@@ -45,10 +45,6 @@ Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo
 
 IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar únicamente cada transacción."""
             
-            # Leer archivo
-            with open(archivo_path, "rb") as f:
-                file_bytes = f.read()
-            
             # Crear chat con emergentintegrations usando Emergent LLM Key
             chat = LlmChat(
                 api_key=self.api_key,
@@ -57,10 +53,10 @@ IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar ún
             ).with_model("openai", "gpt-4o")
             
             # Para imágenes y PDFs, crear FileContentWithMimeType correctamente
-            # El constructor acepta: file_bytes directamente y mime_type
+            # El constructor acepta: mime_type y file_path
             file_content = FileContentWithMimeType(
-                file_bytes,  # Primer parámetro posicional: bytes del archivo
-                mime_type    # Segundo parámetro posicional: tipo MIME
+                mime_type=mime_type,
+                file_path=archivo_path
             )
             
             # Crear mensaje con archivo
