@@ -1,51 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import { X } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import ClienteSelector from './ClienteSelector';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const NuevaOperacionModal = ({ onClose, onSuccess }) => {
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    cliente_nombre: '',
-    cliente_telegram_id: '',
-    cliente_telefono: '',
-    propietario: 'D'
-  });
-
-  useEffect(() => {
-    cargarClientes();
-  }, []);
-
-  const cargarClientes = async () => {
-    try {
-      const response = await axios.get(`${API}/clientes`);
-      setClientes(response.data);
-    } catch (error) {
-      console.error('Error cargando clientes:', error);
-    }
-  };
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [comisionOperacion, setComisionOperacion] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!clienteSeleccionado) {
+      toast.error('Debes seleccionar un cliente');
+      return;
+    }
+    
     try {
       setLoading(true);
-      const response = await axios.post(`${API}/operaciones`, formData);
+      
+      const payload = {
+        id_cliente: clienteSeleccionado.id,
+        porcentaje_comision_usado: comisionOperacion || clienteSeleccionado.porcentaje_comision_cliente
+      };
+      
+      const response = await axios.post(`${API}/operaciones`, payload);
       
       toast.success('Operación creada exitosamente');
       
@@ -55,7 +42,7 @@ const NuevaOperacionModal = ({ onClose, onSuccess }) => {
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creando operación:', error);
-      toast.error('Error al crear operación');
+      toast.error(error.response?.data?.detail || 'Error al crear operación');
     } finally {
       setLoading(false);
     }
