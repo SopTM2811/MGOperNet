@@ -57,42 +57,42 @@ const Home = () => {
         </div>
 
         {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-8 mt-24 animate-slide-in">
+        <div className="grid md:grid-cols-3 gap-6 mt-32 max-w-6xl mx-auto">
           <FeatureCard
-            icon={<FileText className="h-10 w-10 text-blue-600" />}
+            icon={<FileText className="h-8 w-8 text-blue-600" />}
             title="OCR Inteligente"
             description="Lectura automática de comprobantes bancarios con validación de cuenta y beneficiario."
           />
           
           <FeatureCard
-            icon={<BarChart3 className="h-10 w-10 text-emerald-600" />}
+            icon={<BarChart3 className="h-8 w-8 text-blue-600" />}
             title="Cálculos Precisos"
             description="Cálculo automático de capital, comisiones de cliente y comisiones de proveedor."
           />
           
           <FeatureCard
-            icon={<Users className="h-10 w-10 text-purple-600" />}
+            icon={<Users className="h-8 w-8 text-blue-600" />}
             title="Gestión de Flujo"
             description="Seguimiento completo desde el depósito del cliente hasta la entrega de ligas."
           />
         </div>
 
         {/* Info Section */}
-        <div className="mt-24 bg-white rounded-3xl p-12 shadow-xl">
+        <div className="mt-32 bg-slate-50 rounded-2xl p-10 max-w-4xl mx-auto border border-slate-200">
           <div className="flex items-start gap-6">
-            <div className="bg-blue-100 rounded-2xl p-4">
-              <Shield className="h-8 w-8 text-blue-600" />
+            <div className="bg-blue-100 rounded-xl p-3 shrink-0">
+              <Shield className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-4" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+              <h3 className="text-xl font-semibold mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                 Cuenta de Depósito Autorizada
               </h3>
-              <div className="space-y-2 text-slate-700">
-                <p><strong>Razón social:</strong> JARDINERIA Y COMERCIO THABYETHA SA DE CV</p>
-                <p><strong>Banco:</strong> STP</p>
-                <p><strong>CLABE:</strong> 646180139409481462</p>
+              <div className="space-y-2 text-slate-700 text-sm">
+                <p><span className="font-medium">Razón social:</span> JARDINERIA Y COMERCIO THABYETHA SA DE CV</p>
+                <p><span className="font-medium">Banco:</span> STP</p>
+                <p><span className="font-medium">CLABE:</span> 646180139409481462</p>
               </div>
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-xs text-slate-500">
                 Todos los depósitos de clientes NetCash deben realizarse a esta cuenta.
               </p>
             </div>
@@ -101,9 +101,9 @@ const Home = () => {
       </div>
 
       {/* Footer */}
-      <footer className="py-12 text-center text-slate-600 border-t border-slate-200 bg-white/50">
-        <p className="text-sm">
-          © 2025 MBco - Asistente NetCash | Fase 1: Módulo Cliente + OCR + Cálculos Básicos
+      <footer className="py-16 text-center text-slate-500 border-t border-slate-200 bg-slate-50 mt-32">
+        <p className="text-sm font-light">
+          © 2025 MBco - Asistente NetCash
         </p>
       </footer>
     </div>
@@ -112,12 +112,12 @@ const Home = () => {
 
 const FeatureCard = ({ icon, title, description }) => {
   return (
-    <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all hover:-translate-y-2">
+    <div className="bg-white rounded-xl p-8 border border-slate-200 hover:border-slate-300 transition-all hover:shadow-medium">
       <div className="mb-4">{icon}</div>
-      <h3 className="text-xl font-bold mb-3" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+      <h3 className="text-lg font-semibold mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
         {title}
       </h3>
-      <p className="text-slate-600 leading-relaxed">
+      <p className="text-slate-600 leading-relaxed text-sm font-light">
         {description}
       </p>
     </div>
