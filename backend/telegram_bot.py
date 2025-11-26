@@ -1,5 +1,6 @@
 import os
 import logging
+import uuid
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
