@@ -709,7 +709,107 @@ class TelegramBotNetCash:
             )
     
     async def handle_mensaje_no_reconocido(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Maneja mensajes de texto no reconocidos"""
+        """Maneja mensajes de texto no reconocidos y flujo extendido de operación"""
+        texto = update.message.text.strip().lower()
+        
+        # BLOQUE 2: Flujo extendido después de comprobantes
+        if context.user_data.get('esperando_mas_comprobantes'):
+            if texto in ['si', 'sí', 'yes', 's']:
+                context.user_data['esperando_mas_comprobantes'] = False
+                await update.message.reply_text(
+                    "Perfecto. Envíame el siguiente comprobante (PDF o imagen)."
+                )
+                return
+            elif texto in ['no', 'n']:
+                context.user_data['esperando_mas_comprobantes'] = False
+                context.user_data['esperando_cantidad_ligas'] = True
+                await update.message.reply_text(
+                    "🔗 ¿Cuántas ligas NetCash necesitas para esta operación?\n"
+                    "Responde solo con un número (ejemplo: 1, 2, 3...)."
+                )
+                return
+        
+        if context.user_data.get('esperando_cantidad_ligas'):
+            try:
+                cantidad = int(texto)
+                if cantidad < 1:
+                    await update.message.reply_text("Por favor ingresa un número válido mayor a 0.")
+                    return
+                
+                context.user_data['esperando_cantidad_ligas'] = False
+                context.user_data['cantidad_ligas'] = cantidad
+                context.user_data['esperando_nombre_ligas'] = True
+                
+                await update.message.reply_text(
+                    "👤 ¿Qué nombre quieres que aparezca en las ligas NetCash?\n"
+                    "(Ejemplo: 'Soluciones Escodelario SA de CV' o el nombre de tu cliente)."
+                )
+                return
+            except ValueError:
+                await update.message.reply_text("Por favor responde solo con un número (ejemplo: 1, 2, 3...).")
+                return
+        
+        if context.user_data.get('esperando_nombre_ligas'):
+            context.user_data['esperando_nombre_ligas'] = False
+            context.user_data['nombre_ligas'] = update.message.text.strip()
+            context.user_data['esperando_idmex'] = True
+            
+            await update.message.reply_text(
+                "🆔 Ahora dime el IDMEX asociado a esta operación.\n"
+                "Si son varios IDMEX, indícalos separados por coma o en una sola frase."
+            )
+            return
+        
+        if context.user_data.get('esperando_idmex'):
+            context.user_data['esperando_idmex'] = False
+            idmex = update.message.text.strip()
+            
+            # Guardar todos los datos en la operación
+            operacion_id = context.user_data.get('operacion_actual')
+            folio = context.user_data.get('folio_actual', 'N/A')
+            cantidad_ligas = context.user_data.get('cantidad_ligas')
+            nombre_ligas = context.user_data.get('nombre_ligas')
+            
+            try:
+                # Actualizar operación en la base de datos
+                await db.operaciones.update_one(
+                    {"id": operacion_id},
+                    {"$set": {
+                        "cantidad_ligas": cantidad_ligas,
+                        "nombre_ligas": nombre_ligas,
+                        "titular_idmex": idmex
+                    }}
+                )
+                
+                # Obtener operación actualizada para calcular monto total
+                operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+                comprobantes_validos = [c for c in operacion.get("comprobantes", []) if c.get("es_valido")]
+                monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+                cliente_nombre = operacion.get("cliente_nombre", "N/A")
+                
+                # Mostrar resumen
+                mensaje = "📋 **Resumen de tu operación NetCash**\n\n"
+                mensaje += f"**Folio MBco:** {folio}\n"
+                mensaje += f"**Cliente:** {cliente_nombre}\n"
+                mensaje += f"**Monto total comprobantes:** ${monto_total:,.2f}\n"
+                mensaje += f"**Cantidad de ligas:** {cantidad_ligas}\n"
+                mensaje += f"**Nombre en ligas:** {nombre_ligas}\n"
+                mensaje += f"**IDMEX:** {idmex}\n\n"
+                mensaje += "Si hay algún error en estos datos, avísale a Ana para corregirlo."
+                
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                
+                # Limpiar context
+                context.user_data.clear()
+                
+                logger.info(f"Operación {operacion_id} completada con {len(comprobantes_validos)} comprobantes, {cantidad_ligas} ligas")
+                return
+            except Exception as e:
+                logger.error(f"Error guardando datos de operación: {str(e)}")
+                await update.message.reply_text("Error al guardar los datos. Por favor contacta a Ana.")
+                return
+        
+        # Mensaje por defecto para mensajes no reconocidos
         mensaje_respuesta = "Soy el Asistente NetCash 🤖\n\n"
         mensaje_respuesta += "Puedo ayudarte a:\n"
         mensaje_respuesta += "• Registrarte como cliente NetCash\n"
