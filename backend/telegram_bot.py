@@ -1176,6 +1176,46 @@ class TelegramBotNetCash:
             "Responde solo con un número (ejemplo: 1, 2, 3...)."
         )
     
+    async def mostrar_detalle_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE, operacion: dict):
+        """Muestra el detalle completo de una operación"""
+        folio = operacion.get("folio_mbco", "N/A")
+        estado = operacion.get("estado", "DESCONOCIDO").replace("_", " ").title()
+        
+        # Calcular montos
+        comprobantes = operacion.get("comprobantes", [])
+        comprobantes_validos = [c for c in comprobantes if isinstance(c, dict) and c.get("es_valido")]
+        monto_total = operacion.get("monto_total_comprobantes") or sum(c.get("monto", 0) for c in comprobantes_validos)
+        comision_cobrada = operacion.get("comision_cobrada", 0)
+        capital_netcash = operacion.get("capital_netcash", 0)
+        comision_porcentaje = operacion.get("porcentaje_comision_usado", 0.65)
+        
+        # Si no hay cálculos guardados, calcularlos
+        if not comision_cobrada and monto_total:
+            comision_cobrada = round(monto_total * (comision_porcentaje / 100), 2)
+            capital_netcash = round(monto_total - comision_cobrada, 2)
+        
+        mensaje = f"📊 **Detalle de Operación {folio}**\n\n"
+        mensaje += f"**Estado:** {estado}\n"
+        mensaje += f"**Cliente:** {operacion.get('cliente_nombre', 'N/A')}\n\n"
+        
+        if monto_total > 0:
+            mensaje += f"💵 **Total comprobantes:** ${monto_total:,.2f}\n"
+            mensaje += f"📊 **Comisión ({comision_porcentaje}%):** ${comision_cobrada:,.2f}\n"
+            mensaje += f"💰 **Capital NetCash:** ${capital_netcash:,.2f}\n\n"
+        
+        mensaje += f"**Comprobantes válidos:** {len(comprobantes_validos)}\n"
+        
+        if operacion.get("cantidad_ligas"):
+            mensaje += f"**Cantidad de ligas:** {operacion.get('cantidad_ligas')}\n"
+        if operacion.get("nombre_ligas"):
+            mensaje += f"**Nombre en ligas:** {operacion.get('nombre_ligas')}\n"
+        if operacion.get("titular_idmex"):
+            mensaje += f"**IDMEX:** {operacion.get('titular_idmex')}\n"
+        
+        mensaje += "\nEscribe /start para ver el menú principal."
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown")
+    
     async def notificar_cancelacion_por_inactividad(self, operacion_id: str, folio: str, chat_id: str):
         """Envía notificación al cliente cuando su operación es cancelada por inactividad"""
         try:
