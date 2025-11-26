@@ -52,50 +52,22 @@ Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo
 
 IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar únicamente cada transacción."""
             
-            # Para OpenAI, usamos directamente el archivo
-            # Nota: OpenAI no usa FileContentWithMimeType, sino que procesa directamente
-            # Vamos a leer el archivo y enviarlo como base64 si es imagen, o como texto si es PDF
-            
-            if mime_type.startswith("image/"):
-                # Para imágenes, leemos y enviamos como base64
-                with open(archivo_path, "rb") as f:
-                    contenido = base64.b64encode(f.read()).decode('utf-8')
-                
-                # Crear mensaje con imagen
-                user_message = UserMessage(
-                    text=prompt
-                )
-                # Nota: Con OpenAI necesitamos usar un formato específico para imágenes
-                # Por ahora usaremos el texto y confiaremos en que la librería maneja el archivo
-                
-            elif mime_type == "application/pdf":
-                # Para PDFs, OpenAI puede procesarlos directamente
-                user_message = UserMessage(
-                    text=prompt
-                )
-            
-            else:
-                logger.warning(f"Tipo MIME no soportado: {mime_type}")
-                return {
-                    "error": f"Tipo de archivo no soportado: {mime_type}"
-                }
-            
-            # Usar emergentintegrations con Emergent LLM Key
-            # Leer archivo y preparar para envío
+            # Leer archivo
             with open(archivo_path, "rb") as f:
                 file_bytes = f.read()
             
-            # Crear chat con emergentintegrations
+            # Crear chat con emergentintegrations usando Emergent LLM Key
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"ocr_{os.path.basename(archivo_path)}",
                 system_message="Eres un asistente experto en leer y extraer información de comprobantes bancarios en español."
             ).with_model("openai", "gpt-4o")
             
-            # Para imágenes y PDFs, usar FileContentWithMimeType
+            # Para imágenes y PDFs, crear FileContentWithMimeType correctamente
+            # El constructor acepta: file_bytes directamente y mime_type
             file_content = FileContentWithMimeType(
-                content=file_bytes,
-                mime_type=mime_type
+                file_bytes,  # Primer parámetro posicional: bytes del archivo
+                mime_type    # Segundo parámetro posicional: tipo MIME
             )
             
             # Crear mensaje con archivo
