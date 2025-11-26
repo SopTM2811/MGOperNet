@@ -126,29 +126,37 @@ class TelegramBotNetCash:
     
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
-        Comando /start - Saludo inicial.
+        Comando /start - Saludo inicial con identificación.
         """
         user = update.effective_user
-        telegram_id = str(user.id)
+        chat_id = str(update.effective_chat.id)
         
         # Verificar modo mantenimiento
         if MODO_MANTENIMIENTO == "ON":
             # Verificar si es Daniel (puede cambiar el modo)
-            if not telegram_id.endswith("0098"):
+            if not chat_id.endswith("0098"):
                 await update.message.reply_text(MENSAJE_MANTENIMIENTO)
                 return
         
-        mensaje = f"Hola {user.first_name} 😊\n\n{MENSAJE_BIENVENIDA_CUENTA}"
+        # Verificar si el usuario ya está registrado
+        usuario = await self.obtener_o_crear_usuario(chat_id)
         
-        # Crear teclado de opciones
-        keyboard = [
-            [InlineKeyboardButton("📎 Nueva operación NetCash", callback_data="nueva_operacion")],
-            [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
-            [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        if not usuario:
+            # Primera vez - pedir teléfono
+            from telegram import KeyboardButton, ReplyKeyboardMarkup
+            
+            mensaje = f"Hola {user.first_name} 😊\n\n"
+            mensaje += "Para identificarte y darte el menú correcto de NetCash, necesito tu número de celular.\n\n"
+            mensaje += "👇 Por favor toca el botón de abajo para compartirlo:"
+            
+            keyboard = [[KeyboardButton("📱 Compartir mi teléfono", request_contact=True)]]
+            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+            
+            await update.message.reply_text(mensaje, reply_markup=reply_markup)
+            return
         
-        await update.message.reply_text(mensaje, reply_markup=reply_markup)
+        # Usuario ya registrado - mostrar menú según rol
+        await self.mostrar_menu_segun_rol(update, usuario)
     
     async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
