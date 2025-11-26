@@ -979,62 +979,80 @@ class TelegramBotNetCash:
         if context.user_data.get('esperando_idmex'):
             context.user_data['esperando_idmex'] = False
             idmex = update.message.text.strip()
+            context.user_data['titular_idmex_guardado'] = idmex
             
-            # Guardar todos los datos en la operación
-            operacion_id = context.user_data.get('operacion_actual')
-            folio = context.user_data.get('folio_actual', 'N/A')
-            cantidad_ligas = context.user_data.get('cantidad_ligas')
-            nombre_ligas = context.user_data.get('nombre_ligas')
+            # Finalizar captura
+            await self.finalizar_captura_operacion(update, context)
+            return
+    
+    async def finalizar_captura_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Finaliza la captura de operación y muestra resumen con desglose económico"""
+        operacion_id = context.user_data.get('operacion_actual')
+        folio = context.user_data.get('folio_actual', 'N/A')
+        cantidad_ligas = context.user_data.get('cantidad_ligas')
+        nombre_ligas = context.user_data.get('nombre_ligas')
+        idmex = context.user_data.get('titular_idmex_guardado')
+        
+        try:
+            # Actualizar operación en la base de datos
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {"$set": {
+                    "cantidad_ligas": cantidad_ligas,
+                    "nombre_ligas": nombre_ligas,
+                    "titular_idmex": idmex
+                }}
+            )
             
-            try:
-                # Actualizar operación en la base de datos
-                await db.operaciones.update_one(
-                    {"id": operacion_id},
-                    {"$set": {
-                        "cantidad_ligas": cantidad_ligas,
-                        "nombre_ligas": nombre_ligas,
-                        "titular_idmex": idmex
-                    }}
-                )
-                
-                # Obtener operación actualizada para calcular monto total
-                operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
-                comprobantes_validos = [c for c in operacion.get("comprobantes", []) if c.get("es_valido")]
-                monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
-                cliente_nombre = operacion.get("cliente_nombre", "N/A")
-                
-                # BLOQUE 2: Actualizar estado a DATOS_COMPLETOS
-                await db.operaciones.update_one(
-                    {"id": operacion_id},
-                    {"$set": {"estado": "DATOS_COMPLETOS"}}
-                )
-                
-                # BLOQUE 2: Mostrar resumen + mensaje de qué sigue
-                mensaje = "📋 **Resumen de tu operación NetCash**\n\n"
-                mensaje += f"**Folio MBco:** {folio}\n"
-                mensaje += f"**Cliente:** {cliente_nombre}\n"
-                mensaje += f"**Monto total comprobantes:** ${monto_total:,.2f}\n"
-                mensaje += f"**Cantidad de ligas:** {cantidad_ligas}\n"
-                mensaje += f"**Nombre en ligas:** {nombre_ligas}\n"
-                mensaje += f"**IDMEX:** {idmex}\n\n"
-                mensaje += "Si hay algún error en estos datos, avísale a Ana para corregirlo.\n\n"
-                mensaje += "✅ **Recibimos con éxito tu operación.**\n"
-                mensaje += "Vamos a validar tus comprobantes y, cuando tus ligas NetCash estén listas, te avisaremos por este mismo chat.\n\n"
-                mensaje += "Mientras tanto, puedes:\n"
-                mensaje += "• Crear otra operación NetCash\n"
-                mensaje += "• Ver tus operaciones en curso con \"Ver mis operaciones\" o /start."
-                
-                await update.message.reply_text(mensaje, parse_mode="Markdown")
-                
-                # Limpiar context
-                context.user_data.clear()
-                
-                logger.info(f"Operación {operacion_id} completada con {len(comprobantes_validos)} comprobantes, {cantidad_ligas} ligas")
-                return
-            except Exception as e:
-                logger.error(f"Error guardando datos de operación: {str(e)}")
-                await update.message.reply_text("Error al guardar los datos. Por favor contacta a Ana.")
-                return
+            # Obtener operación actualizada para calcular desglose económico
+            operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+            comprobantes_validos = [c for c in operacion.get("comprobantes", []) if c.get("es_valido")]
+            monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+            cliente_nombre = operacion.get("cliente_nombre", "N/A")
+            
+            # Calcular desglose económico
+            comision_porcentaje = operacion.get("porcentaje_comision_usado", 0.65)
+            comision_cobrada = round(monto_total * (comision_porcentaje / 100), 2)
+            capital_netcash = round(monto_total - comision_cobrada, 2)
+            
+            # Guardar cálculos en la operación
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {"$set": {
+                    "estado": "DATOS_COMPLETOS",
+                    "monto_total_comprobantes": monto_total,
+                    "comision_cobrada": comision_cobrada,
+                    "capital_netcash": capital_netcash
+                }}
+            )
+            
+            # BLOQUE 6: Resumen con desglose económico
+            mensaje = "📋 **Resumen de tu operación NetCash**\n\n"
+            mensaje += f"**Folio MBco:** {folio}\n"
+            mensaje += f"**Cliente:** {cliente_nombre}\n\n"
+            mensaje += f"💵 **Total comprobantes:** ${monto_total:,.2f}\n"
+            mensaje += f"📊 **Comisión cobrada al cliente ({comision_porcentaje}%):** ${comision_cobrada:,.2f}\n"
+            mensaje += f"💰 **Capital NetCash (a dispersar):** ${capital_netcash:,.2f}\n\n"
+            mensaje += f"**Cantidad de ligas:** {cantidad_ligas}\n"
+            mensaje += f"**Nombre en ligas:** {nombre_ligas}\n"
+            mensaje += f"**IDMEX:** {idmex}\n\n"
+            mensaje += "Si hay algún error en estos datos, avísale a Ana para corregirlo.\n\n"
+            mensaje += "✅ **Recibimos con éxito tu operación.**\n"
+            mensaje += "Vamos a validar tus comprobantes y, cuando tus ligas NetCash estén listas, te avisaremos por este mismo chat.\n\n"
+            mensaje += "Mientras tanto, puedes:\n"
+            mensaje += "• Crear otra operación NetCash\n"
+            mensaje += "• Ver tus operaciones en curso con \"Ver mis operaciones\" o /start."
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+            # Limpiar context
+            context.user_data.clear()
+            
+            logger.info(f"Operación {operacion_id} completada con {len(comprobantes_validos)} comprobantes, {cantidad_ligas} ligas")
+        except Exception as e:
+            logger.error(f"Error guardando datos de operación: {str(e)}")
+            await update.message.reply_text("Error al guardar los datos. Por favor contacta a Ana.")
+            return
         
         # BLOQUE 1: Trigger "listo" y sinónimos para cerrar comprobantes
         # Normalizar texto: lowercase, quitar tildes
