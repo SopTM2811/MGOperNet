@@ -92,6 +92,13 @@ class OperacionNetCash(BaseModel):
     cantidad_ligas: Optional[int] = None  # Cantidad de ligas solicitadas por el cliente
     nombre_ligas: Optional[str] = None  # Nombre que aparecerá en las ligas
     
+    # Campos de origen y control de flujo
+    origen_operacion: str = "web"  # "telegram" | "web" | "email"
+    clave_operacion_mbcontrol: Optional[str] = None  # Clave del sistema MBControl (ej: 18434-138-D-11)
+    
+    # Timestamp para control de inactividad
+    ultimo_mensaje_cliente: Optional[datetime] = None
+    
     # Cálculos financieros
     calculos: Optional[CalculosNetCash] = None
     
