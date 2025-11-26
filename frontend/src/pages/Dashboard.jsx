@@ -277,6 +277,20 @@ const Dashboard = () => {
           }}
         />
       )}
+
+      {/* Modal Subir Comprobantes */}
+      {showComprobantes && operacionSeleccionada && (
+        <ComprobantesModal
+          operacion={operacionSeleccionada}
+          onClose={() => {
+            setShowComprobantes(false);
+            setOperacionSeleccionada(null);
+          }}
+          onActualizado={() => {
+            cargarOperaciones();
+          }}
+        />
+      )}
     </div>
   );
 };
