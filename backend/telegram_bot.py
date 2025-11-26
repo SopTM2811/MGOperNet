@@ -750,37 +750,7 @@ class TelegramBotNetCash:
                 {"$set": {"ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()}}
             )
         
-        # BLOQUE 1: Confirmación de cierre de comprobantes
-        if context.user_data.get('esperando_confirmacion_cierre'):
-            if texto in ['si', 'sí', 'yes', 's']:
-                context.user_data['esperando_confirmacion_cierre'] = False
-                context.user_data['esperando_cantidad_ligas'] = True
-                
-                # Actualizar estado de operación
-                operacion_id = context.user_data.get('operacion_actual')
-                await db.operaciones.update_one(
-                    {"id": operacion_id},
-                    {"$set": {
-                        "estado": "COMPROBANTES_CERRADOS",
-                        "ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()
-                    }}
-                )
-                
-                # BLOQUE 2: Preguntar cantidad de ligas
-                await update.message.reply_text(
-                    "🔗 ¿Cuántas ligas NetCash necesitas para esta operación?\n"
-                    "Responde solo con un número (ejemplo: 1, 2, 3...)."
-                )
-                return
-            elif texto in ['no', 'n']:
-                context.user_data['esperando_confirmacion_cierre'] = False
-                context.user_data['recibiendo_comprobantes'] = True
-                await update.message.reply_text(
-                    "Perfecto. Envíame los comprobantes que faltan y escribe **'listo'** cuando termines.",
-                    parse_mode="Markdown"
-                )
-                return
-        
+        # BLOQUE 2: Captura de cantidad de ligas
         if context.user_data.get('esperando_cantidad_ligas'):
             try:
                 cantidad = int(texto)
