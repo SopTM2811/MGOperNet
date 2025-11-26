@@ -21,6 +21,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/operacion/:id" element={<OperacionDetalle />} />
+          <Route path="/pendientes-mbcontrol" element={<PendientesMBControl />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
