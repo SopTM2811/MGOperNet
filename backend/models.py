@@ -117,7 +117,7 @@ class Cliente(BaseModel):
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     nombre: str
-    email: str  # Obligatorio
+    email: Optional[str] = None  # Opcional
     pais: str = "MX"  # País por defecto México
     prefijo_telefono: str = "+52"  # Prefijo por defecto México
     telefono: str  # Número sin prefijo
@@ -126,6 +126,8 @@ class Cliente(BaseModel):
     porcentaje_comision_cliente: float = 0.65  # Porcentaje (ej: 0.65 = 0.65%)
     canal_preferido: Optional[str] = None  # "Telegram", "WhatsApp", "Correo"
     propietario: Propietario
+    rfc: Optional[str] = None  # RFC del cliente
+    notas: Optional[str] = None  # Notas sobre el cliente
     fecha_alta: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     activo: bool = True
     
