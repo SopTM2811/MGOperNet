@@ -27,7 +27,7 @@ const Home = () => {
             <span className="text-blue-600">Operaciones NetCash</span>
           </h1>
           
-          <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mb-12 leading-relaxed">
+          <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mb-14 leading-relaxed font-light">
             Automatiza el procesamiento de depósitos, validación de comprobantes y generación de ligas NetCash.
             Todo en una plataforma centralizada y eficiente.
           </p>
@@ -37,7 +37,7 @@ const Home = () => {
               data-testid="dashboard-btn"
               onClick={() => navigate('/dashboard')}
               size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
             >
               <BarChart3 className="mr-2 h-5 w-5" />
               Ir al Dashboard
@@ -48,7 +48,7 @@ const Home = () => {
               data-testid="about-btn"
               variant="outline"
               size="lg"
-              className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-6 text-lg rounded-xl"
+              className="border border-slate-300 text-slate-700 hover:bg-slate-50 px-10 py-6 text-base rounded-lg font-medium"
             >
               <FileText className="mr-2 h-5 w-5" />
               Documentación
