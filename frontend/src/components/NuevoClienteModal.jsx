@@ -56,6 +56,7 @@ const NuevoClienteModal = ({ onClose, onSuccess }) => {
         notas: formData.notas.trim() || undefined,
         propietario: formData.propietario,
         porcentaje_comision_cliente: parseFloat(formData.porcentaje_comision_cliente),
+        estado: formData.estado,
       };
       
       await axios.post(`${API}/clientes`, payload);
