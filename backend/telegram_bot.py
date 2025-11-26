@@ -158,11 +158,93 @@ class TelegramBotNetCash:
         # Usuario ya registrado - mostrar menú según rol
         await self.mostrar_menu_segun_rol(update, usuario)
     
+    async def mostrar_menu_segun_rol(self, update: Update, usuario: dict):
+        """Muestra el menú apropiado según el rol del usuario"""
+        user = update.effective_user
+        rol = usuario.get("rol", "desconocido")
+        rol_info = usuario.get("rol_info", {})
+        
+        if rol == "cliente":
+            # Menú para clientes
+            mensaje = f"Hola {user.first_name} 😊\n\n{MENSAJE_BIENVENIDA_CUENTA}"
+            
+            keyboard = [
+                [InlineKeyboardButton("📎 Nueva operación NetCash", callback_data="nueva_operacion")],
+                [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
+                [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(mensaje, reply_markup=reply_markup)
+            
+        elif rol in ["admin_mbco", "tesoreria", "supervisor_tesoreria", "direccion", "control_operaciones"]:
+            # Menú para internos MBco
+            nombre = rol_info.get("nombre", user.first_name)
+            descripcion = rol_info.get("descripcion", "Equipo MBco")
+            
+            mensaje = f"Hola {nombre} 👋\n\n"
+            mensaje += f"Te identifico como: **{descripcion}**\n\n"
+            mensaje += "En próximas fases tendrás opciones internas específicas para tu rol.\n\n"
+            mensaje += "Por ahora puedes usar:\n"
+            mensaje += "• /start - Ver este menú\n"
+            mensaje += "• /ayuda - Información general\n"
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+        elif rol.startswith("proveedor_"):
+            # Menú para proveedor NetCash
+            nombre = rol_info.get("nombre", user.first_name) if rol_info else user.first_name
+            
+            mensaje = f"Hola {nombre} 👋\n\n"
+            mensaje += "Te identifico como parte del **Proveedor NetCash**.\n\n"
+            mensaje += "En próximas versiones podrás:\n"
+            mensaje += "• Ver solicitudes de ligas pendientes\n"
+            mensaje += "• Consultar tiempos de respuesta\n"
+            mensaje += "• Recibir notificaciones de pagos\n\n"
+            mensaje += "Por ahora usa /ayuda para más información."
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+        else:
+            # Desconocido
+            mensaje = f"Hola {user.first_name} 😊\n\n"
+            mensaje += "Es tu primera operación con NetCash 🎉\n\n"
+            mensaje += "Para continuar, necesito que te des de alta. Por favor contacta a Ana:\n\n"
+            mensaje += "📧 gestion.ngdl@gmail.com\n"
+            mensaje += "📱 +52 33 1218 6685\n\n"
+            mensaje += "Menciona que quieres usar el Asistente NetCash."
+            
+            await update.message.reply_text(mensaje)
+    
+    async def handle_contact(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Maneja cuando el usuario comparte su contacto"""
+        contact = update.message.contact
+        chat_id = str(update.effective_chat.id)
+        
+        # Obtener teléfono y nombre
+        telefono = contact.phone_number
+        nombre = f"{contact.first_name or ''} {contact.last_name or ''}".strip()
+        
+        # Crear o actualizar usuario
+        usuario = await self.obtener_o_crear_usuario(chat_id, telefono, nombre)
+        
+        if usuario:
+            # Agradecer y mostrar menú
+            mensaje = "✅ ¡Gracias por compartir tu teléfono!\n\n"
+            
+            from telegram import ReplyKeyboardRemove
+            await update.message.reply_text(mensaje, reply_markup=ReplyKeyboardRemove())
+            
+            # Mostrar menú según rol
+            await self.mostrar_menu_segun_rol(update, usuario)
+        else:
+            await update.message.reply_text("Hubo un error al registrarte. Por favor intenta de nuevo.")
+    
     async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Comando /ayuda - Información de ayuda.
         """
-        mensaje = """**Asistente NetCash MBco** 💼
+        mensaje = """**Asistente NetCash MBco** 🤖
 
 Puedo ayudarte a:
 
@@ -185,6 +267,7 @@ CLABE: 646180139409481462
 Contacta a Ana:
 📧 gestion.ngdl@gmail.com
 📱 +52 33 1218 6685
+
 """
         
         await update.message.reply_text(mensaje, parse_mode="Markdown")
