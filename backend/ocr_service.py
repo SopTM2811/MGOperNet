@@ -28,13 +28,6 @@ class OCRService:
             Diccionario con los datos extraídos del comprobante
         """
         try:
-            # Crear sesión de chat con GPT-5.1
-            chat = LlmChat(
-                api_key=self.api_key,
-                session_id=f"ocr_{archivo_path.split('/')[-1]}",
-                system_message="Eres un asistente experto en leer y extraer información de comprobantes bancarios en español."
-            ).with_model("openai", "gpt-5.1")
-            
             # Preparar el mensaje con el archivo
             prompt = """Analiza este comprobante de depósito bancario y extrae la siguiente información en formato JSON:
 
