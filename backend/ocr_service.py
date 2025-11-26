@@ -80,11 +80,8 @@ IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar ún
                     "error": f"Tipo de archivo no soportado: {mime_type}"
                 }
             
-            # Por limitaciones de la librería con OpenAI, vamos a hacer una implementación directa
-            # usando la API de OpenAI para visión
-            from openai import AsyncOpenAI
-            
-            client = AsyncOpenAI(api_key=self.api_key)
+            # Usar emergentintegrations para garantizar compatibilidad con Emergent LLM Key
+            # NO usar AsyncOpenAI directamente
             
             # Leer archivo como base64
             with open(archivo_path, "rb") as f:
