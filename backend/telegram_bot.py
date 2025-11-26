@@ -788,10 +788,16 @@ class TelegramBotNetCash:
                 context.user_data['cantidad_ligas'] = cantidad
                 context.user_data['esperando_nombre_ligas'] = True
                 
-                await update.message.reply_text(
-                    "👤 ¿Qué nombre quieres que aparezca en las ligas NetCash?\n"
-                    "(Ejemplo: 'Soluciones Escodelario SA de CV' o el nombre de tu cliente)."
-                )
+                # BLOQUE 2: Mensaje adaptado singular/plural
+                if cantidad == 1:
+                    mensaje_ligas = "👤 Por favor dime el **nombre completo de la persona que va a cobrar la liga NetCash**.\n"
+                    mensaje_ligas += "Escribe nombre y dos apellidos (mínimo 3 palabras)."
+                else:
+                    mensaje_ligas = "👤 Por favor dime el **nombre completo de la persona que va a cobrar las ligas NetCash**.\n"
+                    mensaje_ligas += "Escribe nombre y dos apellidos (mínimo 3 palabras).\n"
+                    mensaje_ligas += "Si tienes varios beneficiarios, mándame el principal y coordina los demás con Ana."
+                
+                await update.message.reply_text(mensaje_ligas, parse_mode="Markdown")
                 return
             except ValueError:
                 await update.message.reply_text("Por favor responde solo con un número (ejemplo: 1, 2, 3...).")
