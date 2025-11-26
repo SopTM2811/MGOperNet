@@ -470,7 +470,11 @@ class TelegramBotNetCash:
         # Crear nueva operación llamando al backend API
         try:
             async with aiohttp.ClientSession() as session:
-                payload = {"id_cliente": cliente["id"]}
+                payload = {
+                    "id_cliente": cliente["id"],
+                    "origen_operacion": "telegram",  # BLOQUE 5: Marcar origen
+                    "estado": "EN_CAPTURA"  # Estado inicial
+                }
                 async with session.post(f"{BACKEND_API}/operaciones", json=payload) as response:
                     if response.status == 200:
                         operacion_data = await response.json()
