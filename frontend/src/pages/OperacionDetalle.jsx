@@ -404,20 +404,31 @@ const OperacionDetalle = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {operacion.titular_nombre_completo ? (
+                {operacion.titular_nombre_completo || operacion.nombre_ligas ? (
                   <div className="space-y-4">
                     <div>
                       <Label className="text-slate-600">Nombre completo</Label>
-                      <p className="font-medium text-lg">{operacion.titular_nombre_completo}</p>
+                      <p className="font-medium text-lg">
+                        {operacion.titular_nombre_completo || operacion.nombre_ligas}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-slate-600">IDMEX (INE)</Label>
-                      <p className="font-medium">{operacion.titular_idmex}</p>
+                      <p className="font-medium">{operacion.titular_idmex || '-'}</p>
                     </div>
                     <div>
-                      <Label className="text-slate-600">Número de ligas</Label>
-                      <p className="font-medium">{operacion.numero_ligas}</p>
+                      <Label className="text-slate-600">Cantidad de ligas</Label>
+                      <p className="font-medium">
+                        {operacion.numero_ligas || operacion.cantidad_ligas || '-'}
+                      </p>
                     </div>
+                    {esSoloLectura && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                        <p className="text-sm text-blue-800">
+                          ℹ️ Datos capturados por el cliente en Telegram
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <form onSubmit={handleGuardarTitular} className="space-y-4">
