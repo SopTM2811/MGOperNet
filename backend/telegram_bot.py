@@ -234,17 +234,36 @@ class TelegramBotNetCash:
         id_cliente = usuario.get("id_cliente")
         
         if id_cliente and rol == "cliente":
-            # Cliente registrado
-            mensaje = f"Hola {user.first_name} 😊\n\n"
-            mensaje += "¿Qué deseas hacer?\n"
+            # Cliente registrado - verificar estado
+            cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
             
-            keyboard = [
-                [InlineKeyboardButton("📎 Crear nueva operación NetCash", callback_data="nueva_operacion")],
-                [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
-                [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
-            ]
+            if cliente and cliente.get("estado") == "activo":
+                # Cliente ACTIVO - mensaje personalizado
+                mensaje = f"Hola {user.first_name} 😊\n\n"
+                mensaje += "Ya estás dado de alta como cliente NetCash.\n\n"
+                mensaje += "Puedo ayudarte a:\n"
+                mensaje += "• Crear una nueva operación NetCash\n"
+                mensaje += "• Ver el estado de tus operaciones\n"
+                mensaje += "• Ver la cuenta para hacer tus pagos\n"
+                
+                keyboard = [
+                    [InlineKeyboardButton("📎 Crear nueva operación NetCash", callback_data="nueva_operacion")],
+                    [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
+                    [InlineKeyboardButton("🏦 Ver cuenta para pagos", callback_data="ver_cuenta_pagos")],
+                    [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+                ]
+            else:
+                # Cliente pendiente de validación
+                mensaje = f"Hola {user.first_name} 😊\n\n"
+                mensaje += "Tu registro está en revisión por Ana.\n\n"
+                mensaje += "Mientras tanto, puedes:\n"
+                
+                keyboard = [
+                    [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
+                    [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+                ]
+            
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
             await update.message.reply_text(mensaje, reply_markup=reply_markup)
         
         elif rol in ["admin_mbco", "tesoreria", "supervisor_tesoreria", "direccion", "control_operaciones", "proveedor_supervisor", "proveedor_operaciones", "proveedor_gerente", "proveedor_direccion"]:
