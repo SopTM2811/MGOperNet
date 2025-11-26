@@ -80,70 +80,38 @@ IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar ún
                     "error": f"Tipo de archivo no soportado: {mime_type}"
                 }
             
-            # Usar emergentintegrations para garantizar compatibilidad con Emergent LLM Key
-            # NO usar AsyncOpenAI directamente
-            
-            # Leer archivo como base64
+            # Usar emergentintegrations con Emergent LLM Key
+            # Leer archivo y preparar para envío
             with open(archivo_path, "rb") as f:
-                if mime_type.startswith("image/"):
-                    file_data = base64.b64encode(f.read()).decode('utf-8')
-                    
-                    response = await client.chat.completions.create(
-                        model="gpt-4o",  # Usando gpt-4o que tiene visión
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "Eres un asistente experto en leer y extraer información de comprobantes bancarios en español."
-                            },
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": prompt},
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {
-                                            "url": f"data:{mime_type};base64,{file_data}"
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        max_tokens=1000
-                    )
-                    
-                    respuesta_texto = response.choices[0].message.content
-                    
-                elif mime_type == "application/pdf":
-                    # Para PDFs, usar directamente el modelo de visión con el PDF
-                    # OpenAI puede procesar PDFs directamente como imágenes
-                    with open(archivo_path, "rb") as f:
-                        file_data = base64.b64encode(f.read()).decode('utf-8')
-                    
-                    # Procesar PDF como imagen base64
-                    response = await client.chat.completions.create(
-                        model="gpt-4o",  # gpt-4o soporta documentos
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "Eres un asistente experto en leer y extraer información de comprobantes bancarios en español."
-                            },
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": prompt},
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {
-                                            "url": f"data:application/pdf;base64,{file_data}"
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        max_tokens=1000
-                    )
-                    
-                    respuesta_texto = response.choices[0].message.content
+                file_bytes = f.read()
+            
+            # Crear chat con emergentintegrations
+            chat = LlmChat(
+                api_key=self.api_key,
+                session_id=f"ocr_{os.path.basename(archivo_path)}",
+                system_message="Eres un asistente experto en leer y extraer información de comprobantes bancarios en español."
+            ).with_model("openai", "gpt-4o")
+            
+            # Para imágenes y PDFs, usar FileContentWithMimeType
+            file_content = FileContentWithMimeType(
+                content=file_bytes,
+                mime_type=mime_type
+            )
+            
+            # Crear mensaje con archivo
+            user_message = UserMessage(
+                text=prompt,
+                files=[file_content]
+            )
+            
+            # Enviar y obtener respuesta
+            response = await chat.send_user_message_streaming_async(user_message)
+            
+            # Recopilar respuesta
+            respuesta_texto = ""
+            async for chunk in response:
+                if hasattr(chunk, 'content') and chunk.content:
+                    respuesta_texto += chunk.content
             
             # Parsear respuesta JSON
             import json
