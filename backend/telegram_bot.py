@@ -804,13 +804,24 @@ class TelegramBotNetCash:
                 return
         
         if context.user_data.get('esperando_nombre_ligas'):
+            nombre_titular = update.message.text.strip()
+            
+            # Validar mínimo 3 palabras
+            if len(nombre_titular.split()) < 3:
+                await update.message.reply_text(
+                    "⚠️ El nombre debe tener al menos 3 palabras (nombre y dos apellidos).\n"
+                    "Por favor envíalo completo."
+                )
+                return
+            
             context.user_data['esperando_nombre_ligas'] = False
-            context.user_data['nombre_ligas'] = update.message.text.strip()
+            context.user_data['nombre_ligas'] = nombre_titular
             context.user_data['esperando_idmex'] = True
             
+            # BLOQUE 2: Texto actualizado para IDMEX de INE
             await update.message.reply_text(
-                "🆔 Ahora dime el IDMEX asociado a esta operación.\n"
-                "Si son varios IDMEX, indícalos separados por coma o en una sola frase."
+                "🆔 Ahora mándame el IDMEX de la INE de esa persona.\n"
+                "Si son varios IDMEX, envíalos separados por coma."
             )
             return
         
