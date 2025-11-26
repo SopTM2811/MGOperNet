@@ -170,7 +170,9 @@ class TelegramBotNetCash:
         
         if rol == "cliente":
             # Menú para clientes
-            mensaje = f"Hola {user.first_name} 😊\n\n{MENSAJE_BIENVENIDA_CUENTA}"
+            nombre_cliente = rol_info.get("nombre", user.first_name) if rol_info else user.first_name
+            
+            mensaje = f"Bienvenido {nombre_cliente} 😊\n\n{MENSAJE_BIENVENIDA_CUENTA}"
             
             keyboard = [
                 [InlineKeyboardButton("📎 Nueva operación NetCash", callback_data="nueva_operacion")],
