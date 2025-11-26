@@ -92,6 +92,43 @@ const NuevaOperacionModal = ({ onClose, onSuccess }) => {
                   Puedes modificarla solo para esta operación.
                 </p>
               </div>
-            )}\n\n            <div className=\"bg-blue-50 border border-blue-200 rounded-lg p-4\">\n              <p className=\"text-sm text-blue-800\">\n                <strong>Siguiente paso:</strong> Después de crear la operación, podrás subir los comprobantes de depósito.\n              </p>\n            </div>\n\n            <div className=\"flex gap-3 mt-6\">\n              <Button\n                type=\"button\"\n                variant=\"outline\"\n                onClick={onClose}\n                className=\"flex-1\"\n                data-testid=\"cancel-btn\"\n              >\n                Cancelar\n              </Button>\n              <Button\n                type=\"submit\"\n                disabled={loading || !clienteSeleccionado}\n                className=\"flex-1 bg-blue-600 hover:bg-blue-700\"\n                data-testid=\"create-operation-btn\"\n              >\n                {loading ? 'Creando...' : (\n                  <>\n                    Crear Operación\n                    <ArrowRight className=\"ml-2 h-4 w-4\" />\n                  </>\n                )}\n              </Button>\n            </div>\n          </form>\n        </div>\n      </div>\n    </div>\n  );\n};
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong>Siguiente paso:</strong> Después de crear la operación, podrás subir los comprobantes de depósito.
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                data-testid="cancel-btn"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || !clienteSeleccionado}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                data-testid="create-operation-btn"
+              >
+                {loading ? 'Creando...' : (
+                  <>
+                    Crear Operación
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default NuevaOperacionModal;
