@@ -106,10 +106,8 @@ class OperacionNetCash(BaseModel):
 
 
 class OperacionNetCashCreate(BaseModel):
-    cliente_telegram_id: Optional[str] = None
-    cliente_nombre: Optional[str] = None
-    cliente_telefono: Optional[str] = None
-    propietario: Optional[Propietario] = None
+    id_cliente: str  # Obligatorio: debe estar vinculado a un cliente
+    porcentaje_comision_usado: Optional[float] = None  # Opcional: si no se proporciona, se copia del cliente
 
 
 class Cliente(BaseModel):
