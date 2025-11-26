@@ -59,10 +59,17 @@ class OperacionNetCash(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     fecha_creacion: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    # Información del cliente
-    cliente_telegram_id: Optional[str] = None
+    # Vínculo con cliente
+    id_cliente: Optional[str] = None  # ID del cliente en la colección clientes
+    
+    # Información del cliente (copiada en el momento de crear la operación)
     cliente_nombre: Optional[str] = None
-    cliente_telefono: Optional[str] = None
+    cliente_email: Optional[str] = None
+    cliente_telefono_completo: Optional[str] = None
+    cliente_telegram_id: Optional[str] = None
+    
+    # Comisión específica de esta operación
+    porcentaje_comision_usado: Optional[float] = None  # Copiado del cliente, pero editable para esta operación
     
     # Propietario de la operación
     propietario: Optional[Propietario] = None
