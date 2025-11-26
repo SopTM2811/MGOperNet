@@ -101,3 +101,149 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+user_problem_statement: |
+  Aplicación full-stack "Asistente NetCash MBco" para gestionar flujo financiero.
+  Requisitos principales:
+  1. Separación clara entre "Alta de Cliente" y "Creación de Operación" (web y Telegram)
+  2. Roles y permisos: Administrador "Ana" valida clientes
+  3. Flujo extendido en Telegram: subida de comprobantes en lote, captura de datos (ligas, titular, IDMEX)
+  4. Flujo de cierre MBControl: generación de layout Excel SPEI y envío por correo a Tesorería
+  5. Web como espejo de solo lectura para operaciones de Telegram
+  6. Monitor de inactividad: cancelar operaciones tras 3 minutos sin actividad
+
+backend:
+  - task: "Bot de Telegram - Flujo de subida de comprobantes en lote con palabra 'listo'"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/telegram_bot.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implementado flujo mejorado donde al escribir 'listo' se cierra la captura de comprobantes 
+          y pasa directamente a solicitar cantidad de ligas (sin confirmación redundante).
+          
+  - task: "Bot de Telegram - Captura de datos extendidos (cantidad ligas, nombre titular, IDMEX)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/telegram_bot.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Flujo completo: cantidad de ligas, nombre completo del titular (mínimo 3 palabras),
+          IDMEX, y resumen final con toda la información capturada.
+          
+  - task: "Monitor de inactividad - Cancelar operaciones tras 3 minutos"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/inactividad_monitor.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Monitor configurado en Supervisor. Revisa cada minuto, cancela operaciones con más
+          de 3 minutos sin actividad, notifica al cliente por Telegram.
+          
+  - task: "Comando /mbcontrol para Ana - Registrar clave MBControl"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/telegram_bot.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Comando /mbcontrol implementado. Solo para admin_mbco. Formato: /mbcontrol FOLIO CLAVE.
+          Genera layout y notifica resultado.
+          
+  - task: "Servicio de generación de layouts SPEI Excel"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/layout_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          LayoutService genera Excel con columnas correctas, concepto con folio y clave MBControl.
+          Envío por SMTP configurable, documenta archivo si no hay credenciales.
+          
+  - task: "Endpoint POST /operaciones/{id}/mbcontrol"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Endpoint registra clave_operacion_mbcontrol, genera layout Excel, intenta enviar por correo,
+          actualiza estado según resultado.
+          
+  - task: "Consejero de plataformas/cuentas para layouts"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/plataformas_config.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          ConsejeroPlataformas evalúa criterios múltiples, advierte sobre empalmes, proporciona
+          explicación detallada. Endpoint GET /plataformas/recomendar disponible.
+
+frontend:
+  - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/OperacionDetalle.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Modo espejo implementado: detecta origen_operacion === 'telegram' y estados cerrados,
+          deshabilita subida de comprobantes y edición de titular, muestra mensajes informativos.
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Bot de Telegram - Flujo completo de operación con lote de comprobantes"
+    - "Monitor de inactividad - Cancelación automática y notificación"
+    - "Comando /mbcontrol - Generación y envío de layout SPEI"
+    - "Web modo espejo - Visualización solo lectura de operaciones Telegram"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      ✅ IMPLEMENTACIÓN P0 COMPLETADA. Flujo Telegram mejorado, monitor de inactividad configurado,
+      flujo MBControl con layouts Excel, web modo espejo, y consejero de plataformas como bonus.
+      Todos los servicios corriendo en Supervisor. Pendiente testing completo de todos los flujos.
