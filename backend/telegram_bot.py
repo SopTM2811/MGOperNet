@@ -851,6 +851,33 @@ class TelegramBotNetCash:
         
         await update.message.reply_text(mensaje_respuesta)
     
+    async def cerrar_comprobantes_y_continuar(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """BLOQUE 1: Cierra la captura de comprobantes y pregunta confirmación"""
+        operacion_id = context.user_data.get('operacion_actual')
+        folio = context.user_data.get('folio_actual', 'N/A')
+        
+        # Obtener operación para calcular resumen
+        operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        if not operacion:
+            await update.message.reply_text("Error: No se encontró la operación. Usa /start para comenzar de nuevo.")
+            return
+        
+        comprobantes = operacion.get("comprobantes", [])
+        comprobantes_validos = [c for c in comprobantes if isinstance(c, dict) and c.get("es_valido")]
+        monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+        
+        # Mostrar resumen
+        mensaje = f"📊 **Resumen de comprobantes recibidos**\n\n"
+        mensaje += f"**Folio MBco:** {folio}\n"
+        mensaje += f"**Comprobantes válidos:** {len(comprobantes_validos)}\n"
+        mensaje += f"**Monto total:** ${monto_total:,.2f}\n\n"
+        mensaje += "¿Confirmas que ya no vas a agregar más comprobantes a esta operación?\n"
+        mensaje += "Responde *sí* para continuar o *no* si todavía te falta enviar alguno."
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown")
+        context.user_data['esperando_confirmacion_cierre'] = True
+        context.user_data['recibiendo_comprobantes'] = False
+    
     def run(self):
         """Inicia el bot de Telegram"""
         if not self.token:
