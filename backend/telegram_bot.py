@@ -301,7 +301,9 @@ Contacta a Ana:
         query = update.callback_query
         await query.answer()
         
-        if query.data == "nueva_operacion":
+        if query.data == "registrar_cliente":
+            await self.registrar_cliente(update, context)
+        elif query.data == "nueva_operacion":
             await self.nueva_operacion(update, context)
         elif query.data == "ver_operaciones":
             await self.ver_operaciones(update, context)
