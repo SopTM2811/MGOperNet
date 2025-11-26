@@ -47,6 +47,35 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================
+# FUNCIONES AUXILIARES
+# ============================================
+
+async def generar_folio_mbco() -> str:
+    """Genera un folio secuencial para operaciones NetCash (ej: NC-000123)"""
+    # Buscar el último folio usado
+    ultima_operacion = await db.operaciones.find_one(
+        {"folio_mbco": {"$exists": True, "$ne": None}},
+        {"_id": 0, "folio_mbco": 1},
+        sort=[("folio_mbco", -1)]
+    )
+    
+    if ultima_operacion and ultima_operacion.get("folio_mbco"):
+        # Extraer el número del último folio (ej: "NC-000123" -> 123)
+        try:
+            ultimo_numero = int(ultima_operacion["folio_mbco"].split("-")[1])
+            nuevo_numero = ultimo_numero + 1
+        except (IndexError, ValueError):
+            # Si hay error parseando, empezar desde 1
+            nuevo_numero = 1
+    else:
+        # Primera operación
+        nuevo_numero = 1
+    
+    # Formatear con 6 dígitos (ej: NC-000001)
+    return f"NC-{nuevo_numero:06d}"
+
+
+# ============================================
 # RUTAS DE OPERACIONES NETCASH
 # ============================================
 
