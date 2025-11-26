@@ -283,12 +283,10 @@ class TelegramBotNetCash:
             # Usuario sin cliente registrado - ofrecer registro
             mensaje = f"Hola {user.first_name} 😊\n\n"
             mensaje += "¡Bienvenido a NetCash MBco! 🎉\n\n"
-            mensaje += "¿Qué deseas hacer?\n"
+            mensaje += "Para comenzar, necesito registrarte como cliente.\n"
             
             keyboard = [
                 [InlineKeyboardButton("1️⃣ Registrarme como cliente NetCash", callback_data="registrar_cliente")],
-                [InlineKeyboardButton("2️⃣ Crear nueva operación NetCash", callback_data="nueva_operacion")],
-                [InlineKeyboardButton("3️⃣ Ver mis operaciones", callback_data="ver_operaciones")],
                 [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
