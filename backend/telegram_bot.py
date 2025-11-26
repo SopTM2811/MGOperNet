@@ -373,7 +373,7 @@ class TelegramBotNetCash:
         email_input = update.message.text.strip().lower()
         
         email = None
-        if email_input != "no" and "@" in email_input:
+        if email_input not in ["no", "sin correo", "ninguno"] and "@" in email_input:
             email = email_input
         
         context.user_data['email_cliente'] = email
