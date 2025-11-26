@@ -869,14 +869,50 @@ class TelegramBotNetCash:
                 context.user_data['cantidad_ligas'] = cantidad
                 context.user_data['esperando_nombre_ligas'] = True
                 
-                # BLOQUE 2: Mensaje adaptado singular/plural
+                # Buscar beneficiarios frecuentes del cliente
+                chat_id = str(update.effective_chat.id)
+                usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+                
+                beneficiarios_frecuentes = []
+                if usuario and usuario.get('id_cliente'):
+                    # Buscar operaciones previas del cliente con titular
+                    operaciones_previas = await db.operaciones.find(
+                        {
+                            "id_cliente": usuario['id_cliente'],
+                            "nombre_ligas": {"$exists": True, "$ne": None}
+                        },
+                        {"_id": 0, "nombre_ligas": 1, "titular_idmex": 1}
+                    ).to_list(10)
+                    
+                    # Crear diccionario para evitar duplicados
+                    beneficiarios_dict = {}
+                    for op in operaciones_previas:
+                        nombre = op.get('nombre_ligas', '').strip()
+                        idmex = op.get('titular_idmex', '').strip()
+                        if nombre and idmex:
+                            key = f"{nombre}_{idmex}"
+                            if key not in beneficiarios_dict:
+                                beneficiarios_dict[key] = {"nombre": nombre, "idmex": idmex}
+                    
+                    beneficiarios_frecuentes = list(beneficiarios_dict.values())[:3]
+                
+                # BLOQUE 2: Mensaje adaptado singular/plural + beneficiarios frecuentes
                 if cantidad == 1:
                     mensaje_ligas = "👤 Por favor dime el **nombre completo de la persona que va a cobrar la liga NetCash**.\n"
-                    mensaje_ligas += "Escribe nombre y dos apellidos (mínimo 3 palabras)."
                 else:
                     mensaje_ligas = "👤 Por favor dime el **nombre completo de la persona que va a cobrar las ligas NetCash**.\n"
-                    mensaje_ligas += "Escribe nombre y dos apellidos (mínimo 3 palabras).\n"
-                    mensaje_ligas += "Si tienes varios beneficiarios, mándame el principal y coordina los demás con Ana."
+                
+                if beneficiarios_frecuentes:
+                    mensaje_ligas += "\n📋 **Te recuerdo tus beneficiarios frecuentes:**\n"
+                    for idx, benef in enumerate(beneficiarios_frecuentes, 1):
+                        mensaje_ligas += f"{idx}) {benef['nombre']} — IDMEX {benef['idmex']}\n"
+                    mensaje_ligas += "\nResponde con el **número** si quieres usar uno de ellos, o escribe un nombre nuevo.\n"
+                    mensaje_ligas += "Recuerda: nombre y dos apellidos (mínimo 3 palabras)."
+                    context.user_data['beneficiarios_frecuentes'] = beneficiarios_frecuentes
+                else:
+                    mensaje_ligas += "Escribe nombre y dos apellidos (mínimo 3 palabras)."
+                    if cantidad > 1:
+                        mensaje_ligas += "\nSi tienes varios beneficiarios, mándame el principal y coordina los demás con Ana."
                 
                 await update.message.reply_text(mensaje_ligas, parse_mode="Markdown")
                 return
