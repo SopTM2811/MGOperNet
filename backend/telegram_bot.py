@@ -907,7 +907,7 @@ class TelegramBotNetCash:
         await update.message.reply_text(mensaje_respuesta)
     
     async def cerrar_comprobantes_y_continuar(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """BLOQUE 1: Cierra la captura de comprobantes y pregunta confirmación"""
+        """BLOQUE 1: Cierra la captura de comprobantes y continúa directamente a captura extendida"""
         operacion_id = context.user_data.get('operacion_actual')
         folio = context.user_data.get('folio_actual', 'N/A')
         
@@ -919,19 +919,65 @@ class TelegramBotNetCash:
         
         comprobantes = operacion.get("comprobantes", [])
         comprobantes_validos = [c for c in comprobantes if isinstance(c, dict) and c.get("es_valido")]
+        
+        # Validar que haya al menos un comprobante válido
+        if not comprobantes_validos:
+            await update.message.reply_text(
+                "⚠️ No has enviado ningún comprobante válido. Por favor envía al menos un comprobante antes de escribir 'listo'."
+            )
+            return
+        
         monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
         
-        # Mostrar resumen
-        mensaje = f"📊 **Resumen de comprobantes recibidos**\n\n"
+        # Actualizar estado de operación
+        await db.operaciones.update_one(
+            {"id": operacion_id},
+            {
+                "$set": {
+                    "estado": "COMPROBANTES_CERRADOS",
+                    "ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Mostrar resumen y pasar directamente a captura extendida
+        mensaje = f"✅ **Comprobantes recibidos correctamente**\n\n"
         mensaje += f"**Folio MBco:** {folio}\n"
         mensaje += f"**Comprobantes válidos:** {len(comprobantes_validos)}\n"
         mensaje += f"**Monto total:** ${monto_total:,.2f}\n\n"
-        mensaje += "¿Confirmas que ya no vas a agregar más comprobantes a esta operación?\n"
-        mensaje += "Responde *sí* para continuar o *no* si todavía te falta enviar alguno."
         
         await update.message.reply_text(mensaje, parse_mode="Markdown")
-        context.user_data['esperando_confirmacion_cierre'] = True
+        await asyncio.sleep(0.5)
+        
+        # Pasar directamente a solicitar cantidad de ligas (sin confirmación extra)
         context.user_data['recibiendo_comprobantes'] = False
+        context.user_data['esperando_cantidad_ligas'] = True
+        
+        await update.message.reply_text(
+            "🔗 ¿Cuántas ligas NetCash necesitas para esta operación?\n"
+            "Responde solo con un número (ejemplo: 1, 2, 3...)."
+        )
+    
+    async def notificar_cancelacion_por_inactividad(self, operacion_id: str, folio: str, chat_id: str):
+        """Envía notificación al cliente cuando su operación es cancelada por inactividad"""
+        try:
+            mensaje = f"⏰ **Operación cancelada por inactividad**\n\n"
+            mensaje += f"**Folio MBco:** {folio}\n\n"
+            mensaje += "Tu operación fue cancelada automáticamente porque no recibimos actividad en los últimos 3 minutos.\n\n"
+            mensaje += "Si aún necesitas crear esta operación, por favor:\n"
+            mensaje += "• Escribe /start\n"
+            mensaje += "• Selecciona 'Crear nueva operación NetCash'\n"
+            mensaje += "• Envía tus comprobantes de forma continua"
+            
+            await self.app.bot.send_message(
+                chat_id=chat_id,
+                text=mensaje,
+                parse_mode="Markdown"
+            )
+            
+            logger.info(f"Notificación de cancelación enviada para operación {operacion_id}")
+        except Exception as e:
+            logger.error(f"Error enviando notificación de cancelación: {str(e)}")
     
     def run(self):
         """Inicia el bot de Telegram"""
