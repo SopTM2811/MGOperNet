@@ -249,7 +249,12 @@ const ComprobantesUpload = ({ operacionId, comprobantes = [], onComprobantesActu
                       <FileText className="h-4 w-4 text-blue-600" />
                       <span className="font-medium text-sm">{comp.archivo_original}</span>
                     </div>
-                    {comp.es_valido ? (
+                    {comp.es_duplicado ? (
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Duplicado
+                      </Badge>
+                    ) : comp.es_valido ? (
                       <Badge variant="success" className="bg-emerald-100 text-emerald-700">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Válido
