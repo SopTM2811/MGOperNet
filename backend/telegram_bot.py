@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
+import aiohttp
+from pathlib import Path
 
 from models import OperacionNetCash, EstadoOperacion, Propietario
 from config import MENSAJE_BIENVENIDA_CUENTA, MENSAJE_MANTENIMIENTO, MODO_MANTENIMIENTO, CONTACTOS
@@ -53,6 +55,9 @@ mongo_url = os.environ['MONGO_URL']
 mongo_client = AsyncIOMotorClient(mongo_url)
 db = mongo_client[os.environ.get('DB_NAME', 'netcash_mbco')]
 
+# Backend API URL
+BACKEND_API = os.getenv("BACKEND_API_URL", "http://localhost:8001/api")
+
 
 class TelegramBotNetCash:
     def __init__(self):
@@ -79,11 +84,12 @@ class TelegramBotNetCash:
             return
         
         try:
-            mensaje = f"🆕 **Nuevo cliente creado desde Telegram**\n\n"
+            mensaje = f"🆕 **Nuevo cliente creado desde Telegram (pendiente de validación)**\n\n"
             mensaje += f"**Nombre:** {cliente.get('nombre')}\n"
             mensaje += f"**Teléfono:** {cliente.get('telefono_completo')}\n"
             mensaje += f"**Email:** {cliente.get('email') or 'No proporcionado'}\n"
             mensaje += f"**Cliente ID:** `{cliente.get('id')}`\n"
+            mensaje += f"**Estado:** Pendiente de validación\n"
             mensaje += f"**Fecha:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
             
             await self.app.bot.send_message(
@@ -278,61 +284,68 @@ class TelegramBotNetCash:
         
         # Verificar si ya está registrado
         usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
-        cliente_existente = None
-        if usuario and usuario.get("id_cliente"):
-            cliente_existente = await db.clientes.find_one({"id": usuario["id_cliente"]}, {"_id": 0})
+        if not usuario:
+            await query.edit_message_text("Error: No se encontró tu usuario. Usa /start para comenzar.")
+            return ConversationHandler.END
+        
+        telefono_normalizado = self.normalizar_telefono(usuario.get("telefono", ""))
+        
+        # CASO B: Buscar si ya existe un cliente con ese teléfono (creado por Ana en el dashboard)
+        cliente_existente = await db.clientes.find_one(
+            {"$or": [
+                {"telefono_completo": telefono_normalizado},
+                {"telefono": telefono_normalizado.replace("+52", "")}
+            ]},
+            {"_id": 0}
+        )
         
         if cliente_existente:
+            # Cliente ya existe, solo vincular el telegram_id y chat_id
+            await db.clientes.update_one(
+                {"id": cliente_existente["id"]},
+                {"$set": {"telegram_id": str(user.id)}}
+            )
+            
+            await db.usuarios_telegram.update_one(
+                {"chat_id": chat_id},
+                {"$set": {
+                    "rol": "cliente",
+                    "id_cliente": cliente_existente["id"],
+                    "rol_info": {"nombre": cliente_existente["nombre"], "descripcion": "Cliente NetCash"}
+                }}
+            )
+            
+            logger.info(f"Cliente existente vinculado a Telegram: {cliente_existente['id']} - {cliente_existente['nombre']}")
+            
+            mensaje = f"✅ **Te encontré como cliente ya registrado: {cliente_existente['nombre']}.**\n\n"
+            mensaje += "Te acabo de vincular a tu cuenta NetCash MBco.\n"
+            mensaje += "Ya puedes crear operaciones y mandarme tus comprobantes."
+            
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
+            return ConversationHandler.END
+        
+        # CASO A: Cliente nuevo - verificar si ya lo registramos antes
+        cliente_telegram = None
+        if usuario.get("id_cliente"):
+            cliente_telegram = await db.clientes.find_one({"id": usuario["id_cliente"]}, {"_id": 0})
+        
+        if cliente_telegram:
             await query.edit_message_text("Ya estás registrado como cliente. Puedes crear operaciones.")
             return ConversationHandler.END
         
         # Tomar nombre del perfil de Telegram
         nombre_telegram = f"{user.first_name} {user.last_name or ''}".strip()
         context.user_data['nombre_cliente'] = nombre_telegram
-        context.user_data['telefono_cliente'] = usuario.get("telefono") if usuario else None
-        
-        # Pedir teléfono si no lo tenemos
-        if not context.user_data['telefono_cliente']:
-            mensaje = f"Para registrarte como cliente NetCash, necesito algunos datos.\n\n"
-            mensaje += f"**Nombre:** {nombre_telegram}\n\n"
-            mensaje += "📱 Por favor mándame tu número de celular con LADA\n"
-            mensaje += "Ejemplo: +52 33 1234 5678"
-            
-            await query.edit_message_text(mensaje, parse_mode="Markdown")
-            return ESPERANDO_TELEFONO
-        else:
-            # Ya tenemos teléfono, pedir email
-            mensaje = f"Perfecto, estos son tus datos:\n\n"
-            mensaje += f"**Nombre:** {nombre_telegram}\n"
-            mensaje += f"**Teléfono:** {context.user_data['telefono_cliente']}\n\n"
-            mensaje += "📧 Si quieres, mándame tu correo electrónico para enviarte notificaciones.\n"
-            mensaje += "O escribe **'no'** para saltar este paso."
-            
-            await query.edit_message_text(mensaje, parse_mode="Markdown")
-            return ESPERANDO_EMAIL
-    
-    async def recibir_telefono(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Recibe el teléfono del usuario"""
-        telefono = update.message.text.strip()
-        
-        # Validar formato básico
-        telefono_normalizado = self.normalizar_telefono(telefono)
-        if len(telefono_normalizado) < 10:
-            await update.message.reply_text(
-                "❌ El teléfono no parece válido. Por favor envía un número con LADA.\n"
-                "Ejemplo: +52 33 1234 5678"
-            )
-            return ESPERANDO_TELEFONO
-        
         context.user_data['telefono_cliente'] = telefono_normalizado
         
-        mensaje = f"Perfecto, estos son tus datos:\n\n"
-        mensaje += f"**Nombre:** {context.user_data['nombre_cliente']}\n"
+        # Ya tenemos teléfono, pedir email
+        mensaje = f"Para registrarte como cliente NetCash, necesito algunos datos.\n\n"
+        mensaje += f"**Nombre:** {nombre_telegram}\n"
         mensaje += f"**Teléfono:** {telefono_normalizado}\n\n"
         mensaje += "📧 Si quieres, mándame tu correo electrónico para enviarte notificaciones.\n"
         mensaje += "O escribe **'no'** para saltar este paso."
         
-        await update.message.reply_text(mensaje, parse_mode="Markdown")
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
         return ESPERANDO_EMAIL
     
     async def recibir_email(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -345,7 +358,7 @@ class TelegramBotNetCash:
         
         context.user_data['email_cliente'] = email
         
-        # Crear cliente
+        # Crear cliente NUEVO (CASO A)
         try:
             chat_id = str(update.effective_chat.id)
             
@@ -358,11 +371,12 @@ class TelegramBotNetCash:
                 "telefono": context.user_data['telefono_cliente'].replace("+52", ""),
                 "telefono_completo": context.user_data['telefono_cliente'],
                 "telegram_id": str(update.effective_user.id),
-                "porcentaje_comision_cliente": 2.5,  # Default
+                "porcentaje_comision_cliente": 0,  # Ana lo ajustará
                 "canal_preferido": "Telegram",
-                "propietario": "M",  # Ana por defecto
+                "propietario": "M",  # Ana
                 "rfc": None,
-                "notas": f"Cliente creado desde Telegram (alta automática) - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}",
+                "notas": "Cliente creado desde Telegram (alta automática)",
+                "estado": "pendiente_validacion",  # Pendiente de validación por Ana
                 "fecha_alta": datetime.now(timezone.utc).isoformat(),
                 "activo": True
             }
@@ -380,17 +394,15 @@ class TelegramBotNetCash:
                 upsert=True
             )
             
-            logger.info(f"Cliente registrado: {nuevo_cliente['id']} - {nuevo_cliente['nombre']}")
+            logger.info(f"Cliente NUEVO registrado: {nuevo_cliente['id']} - {nuevo_cliente['nombre']}")
             
             # Notificar a Ana
             await self.notificar_ana_nuevo_cliente(nuevo_cliente)
             
-            mensaje = "✅ ¡Listo! Ya te di de alta como cliente NetCash MBco.\n\n"
-            mensaje += f"**Nombre:** {nuevo_cliente['nombre']}\n"
-            mensaje += f"**Teléfono:** {nuevo_cliente['telefono_completo']}\n"
-            if email:
-                mensaje += f"**Email:** {email}\n"
-            mensaje += "\nAhora ya puedes crear operaciones y mandarme tus comprobantes para procesarlos.\n\n"
+            mensaje = "✅ **¡Te di de alta como cliente NetCash MBco.**\n\n"
+            mensaje += "Tu registro está pendiente de validación interna.\n"
+            mensaje += "Ana revisará tus datos y definirá las condiciones de tu servicio.\n\n"
+            mensaje += "Mientras tanto, ya puedes ir creando operaciones y mandando comprobantes.\n\n"
             mensaje += "Usa /start para ver el menú."
             
             await update.message.reply_text(mensaje, parse_mode="Markdown")
@@ -444,34 +456,33 @@ class TelegramBotNetCash:
             await query.edit_message_text(mensaje)
             return
         
-        # Crear nueva operación
-        operacion = OperacionNetCash(
-            id_cliente=cliente["id"],
-            cliente_nombre=cliente.get("nombre"),
-            cliente_email=cliente.get("email"),
-            cliente_telefono_completo=cliente.get("telefono_completo"),
-            cliente_telegram_id=telegram_id,
-            porcentaje_comision_usado=cliente.get("porcentaje_comision_cliente"),
-            propietario=cliente.get("propietario"),
-            estado=EstadoOperacion.ESPERANDO_COMPROBANTES
-        )
-        
-        doc = operacion.model_dump()
-        doc['fecha_creacion'] = doc['fecha_creacion'].isoformat()
-        await db.operaciones.insert_one(doc)
-        
-        context.user_data['operacion_actual'] = operacion.id
-        
-        mensaje = f"✅ **Creé tu operación NetCash**\n\n"
-        mensaje += f"**ID:** `{operacion.id}`\n\n"
-        mensaje += "Ahora mándame el comprobante del depósito (PDF o imagen) para procesarlo.\n\n"
-        mensaje += f"**Recuerda:** El depósito debe ser a la cuenta:\n"
-        mensaje += f"JARDINERIA Y COMERCIO THABYETHA SA DE CV\n"
-        mensaje += f"CLABE: 646180139409481462"
-        
-        await query.edit_message_text(mensaje, parse_mode="Markdown")
-        
-        logger.info(f"Operación creada: {operacion.id} para cliente {cliente['id']}")
+        # Crear nueva operación llamando al backend API
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {"id_cliente": cliente["id"]}
+                async with session.post(f"{BACKEND_API}/operaciones", json=payload) as response:
+                    if response.status == 200:
+                        operacion_data = await response.json()
+                        folio = operacion_data.get("folio_mbco", "N/A")
+                        operacion_id = operacion_data.get("id")
+                        
+                        context.user_data['operacion_actual'] = operacion_id
+                        context.user_data['folio_actual'] = folio
+                        
+                        mensaje = f"✅ **Creé tu operación NetCash**\n\n"
+                        mensaje += f"**Folio MBco:** {folio}\n\n"
+                        mensaje += "Ahora mándame el comprobante del depósito (PDF o imagen) para procesarlo.\n\n"
+                        mensaje += f"**Recuerda:** El depósito debe ser a la cuenta:\n"
+                        mensaje += f"JARDINERIA Y COMERCIO THABYETHA SA DE CV\n"
+                        mensaje += f"CLABE: 646180139409481462"
+                        
+                        await query.edit_message_text(mensaje, parse_mode="Markdown")
+                        logger.info(f"Operación creada: {operacion_id} (Folio: {folio}) para cliente {cliente['id']}")
+                    else:
+                        await query.edit_message_text("Error al crear la operación. Por favor intenta de nuevo.")
+        except Exception as e:
+            logger.error(f"Error creando operación: {str(e)}")
+            await query.edit_message_text("Error al crear la operación. Por favor intenta de nuevo más tarde.")
     
     async def ver_operaciones(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Muestra las operaciones del usuario"""
@@ -498,12 +509,13 @@ class TelegramBotNetCash:
         mensaje = "**Tus operaciones NetCash:**\n\n"
         
         for op in operaciones:
+            folio = op.get("folio_mbco", "N/A")
             estado = op.get("estado", "DESCONOCIDO")
             fecha = op.get("fecha_creacion", "")
             if isinstance(fecha, str):
                 fecha = datetime.fromisoformat(fecha).strftime("%d/%m/%Y %H:%M")
             
-            mensaje += f"• `{op['id'][:8]}...` - {estado}\n"
+            mensaje += f"• Folio: **{folio}** - {estado}\n"
             mensaje += f"  Fecha: {fecha}\n\n"
         
         await query.edit_message_text(mensaje, parse_mode="Markdown")
@@ -547,6 +559,7 @@ class TelegramBotNetCash:
     async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Maneja documentos enviados (comprobantes)"""
         operacion_id = context.user_data.get('operacion_actual')
+        folio = context.user_data.get('folio_actual', 'N/A')
         
         if not operacion_id:
             await update.message.reply_text(
@@ -556,12 +569,117 @@ class TelegramBotNetCash:
         
         await update.message.reply_text("🔍 Procesando comprobante...")
         
-        # Aquí iría la lógica para descargar y procesar el archivo
-        await update.message.reply_text(
-            "**⚠️ Nota:** La funcionalidad de procesamiento de comprobantes desde Telegram se activará en la siguiente fase.\n\n"
-            "Por ahora, usa la interfaz web para subir comprobantes.",
-            parse_mode="Markdown"
-        )
+        try:
+            # Descargar archivo
+            file = await update.message.document.get_file()
+            file_path = Path("/tmp") / f"comprobante_{operacion_id}_{file.file_id}.pdf"
+            await file.download_to_drive(file_path)
+            
+            # Subir al backend para procesamiento con OCR
+            async with aiohttp.ClientSession() as session:
+                with open(file_path, 'rb') as f:
+                    form = aiohttp.FormData()
+                    form.add_field('file', f, filename=update.message.document.file_name, content_type=update.message.document.mime_type)
+                    
+                    async with session.post(f"{BACKEND_API}/operaciones/{operacion_id}/comprobante", data=form) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            comprobante = result.get("comprobante", {})
+                            
+                            if comprobante.get("es_duplicado"):
+                                mensaje = "⚠️ **Este comprobante parece estar duplicado de una operación anterior.**\n\n"
+                                mensaje += "Por favor confirma con Ana antes de continuar."
+                            elif comprobante.get("es_valido"):
+                                monto = comprobante.get("monto", 0)
+                                referencia = comprobante.get("referencia", "N/A")
+                                clave_rastreo = comprobante.get("clave_rastreo", "N/A")
+                                
+                                mensaje = f"✅ **Comprobante recibido y procesado.**\n\n"
+                                mensaje += f"**Folio MBco:** {folio}\n"
+                                mensaje += f"**Monto detectado:** ${monto:,.2f}\n"
+                                mensaje += f"**Referencia:** {referencia}\n"
+                                mensaje += f"**Clave rastreo:** {clave_rastreo}\n\n"
+                                mensaje += "Si hay algún error en los datos, por favor avísale a Ana."
+                            else:
+                                mensaje = "⚠️ **No pude leer bien el comprobante.**\n\n"
+                                mensaje += "Intenta enviarlo de nuevo con mejor calidad o súbelo por el panel web."
+                            
+                            await update.message.reply_text(mensaje, parse_mode="Markdown")
+                            
+                            # Limpiar archivo temporal
+                            file_path.unlink(missing_ok=True)
+                        else:
+                            await update.message.reply_text(
+                                "Error al procesar el comprobante. Por favor intenta de nuevo más tarde."
+                            )
+        except Exception as e:
+            logger.error(f"Error procesando comprobante: {str(e)}")
+            await update.message.reply_text(
+                "Error al procesar el comprobante. Por favor intenta de nuevo o súbelo por el panel web."
+            )
+    
+    async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Maneja fotos enviadas (comprobantes en imagen)"""
+        operacion_id = context.user_data.get('operacion_actual')
+        folio = context.user_data.get('folio_actual', 'N/A')
+        
+        if not operacion_id:
+            await update.message.reply_text(
+                "Primero crea una operación con /start y selecciona 'Crear nueva operación NetCash'."
+            )
+            return
+        
+        await update.message.reply_text("🔍 Procesando comprobante...")
+        
+        try:
+            # Descargar foto (la de mayor resolución)
+            photo = update.message.photo[-1]
+            file = await photo.get_file()
+            file_path = Path("/tmp") / f"comprobante_{operacion_id}_{file.file_id}.jpg"
+            await file.download_to_drive(file_path)
+            
+            # Subir al backend para procesamiento con OCR
+            async with aiohttp.ClientSession() as session:
+                with open(file_path, 'rb') as f:
+                    form = aiohttp.FormData()
+                    form.add_field('file', f, filename=f"comprobante_{operacion_id}.jpg", content_type='image/jpeg')
+                    
+                    async with session.post(f"{BACKEND_API}/operaciones/{operacion_id}/comprobante", data=form) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            comprobante = result.get("comprobante", {})
+                            
+                            if comprobante.get("es_duplicado"):
+                                mensaje = "⚠️ **Este comprobante parece estar duplicado de una operación anterior.**\n\n"
+                                mensaje += "Por favor confirma con Ana antes de continuar."
+                            elif comprobante.get("es_valido"):
+                                monto = comprobante.get("monto", 0)
+                                referencia = comprobante.get("referencia", "N/A")
+                                clave_rastreo = comprobante.get("clave_rastreo", "N/A")
+                                
+                                mensaje = f"✅ **Comprobante recibido y procesado.**\n\n"
+                                mensaje += f"**Folio MBco:** {folio}\n"
+                                mensaje += f"**Monto detectado:** ${monto:,.2f}\n"
+                                mensaje += f"**Referencia:** {referencia}\n"
+                                mensaje += f"**Clave rastreo:** {clave_rastreo}\n\n"
+                                mensaje += "Si hay algún error en los datos, por favor avísale a Ana."
+                            else:
+                                mensaje = "⚠️ **No pude leer bien el comprobante.**\n\n"
+                                mensaje += "Intenta enviarlo de nuevo con mejor calidad o súbelo por el panel web."
+                            
+                            await update.message.reply_text(mensaje, parse_mode="Markdown")
+                            
+                            # Limpiar archivo temporal
+                            file_path.unlink(missing_ok=True)
+                        else:
+                            await update.message.reply_text(
+                                "Error al procesar el comprobante. Por favor intenta de nuevo más tarde."
+                            )
+        except Exception as e:
+            logger.error(f"Error procesando comprobante: {str(e)}")
+            await update.message.reply_text(
+                "Error al procesar el comprobante. Por favor intenta de nuevo o súbelo por el panel web."
+            )
     
     async def handle_mensaje_no_reconocido(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Maneja mensajes de texto no reconocidos"""
@@ -587,7 +705,6 @@ class TelegramBotNetCash:
         conv_handler = ConversationHandler(
             entry_points=[CallbackQueryHandler(self.iniciar_registro_cliente, pattern='^registrar_cliente$')],
             states={
-                ESPERANDO_TELEFONO: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.recibir_telefono)],
                 ESPERANDO_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.recibir_email)],
             },
             fallbacks=[CommandHandler('start', self.start)],
@@ -600,6 +717,7 @@ class TelegramBotNetCash:
         self.app.add_handler(CallbackQueryHandler(self.handle_callback))
         self.app.add_handler(MessageHandler(filters.CONTACT, self.handle_contact))
         self.app.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
+        self.app.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_mensaje_no_reconocido))
         
         logger.info("Bot iniciado correctamente. Esperando mensajes...")
