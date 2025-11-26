@@ -65,14 +65,8 @@ IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar ún
                 file_contents=[file_content]
             )
             
-            # Enviar y obtener respuesta
-            response = await chat.send_user_message_streaming_async(user_message)
-            
-            # Recopilar respuesta
-            respuesta_texto = ""
-            async for chunk in response:
-                if hasattr(chunk, 'content') and chunk.content:
-                    respuesta_texto += chunk.content
+            # Enviar y obtener respuesta (método síncrono)
+            respuesta_texto, _ = chat.send_message_multimodal_response(user_message)
             
             # Parsear respuesta JSON
             import json
