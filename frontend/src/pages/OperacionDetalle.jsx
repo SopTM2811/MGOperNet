@@ -133,9 +133,24 @@ const OperacionDetalle = () => {
   }
 
   const comprobantesValidos = operacion.comprobantes.filter(c => c.es_valido);
-  const puedeAgregarTitular = comprobantesValidos.length > 0 && !operacion.titular_nombre_completo;
-  const puedeCalcular = operacion.titular_nombre_completo && !operacion.calculos;
-  const puedeConfirmar = operacion.calculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
+  
+  // MODO ESPEJO: Deshabilitar edición para operaciones de Telegram en estados cerrados
+  const esOrigenTelegram = operacion.origen_operacion === 'telegram';
+  const estadosCerrados = [
+    'COMPROBANTES_CERRADOS',
+    'DATOS_COMPLETOS',
+    'ESPERANDO_CODIGO_SISTEMA',
+    'PENDIENTE_ENVIO_LAYOUT',
+    'LAYOUT_ENVIADO',
+    'PENDIENTE_PAGO_PROVEEDOR',
+    'ESPERANDO_TESORERIA',
+    'COMPLETADO'
+  ];
+  const esSoloLectura = esOrigenTelegram && estadosCerrados.includes(operacion.estado);
+  
+  const puedeAgregarTitular = !esSoloLectura && comprobantesValidos.length > 0 && !operacion.titular_nombre_completo;
+  const puedeCalcular = !esSoloLectura && operacion.titular_nombre_completo && !operacion.calculos;
+  const puedeConfirmar = !esSoloLectura && operacion.calculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8">
