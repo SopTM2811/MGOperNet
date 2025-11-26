@@ -7,19 +7,19 @@ const Home = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="container mx-auto px-6 py-20">
-        <div className="flex flex-col items-center text-center animate-fade-in">
-          <div className="mb-8">
-            <div className="inline-block bg-blue-100 rounded-full px-6 py-2 mb-6">
-              <span className="text-blue-700 font-semibold text-sm tracking-wide">ASISTENTE NETCASH MBCO</span>
+      <div className="container mx-auto px-8 py-24 lg:py-32">
+        <div className="flex flex-col items-center text-center animate-fade-in max-w-5xl mx-auto">
+          <div className="mb-12">
+            <div className="inline-block bg-blue-50 rounded-full px-5 py-2 mb-8 border border-blue-100">
+              <span className="text-blue-700 font-medium text-sm tracking-tight">ASISTENTE NETCASH MBCO</span>
             </div>
           </div>
           
           <h1 
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
-            style={{ fontFamily: 'Cormorant Garamond, serif' }}
+            className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-8 leading-[1.1] tracking-tight"
+            style={{ fontFamily: 'Space Grotesk, sans-serif' }}
             data-testid="home-title"
           >
             Gestión Inteligente de
