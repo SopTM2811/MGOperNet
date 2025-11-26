@@ -181,9 +181,9 @@ const Clientes = () => {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      {/* Header con nombre y badges - ORDEN FIJO */}
+                      <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-lg font-semibold">{cliente.nombre}</h3>
-                        {getPropietarioBadge(cliente.propietario)}
                         {cliente.estado === 'pendiente_validacion' && (
                           <Badge className="bg-yellow-100 text-yellow-800">Pendiente Validación</Badge>
                         )}
@@ -193,21 +193,45 @@ const Clientes = () => {
                         {!cliente.activo && (
                           <Badge variant="secondary">Inactivo</Badge>
                         )}
+                        {getPropietarioBadge(cliente.propietario)}
                       </div>
                       
+                      {/* Alerta de comisión pendiente */}
+                      {(cliente.porcentaje_comision_cliente === null || cliente.porcentaje_comision_cliente === 0) && (
+                        <div className="mb-3 p-2 bg-amber-50 border-l-4 border-amber-400 text-sm text-amber-800">
+                          ⚠️ Pendiente: Definir comisión por Ana
+                        </div>
+                      )}
+                      
+                      {/* Datos del cliente - ORDEN FIJO */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
-                        {cliente.telefono_completo && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">📱</span>
-                            <span>{cliente.telefono_completo}</span>
-                          </div>
-                        )}
-                        {cliente.email && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">📧</span>
-                            <span>{cliente.email}</span>
-                          </div>
-                        )}
+                        {/* Fila 1: Teléfono y Email */}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">📱</span>
+                          <span>{cliente.telefono_completo || 'Sin teléfono'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">📧</span>
+                          <span>{cliente.email || 'Sin correo'}</span>
+                        </div>
+                        
+                        {/* Fila 2: Fecha de alta y Comisión */}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">📅</span>
+                          <span>Alta: {formatFecha(cliente.fecha_alta)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">💰</span>
+                          <span>
+                            Comisión: {
+                              cliente.porcentaje_comision_cliente === null 
+                                ? '❌ Pendiente' 
+                                : `${cliente.porcentaje_comision_cliente}%`
+                            }
+                          </span>
+                        </div>
+                        
+                        {/* Fila 3: RFC y Telegram */}
                         {cliente.rfc && (
                           <div className="flex items-center gap-2">
                             <span className="font-medium">🆔</span>
@@ -215,19 +239,11 @@ const Clientes = () => {
                           </div>
                         )}
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">📅</span>
-                          <span>Alta: {formatFecha(cliente.fecha_alta)}</span>
+                          <span className="font-medium">✈️</span>
+                          <span>
+                            {cliente.telegram_id ? '✅ Telegram conectado' : '⚪ Sin Telegram'}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">💰</span>
-                          <span>Comisión: {cliente.porcentaje_comision_cliente}%</span>
-                        </div>
-                        {cliente.telegram_id && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">✈️</span>
-                            <span>Telegram conectado</span>
-                          </div>
-                        )}
                       </div>
 
                       {cliente.notas && (
