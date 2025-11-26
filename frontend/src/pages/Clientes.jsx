@@ -187,6 +187,9 @@ const Clientes = () => {
                         {cliente.estado === 'pendiente_validacion' && (
                           <Badge className="bg-yellow-100 text-yellow-800">Pendiente Validación</Badge>
                         )}
+                        {cliente.estado === 'activo' && (
+                          <Badge className="bg-green-100 text-green-800">Activo</Badge>
+                        )}
                         {!cliente.activo && (
                           <Badge variant="secondary">Inactivo</Badge>
                         )}
