@@ -25,6 +25,7 @@ const NuevoClienteModal = ({ onClose, onSuccess }) => {
     notas: '',
     propietario: 'M',
     porcentaje_comision_cliente: 0.65,
+    estado: 'activo',
   });
 
   const handleChange = (field, value) => {
