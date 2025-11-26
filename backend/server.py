@@ -99,9 +99,28 @@ async def obtener_operacion(operacion_id: str):
 @api_router.post("/operaciones", response_model=OperacionNetCash)
 async def crear_operacion(operacion_input: OperacionNetCashCreate):
     """
-    Crea una nueva operación NetCash.
+    Crea una nueva operación NetCash vinculada a un cliente.
     """
+    # Buscar el cliente
+    cliente = await db.clientes.find_one({"id": operacion_input.id_cliente}, {"_id": 0})
+    
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # Crear operación con datos del cliente
     operacion_dict = operacion_input.model_dump()
+    
+    # Copiar datos del cliente a la operación
+    operacion_dict["cliente_nombre"] = cliente.get("nombre")
+    operacion_dict["cliente_email"] = cliente.get("email")
+    operacion_dict["cliente_telefono_completo"] = cliente.get("telefono_completo")
+    operacion_dict["cliente_telegram_id"] = cliente.get("telegram_id")
+    operacion_dict["propietario"] = cliente.get("propietario")
+    
+    # Si no se especificó comisión, usar la del cliente
+    if operacion_dict.get("porcentaje_comision_usado") is None:
+        operacion_dict["porcentaje_comision_usado"] = cliente.get("porcentaje_comision_cliente", 0.65)
+    
     operacion = OperacionNetCash(**operacion_dict)
     
     # Convertir a dict y serializar datetime
@@ -110,7 +129,7 @@ async def crear_operacion(operacion_input: OperacionNetCashCreate):
     
     await db.operaciones.insert_one(doc)
     
-    logger.info(f"Operación creada: {operacion.id}")
+    logger.info(f"Operación creada: {operacion.id} para cliente {cliente.get('nombre')}")
     return operacion
 
 
