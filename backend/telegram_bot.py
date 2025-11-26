@@ -1,0 +1,255 @@
+import os
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    filters
+)
+from dotenv import load_dotenv
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime, timezone
+
+from models import OperacionNetCash, EstadoOperacion, Propietario
+from config import MENSAJE_BIENVENIDA_CUENTA, MENSAJE_MANTENIMIENTO, MODO_MANTENIMIENTO, CONTACTOS
+
+load_dotenv()
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# MongoDB connection
+mongo_url = os.environ['MONGO_URL']
+mongo_client = AsyncIOMotorClient(mongo_url)
+db = mongo_client[os.environ.get('DB_NAME', 'netcash_mbco')]
+
+
+class TelegramBotNetCash:
+    def __init__(self):
+        self.token = os.getenv("TELEGRAM_BOT_TOKEN")
+        if not self.token:
+            logger.warning("TELEGRAM_BOT_TOKEN no configurado")
+        
+        self.app = None
+    
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Comando /start - Saludo inicial.
+        """
+        user = update.effective_user
+        telegram_id = str(user.id)
+        
+        # Verificar modo mantenimiento
+        if MODO_MANTENIMIENTO == "ON":
+            # Verificar si es Daniel (puede cambiar el modo)
+            if not telegram_id.endswith("0098"):
+                await update.message.reply_text(MENSAJE_MANTENIMIENTO)
+                return
+        
+        mensaje = f"Hola {user.first_name} 😊\n\n{MENSAJE_BIENVENIDA_CUENTA}"
+        
+        # Crear teclado de opciones
+        keyboard = [
+            [InlineKeyboardButton("📎 Nueva operación NetCash", callback_data="nueva_operacion")],
+            [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
+            [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(mensaje, reply_markup=reply_markup)
+    
+    async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Comando /ayuda - Información de ayuda.
+        """
+        mensaje = """**Asistente NetCash MBco** 💼
+
+Puedo ayudarte a:
+
+1️⃣ **Procesar tus depósitos NetCash**
+   - Envíame tu comprobante (PDF, imagen o ZIP)
+   - Validaré que sea a la cuenta correcta
+   - Calcularé tu capital y comisiones
+   - Gestionaré las ligas con el proveedor
+
+2️⃣ **Ver el estado de tus operaciones**
+   - Consulta en qué paso va tu solicitud
+   - Recibe actualizaciones automáticas
+
+📌 **Cuenta para depósitos:**
+Razón social: JARDINERIA Y COMERCIO THABYETHA SA DE CV
+Banco: STP
+CLABE: 646180139409481462
+
+📞 **¿Necesitas ayuda personalizada?**
+Contacta a Ana:
+📧 gestion.ngdl@gmail.com
+📱 +52 33 1218 6685
+"""
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown")
+    
+    async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Maneja los callbacks de botones.
+        """
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "nueva_operacion":
+            await self.nueva_operacion(update, context)
+        elif query.data == "ver_operaciones":
+            await self.ver_operaciones(update, context)
+        elif query.data == "ayuda":
+            mensaje = """**Ayuda - Asistente NetCash**
+
+Para iniciar una nueva operación:
+1️⃣ Envía tu comprobante de depósito
+2️⃣ Te pediré los datos del titular
+3️⃣ Calcularé los montos
+4️⃣ Gestionaré las ligas
+
+Contacto: gestion.ngdl@gmail.com"""
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
+    
+    async def nueva_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Inicia una nueva operación NetCash.
+        """
+        query = update.callback_query
+        user = update.effective_user
+        telegram_id = str(user.id)
+        
+        # Buscar o crear cliente
+        cliente = await db.clientes.find_one({"telegram_id": telegram_id}, {"_id": 0})
+        
+        if not cliente:
+            # Cliente nuevo - necesita alta
+            mensaje = """Es tu primera operación con NetCash 🎉
+
+Para continuar, necesito que te des de alta. Por favor contacta a Ana:
+
+📧 gestion.ngdl@gmail.com
+📱 +52 33 1218 6685
+
+Menciona que quieres usar el Asistente NetCash."""
+            await query.edit_message_text(mensaje)
+            return
+        
+        # Crear nueva operación
+        operacion = OperacionNetCash(
+            cliente_telegram_id=telegram_id,
+            cliente_nombre=cliente.get("nombre"),
+            cliente_telefono=cliente.get("telefono"),
+            propietario=cliente.get("propietario"),
+            estado=EstadoOperacion.ESPERANDO_COMPROBANTES
+        )
+        
+        doc = operacion.model_dump()
+        doc['fecha_creacion'] = doc['fecha_creacion'].isoformat()
+        await db.operaciones.insert_one(doc)
+        
+        # Guardar ID de operación en contexto
+        context.user_data['operacion_actual'] = operacion.id
+        
+        mensaje = f"""Operación iniciada ✅
+
+**ID:** `{operacion.id}`
+
+Ahora envíame tu comprobante de depósito:
+• PDF del banco
+• Captura de pantalla
+• Archivo ZIP con varios comprobantes
+
+Validaré que el depósito sea a la cuenta correcta de MBco."""
+        
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
+    
+    async def ver_operaciones(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Muestra las operaciones del usuario.
+        """
+        query = update.callback_query
+        user = update.effective_user
+        telegram_id = str(user.id)
+        
+        # Buscar operaciones del usuario
+        operaciones = await db.operaciones.find(
+            {"cliente_telegram_id": telegram_id},
+            {"_id": 0}
+        ).sort("fecha_creacion", -1).limit(10).to_list(10)
+        
+        if not operaciones:
+            await query.edit_message_text("Aún no tienes operaciones NetCash.")
+            return
+        
+        mensaje = "**Tus operaciones NetCash:**\n\n"
+        
+        for op in operaciones:
+            estado = op.get("estado", "DESCONOCIDO")
+            fecha = op.get("fecha_creacion", "")
+            if isinstance(fecha, str):
+                fecha = datetime.fromisoformat(fecha).strftime("%d/%m/%Y %H:%M")
+            
+            mensaje += f"• `{op['id'][:8]}...` - {estado}\n"
+            mensaje += f"  Fecha: {fecha}\n\n"
+        
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
+    
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Maneja documentos enviados (comprobantes).
+        """
+        # Verificar si hay operación actual
+        operacion_id = context.user_data.get('operacion_actual')
+        
+        if not operacion_id:
+            await update.message.reply_text(
+                "Primero inicia una operación con /start y selecciona 'Nueva operación NetCash'."
+            )
+            return
+        
+        await update.message.reply_text("🔍 Procesando comprobante...")
+        
+        # Por ahora, simular procesamiento
+        # En producción, aquí se descargaría el archivo y se llamaría al API
+        
+        await update.message.reply_text(
+            "**⚠️ Nota:** La funcionalidad de procesamiento de comprobantes desde Telegram se activará en la siguiente fase.\n\n"
+            "Por ahora, usa la interfaz web para subir comprobantes.",
+            parse_mode="Markdown"
+        )
+    
+    def run(self):
+        """
+        Inicia el bot de Telegram.
+        """
+        if not self.token:
+            logger.error("No se puede iniciar el bot sin TELEGRAM_BOT_TOKEN")
+            return
+        
+        # Crear aplicación
+        self.app = Application.builder().token(self.token).build()
+        
+        # Agregar handlers
+        self.app.add_handler(CommandHandler("start", self.start))
+        self.app.add_handler(CommandHandler("ayuda", self.ayuda))
+        self.app.add_handler(CallbackQueryHandler(self.handle_callback))
+        self.app.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
+        self.app.add_handler(MessageHandler(filters.PHOTO, self.handle_document))
+        
+        # Iniciar bot
+        logger.info("Bot de Telegram iniciado")
+        self.app.run_polling()
+
+
+if __name__ == "__main__":
+    bot = TelegramBotNetCash()
+    bot.run()
