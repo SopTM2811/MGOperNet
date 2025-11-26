@@ -272,63 +272,15 @@ const OperacionDetalle = () => {
                   Comprobantes de Depósito
                 </CardTitle>
                 <CardDescription>
-                  Sube los comprobantes de depósito del cliente
+                  Sube y procesa comprobantes de depósito con validación automática
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Upload Area */}
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-                  <Upload className="h-12 w-12 mx-auto mb-4 text-slate-400" />
-                  <label className="cursor-pointer">
-                    <span className="text-blue-600 hover:text-blue-700 font-medium">
-                      {uploading ? 'Procesando...' : 'Subir comprobante'}
-                    </span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      accept=".pdf,image/*,.zip"
-                      disabled={uploading}
-                      data-testid="file-upload-input"
-                    />
-                  </label>
-                  <p className="text-sm text-slate-500 mt-2">
-                    PDF, imágenes o ZIP (máx. 10MB)
-                  </p>
-                </div>
-
-                {/* Comprobantes existentes */}
-                {operacion.comprobantes.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold">Comprobantes procesados:</h3>
-                    {operacion.comprobantes.map((comp, idx) => (
-                      <div key={idx} className="border rounded-lg p-4 bg-slate-50">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <FileText className="h-4 w-4" />
-                              <span className="font-medium">{comp.archivo_original}</span>
-                              {comp.es_valido ? (
-                                <Badge variant="success">Válido</Badge>
-                              ) : (
-                                <Badge variant="destructive">Inválido</Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-slate-600 space-y-1">
-                              <p><strong>Monto:</strong> ${comp.monto?.toLocaleString('es-MX') || '-'}</p>
-                              <p><strong>Fecha:</strong> {comp.fecha || '-'}</p>
-                              <p><strong>Cuenta:</strong> {comp.cuenta_beneficiaria || '-'}</p>
-                              <p><strong>Beneficiario:</strong> {comp.nombre_beneficiario || '-'}</p>
-                              {comp.mensaje_validacion && (
-                                <p className="text-xs mt-2 italic">{comp.mensaje_validacion}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <CardContent>
+                <ComprobantesUpload
+                  operacionId={operacion.id}
+                  comprobantes={operacion.comprobantes || []}
+                  onComprobantesActualizados={cargarOperacion}
+                />
               </CardContent>
             </Card>
           </TabsContent>
