@@ -82,9 +82,42 @@ async def revisar_operaciones_inactivas():
                 
                 logger.info(f"Operación {folio} cancelada por inactividad ({TIMEOUT_MINUTOS} min)")
                 
-                # Intentar notificar al cliente por Telegram si es posible
-                # (Esto requeriría acceso al bot, por ahora solo registramos)
-                # TODO: Enviar notificación de cancelación al cliente
+                # Notificar al cliente por Telegram
+                chat_id = op.get("cliente_telegram_id")
+                if chat_id:
+                    try:
+                        # Buscar el chat_id del usuario de telegram
+                        usuario_telegram = await db.usuarios_telegram.find_one(
+                            {"id_cliente": op.get("id_cliente")},
+                            {"_id": 0}
+                        )
+                        
+                        if usuario_telegram and usuario_telegram.get("chat_id"):
+                            # Enviar notificación usando la API de Telegram directamente
+                            import aiohttp
+                            telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+                            
+                            if telegram_token:
+                                mensaje = f"⏰ **Operación cancelada por inactividad**\n\n"
+                                mensaje += f"**Folio MBco:** {folio}\n\n"
+                                mensaje += "Tu operación fue cancelada automáticamente porque no recibimos actividad en los últimos 3 minutos.\n\n"
+                                mensaje += "Si aún necesitas crear esta operación, por favor:\n"
+                                mensaje += "• Escribe /start\n"
+                                mensaje += "• Selecciona 'Crear nueva operación NetCash'\n"
+                                mensaje += "• Envía tus comprobantes de forma continua"
+                                
+                                async with aiohttp.ClientSession() as session:
+                                    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+                                    payload = {
+                                        "chat_id": usuario_telegram["chat_id"],
+                                        "text": mensaje,
+                                        "parse_mode": "Markdown"
+                                    }
+                                    await session.post(url, json=payload)
+                                
+                                logger.info(f"Notificación de cancelación enviada al cliente {op.get('id_cliente')}")
+                    except Exception as notif_error:
+                        logger.error(f"Error enviando notificación de cancelación: {str(notif_error)}")
         
     except Exception as e:
         logger.error(f"Error revisando operaciones inactivas: {str(e)}")
