@@ -600,6 +600,7 @@ class TelegramBotNetCash:
                             if comprobante.get("es_duplicado"):
                                 mensaje = "⚠️ **Este comprobante parece estar duplicado de una operación anterior.**\n\n"
                                 mensaje += "Por favor confirma con Ana antes de continuar."
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
                             elif comprobante.get("es_valido"):
                                 monto = comprobante.get("monto", 0)
                                 referencia = comprobante.get("referencia", "N/A")
@@ -611,11 +612,18 @@ class TelegramBotNetCash:
                                 mensaje += f"**Referencia:** {referencia}\n"
                                 mensaje += f"**Clave rastreo:** {clave_rastreo}\n\n"
                                 mensaje += "Si hay algún error en los datos, por favor avísale a Ana."
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                
+                                # BLOQUE 2: Preguntar si quiere agregar más comprobantes
+                                await asyncio.sleep(0.5)
+                                pregunta = "📎 ¿Vas a agregar otro comprobante para esta misma operación?\n"
+                                pregunta += "Responde *sí* o *no*."
+                                await update.message.reply_text(pregunta, parse_mode="Markdown")
+                                context.user_data['esperando_mas_comprobantes'] = True
                             else:
                                 mensaje = "⚠️ **No pude leer bien el comprobante.**\n\n"
                                 mensaje += "Intenta enviarlo de nuevo con mejor calidad o súbelo por el panel web."
-                            
-                            await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
                             
                             # Limpiar archivo temporal
                             file_path.unlink(missing_ok=True)
@@ -663,6 +671,7 @@ class TelegramBotNetCash:
                             if comprobante.get("es_duplicado"):
                                 mensaje = "⚠️ **Este comprobante parece estar duplicado de una operación anterior.**\n\n"
                                 mensaje += "Por favor confirma con Ana antes de continuar."
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
                             elif comprobante.get("es_valido"):
                                 monto = comprobante.get("monto", 0)
                                 referencia = comprobante.get("referencia", "N/A")
@@ -674,11 +683,18 @@ class TelegramBotNetCash:
                                 mensaje += f"**Referencia:** {referencia}\n"
                                 mensaje += f"**Clave rastreo:** {clave_rastreo}\n\n"
                                 mensaje += "Si hay algún error en los datos, por favor avísale a Ana."
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                
+                                # BLOQUE 2: Preguntar si quiere agregar más comprobantes
+                                await asyncio.sleep(0.5)
+                                pregunta = "📎 ¿Vas a agregar otro comprobante para esta misma operación?\n"
+                                pregunta += "Responde *sí* o *no*."
+                                await update.message.reply_text(pregunta, parse_mode="Markdown")
+                                context.user_data['esperando_mas_comprobantes'] = True
                             else:
                                 mensaje = "⚠️ **No pude leer bien el comprobante.**\n\n"
                                 mensaje += "Intenta enviarlo de nuevo con mejor calidad o súbelo por el panel web."
-                            
-                            await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
                             
                             # Limpiar archivo temporal
                             file_path.unlink(missing_ok=True)
