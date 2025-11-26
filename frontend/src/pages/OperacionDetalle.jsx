@@ -191,6 +191,24 @@ const OperacionDetalle = () => {
           </div>
         </div>
 
+        {/* Mensaje informativo para modo espejo */}
+        {esSoloLectura && (
+          <div className="mb-6 bg-blue-50 border-l-4 border-blue-600 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <MessageCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-blue-900 mb-1">
+                  🔒 Operación creada desde Telegram (Solo lectura)
+                </p>
+                <p className="text-sm text-blue-800">
+                  Los datos de esta operación fueron capturados por el cliente en Telegram y ya están confirmados. 
+                  No se permite modificar la información desde el panel web para mantener la integridad de los datos.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
             <TabsTrigger value="general" data-testid="tab-general">General</TabsTrigger>
@@ -202,6 +220,23 @@ const OperacionDetalle = () => {
           {/* Tab General */}
           <TabsContent value="general">
             <div className="space-y-6">
+              {/* Origen de la operación */}
+              {esOrigenTelegram && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <MessageCircle className="h-6 w-6 text-blue-600" />
+                      <div>
+                        <p className="font-semibold text-blue-900">Origen: Telegram</p>
+                        <p className="text-sm text-blue-700">
+                          Esta operación fue creada y gestionada por el cliente a través del bot de Telegram
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               {/* Información del Cliente */}
               <Card>
                 <CardHeader>
