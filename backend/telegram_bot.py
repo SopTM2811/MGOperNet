@@ -834,13 +834,20 @@ class TelegramBotNetCash:
                 await update.message.reply_text("Error al guardar los datos. Por favor contacta a Ana.")
                 return
         
-        # Mensaje por defecto para mensajes no reconocidos
-        mensaje_respuesta = "Soy el Asistente NetCash 🤖\n\n"
+        # BLOQUE 1: Trigger "listo" para cerrar comprobantes
+        if texto in ['listo', 'terminé', 'termine', 'ya']:
+            if context.user_data.get('operacion_actual') and context.user_data.get('recibiendo_comprobantes'):
+                await self.cerrar_comprobantes_y_continuar(update, context)
+                return
+        
+        # Mensaje por defecto para mensajes no reconocidos (BLOQUE 1: saludo más humano)
+        mensaje_respuesta = f"Hola, {user_name} 😊\n"
+        mensaje_respuesta += "Soy el Asistente NetCash 🤖\n\n"
         mensaje_respuesta += "Puedo ayudarte a:\n"
         mensaje_respuesta += "• Registrarte como cliente NetCash\n"
         mensaje_respuesta += "• Crear una nueva operación\n"
         mensaje_respuesta += "• Dar seguimiento a tus operaciones\n\n"
-        mensaje_respuesta += "👉 Escribe /start para ver el menú."
+        mensaje_respuesta += "👉 Escribe /start o usa el menú para comenzar."
         
         await update.message.reply_text(mensaje_respuesta)
     
