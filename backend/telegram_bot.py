@@ -675,6 +675,20 @@ class TelegramBotNetCash:
         else:
             await update.message.reply_text(mensaje, parse_mode="Markdown")
     
+    async def ver_cuenta_pagos(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Muestra la cuenta para realizar pagos"""
+        query = update.callback_query
+        await query.answer()
+        
+        mensaje = "🏦 **Cuenta para depósitos NetCash**\n\n"
+        mensaje += "**Razón social:**\n"
+        mensaje += "JARDINERIA Y COMERCIO THABYETHA SA DE CV\n\n"
+        mensaje += "**Banco:** STP\n"
+        mensaje += "**CLABE:** 646180139409481462\n\n"
+        mensaje += "ℹ️ Realiza tu depósito a esta cuenta y después envíame los comprobantes."
+        
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
+    
     async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Maneja los callbacks de botones"""
         query = update.callback_query
@@ -684,6 +698,8 @@ class TelegramBotNetCash:
             await self.nueva_operacion(update, context)
         elif query.data == "ver_operaciones":
             await self.ver_operaciones(update, context)
+        elif query.data == "ver_cuenta_pagos":
+            await self.ver_cuenta_pagos(update, context)
         elif query.data == "ayuda":
             await self.ayuda(update, context)
     
