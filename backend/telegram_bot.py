@@ -403,6 +403,20 @@ Validaré que el depósito sea a la cuenta correcta de MBco."""
             parse_mode="Markdown"
         )
     
+    async def handle_mensaje_no_reconocido(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Maneja cualquier mensaje de texto que no coincida con comandos o flujos conocidos.
+        NUNCA deja un mensaje sin respuesta.
+        """
+        mensaje_respuesta = "Soy el Asistente NetCash 🤖\n\n"
+        mensaje_respuesta += "Puedo ayudarte a:\n"
+        mensaje_respuesta += "• Crear una nueva operación NetCash\n"
+        mensaje_respuesta += "• Dar seguimiento a tus operaciones\n"
+        mensaje_respuesta += "• Explicarte cómo mandar tus comprobantes\n\n"
+        mensaje_respuesta += "👉 Escribe /start o toca una de las opciones del menú para continuar."
+        
+        await update.message.reply_text(mensaje_respuesta)
+    
     def run(self):
         """
         Inicia el bot de Telegram.
