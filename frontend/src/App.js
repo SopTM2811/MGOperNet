@@ -6,6 +6,7 @@ import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/Clientes";
 import OperacionDetalle from "@/pages/OperacionDetalle";
+import PendientesMBControl from "@/pages/PendientesMBControl";
 import { Toaster } from "@/components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
