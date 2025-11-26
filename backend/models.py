@@ -59,6 +59,7 @@ class OperacionNetCash(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    folio_mbco: Optional[str] = None  # Folio legible para el usuario (ej: NC-000123)
     fecha_creacion: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Vínculo con cliente
