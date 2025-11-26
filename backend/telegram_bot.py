@@ -966,8 +966,21 @@ class TelegramBotNetCash:
                 await update.message.reply_text("Error al guardar los datos. Por favor contacta a Ana.")
                 return
         
-        # BLOQUE 1: Trigger "listo" para cerrar comprobantes
-        if texto in ['listo', 'terminé', 'termine', 'ya']:
+        # BLOQUE 1: Trigger "listo" y sinónimos para cerrar comprobantes
+        # Normalizar texto: lowercase, quitar tildes
+        import unicodedata
+        texto_normalizado = ''.join(
+            c for c in unicodedata.normalize('NFD', texto)
+            if unicodedata.category(c) != 'Mn'
+        )
+        
+        palabras_cierre = [
+            'listo', 'lista', 'ya quedo', 'ya quede', 'ya esta', 'ya estas',
+            'ok', 'de acuerdo', 'terminado', 'termine', 'termino',
+            'eso es todo', 'ya', 'vale', 'perfecto'
+        ]
+        
+        if texto_normalizado in palabras_cierre:
             if context.user_data.get('operacion_actual') and context.user_data.get('recibiendo_comprobantes'):
                 await self.cerrar_comprobantes_y_continuar(update, context)
                 return
