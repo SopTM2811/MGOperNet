@@ -555,6 +555,10 @@ class TelegramBotNetCash:
             await query.edit_message_text(mensaje, parse_mode="Markdown")
             return
         
+        # Guardar operaciones en context para interacción
+        context.user_data['operaciones_lista'] = operaciones
+        context.user_data['esperando_seleccion_operacion'] = True
+        
         # Caso CON operaciones
         mensaje = "📋 **Estas son tus últimas operaciones NetCash:**\n\n"
         
@@ -568,11 +572,12 @@ class TelegramBotNetCash:
                 comprobantes_validos = [c for c in comprobantes if isinstance(c, dict) and c.get("es_valido")]
                 monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
             else:
-                monto_total = op.get("monto_depositado_cliente", 0)
+                monto_total = op.get("monto_total_comprobantes", 0) or op.get("monto_depositado_cliente", 0)
             
             mensaje += f"{idx}) **{folio}** — ${monto_total:,.2f} — {estado}\n"
         
-        mensaje += "\nSi necesitas detalle de alguna, díselo a Ana por ahora."
+        mensaje += "\n💡 **Responde con el NÚMERO de la operación** para ver más detalle\n"
+        mensaje += "o escribe el **FOLIO** (ej. NC-000009)."
         
         await query.edit_message_text(mensaje, parse_mode="Markdown")
         logger.info(f"Usuario {chat_id} consultó sus operaciones: {len(operaciones)} encontradas")
