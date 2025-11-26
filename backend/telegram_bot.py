@@ -357,12 +357,13 @@ class TelegramBotNetCash:
         context.user_data['nombre_cliente'] = nombre_telegram
         context.user_data['telefono_cliente'] = telefono_normalizado
         
-        # Ya tenemos teléfono, pedir email
-        mensaje = f"Para registrarte como cliente NetCash, necesito algunos datos.\n\n"
+        # Ya tenemos teléfono, pedir email (OBLIGATORIO para completar el alta)
+        mensaje = f"Para completar tu alta como cliente NetCash, necesito algunos datos.\n\n"
         mensaje += f"**Nombre:** {nombre_telegram}\n"
         mensaje += f"**Teléfono:** {telefono_normalizado}\n\n"
-        mensaje += "📧 Si quieres, mándame tu correo electrónico para enviarte notificaciones.\n"
-        mensaje += "O escribe **'no'** para saltar este paso."
+        mensaje += "📧 Por favor, mándame tu **correo electrónico**.\n"
+        mensaje += "Lo usaremos para enviarte ligas NetCash y avisos importantes.\n\n"
+        mensaje += "Si no tienes correo o prefieres no proporcionarlo, escribe **'sin correo'**."
         
         await query.edit_message_text(mensaje, parse_mode="Markdown")
         return ESPERANDO_EMAIL
