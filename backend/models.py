@@ -88,6 +88,10 @@ class OperacionNetCash(BaseModel):
     titular_idmex: Optional[str] = None
     numero_ligas: Optional[int] = None
     
+    # Nuevos campos para flujo extendido
+    cantidad_ligas: Optional[int] = None  # Cantidad de ligas solicitadas por el cliente
+    nombre_ligas: Optional[str] = None  # Nombre que aparecerá en las ligas
+    
     # Cálculos financieros
     calculos: Optional[CalculosNetCash] = None
     
