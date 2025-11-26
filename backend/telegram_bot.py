@@ -56,6 +56,74 @@ class TelegramBotNetCash:
         
         self.app = None
     
+    def normalizar_telefono(self, telefono: str) -> str:
+        """Normaliza un teléfono removiendo espacios, guiones, paréntesis"""
+        if not telefono:
+            return ""
+        # Remover todos los caracteres no numéricos excepto el +
+        telefono = ''.join(c for c in telefono if c.isdigit() or c == '+')
+        return telefono
+    
+    async def obtener_o_crear_usuario(self, chat_id: str, telefono: str = None, nombre: str = None):
+        """Obtiene o crea un usuario en la BD"""
+        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+        
+        if usuario:
+            return usuario
+        
+        if not telefono:
+            return None
+        
+        # Normalizar teléfono
+        telefono_normalizado = self.normalizar_telefono(telefono)
+        
+        # Determinar rol
+        rol_info = None
+        rol = "desconocido"
+        es_interno = False
+        id_cliente = None
+        
+        # Buscar en mapeo de roles conocidos
+        for tel_key, info in TELEFONO_A_ROL.items():
+            tel_normalizado = self.normalizar_telefono(tel_key)
+            if telefono_normalizado == tel_normalizado:
+                rol_info = info
+                rol = info["rol"]
+                es_interno = rol in ["admin_mbco", "tesoreria", "supervisor_tesoreria", "direccion", "control_operaciones"]
+                break
+        
+        # Si no está en roles conocidos, buscar en clientes
+        if not rol_info:
+            cliente = await db.clientes.find_one(
+                {"$or": [
+                    {"telefono_completo": telefono},
+                    {"telefono_completo": telefono_normalizado}
+                ]},
+                {"_id": 0}
+            )
+            
+            if cliente:
+                rol = "cliente"
+                id_cliente = cliente.get("id")
+                rol_info = {"nombre": cliente.get("nombre"), "descripcion": "Cliente NetCash"}
+        
+        # Crear usuario
+        nuevo_usuario = {
+            "chat_id": chat_id,
+            "telefono": telefono_normalizado,
+            "nombre_telegram": nombre,
+            "rol": rol,
+            "es_interno": es_interno,
+            "id_cliente": id_cliente,
+            "rol_info": rol_info,
+            "fecha_registro": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.usuarios_telegram.insert_one(nuevo_usuario)
+        logger.info(f"Usuario creado: {chat_id} - Rol: {rol}")
+        
+        return nuevo_usuario
+    
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Comando /start - Saludo inicial.
