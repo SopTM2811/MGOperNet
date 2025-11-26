@@ -229,9 +229,20 @@ const Dashboard = () => {
                         onClick={() => navigate(`/operacion/${operacion.id}`)}
                       >
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                            {operacion.id.substring(0, 8)}...
-                          </code>
+                          {operacion.folio_mbco ? (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-blue-600 text-white font-semibold text-base px-3 py-1">
+                                {operacion.folio_mbco}
+                              </Badge>
+                              <code className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500">
+                                {operacion.id.substring(0, 8)}...
+                              </code>
+                            </div>
+                          ) : (
+                            <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
+                              {operacion.id.substring(0, 8)}...
+                            </code>
+                          )}
                           {getEstadoBadge(operacion.estado)}
                           {operacion.codigo_operacion_sistema && (
                             <Badge variant="outline">
