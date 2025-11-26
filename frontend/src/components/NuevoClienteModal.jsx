@@ -137,6 +137,26 @@ const NuevoClienteModal = ({ onClose, onSuccess }) => {
               />
             </div>
 
+            {/* Estado */}
+            <div>
+              <Label htmlFor="estado">Estado</Label>
+              <Select 
+                value={formData.estado} 
+                onValueChange={(value) => handleChange('estado', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pendiente_validacion">Pendiente Validación</SelectItem>
+                  <SelectItem value="activo">Activo</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500 mt-1">
+                Solo clientes "Activos" pueden crear operaciones
+              </p>
+            </div>
+
             {/* Propietario */}
             <div>
               <Label htmlFor="propietario">Propietario</Label>
