@@ -114,18 +114,14 @@ Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo
                     respuesta_texto = response.choices[0].message.content
                     
                 elif mime_type == "application/pdf":
-                    # Para PDFs, necesitamos convertir a imágenes o extraer texto primero
-                    # Por simplicidad, vamos a intentar con texto plano
-                    import pypdf2
-                    from pypdf2 import PdfReader
+                    # Para PDFs, usar directamente el modelo de visión con el PDF
+                    # OpenAI puede procesar PDFs directamente como imágenes
+                    with open(archivo_path, "rb") as f:
+                        file_data = base64.b64encode(f.read()).decode('utf-8')
                     
-                    reader = PdfReader(archivo_path)
-                    texto_pdf = ""
-                    for page in reader.pages:
-                        texto_pdf += page.extract_text()
-                    
+                    # Procesar PDF como imagen base64
                     response = await client.chat.completions.create(
-                        model="gpt-5.1",
+                        model="gpt-4o",  # gpt-4o soporta documentos
                         messages=[
                             {
                                 "role": "system",
@@ -133,7 +129,15 @@ Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo
                             },
                             {
                                 "role": "user",
-                                "content": f"{prompt}\n\nTexto del PDF:\n{texto_pdf}"
+                                "content": [
+                                    {"type": "text", "text": prompt},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:application/pdf;base64,{file_data}"
+                                        }
+                                    }
+                                ]
                             }
                         ],
                         max_tokens=1000
