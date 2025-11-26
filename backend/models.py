@@ -128,6 +128,7 @@ class Cliente(BaseModel):
     propietario: Propietario
     rfc: Optional[str] = None  # RFC del cliente
     notas: Optional[str] = None  # Notas sobre el cliente
+    estado: str = "activo"  # "pendiente_validacion" o "activo"
     fecha_alta: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     activo: bool = True
     
