@@ -163,36 +163,56 @@ async def procesar_comprobante(
         logger.info(f"Procesando comprobante para operación {operacion_id}")
         datos_ocr = await ocr_service.leer_comprobante(str(file_path), mime_type)
         
-        # Validar cuenta beneficiaria
+        # Validar cuenta beneficiaria y detectar duplicados
         es_valido = False
+        es_duplicado = False
         mensaje_validacion = ""
         
         if "error" in datos_ocr:
             mensaje_validacion = datos_ocr["error"]
         else:
-            # Validar cuenta
-            cuenta_valida = ocr_service.validar_cuenta_beneficiaria(
-                datos_ocr.get("cuenta_beneficiaria", ""),
-                CUENTA_DEPOSITO_CLIENTE["clabe"]
-            )
+            # PASO 1: Verificar si es un comprobante duplicado por clave_rastreo
+            clave_rastreo = datos_ocr.get("clave_rastreo")
             
-            # Validar nombre beneficiario
-            nombre_valido = ocr_service.validar_nombre_beneficiario(
-                datos_ocr.get("nombre_beneficiario", ""),
-                CUENTA_DEPOSITO_CLIENTE["razon_social"]
-            )
+            if clave_rastreo:
+                # Buscar en todas las operaciones si ya existe esta clave_rastreo
+                operacion_con_duplicado = await db.operaciones.find_one(
+                    {"comprobantes.clave_rastreo": clave_rastreo},
+                    {"_id": 0, "id": 1, "cliente_nombre": 1}
+                )
+                
+                if operacion_con_duplicado:
+                    es_duplicado = True
+                    es_valido = False
+                    mensaje_validacion = f"Este comprobante ya había sido registrado anteriormente en la operación {operacion_con_duplicado['id'][:8]}... No es necesario procesarlo de nuevo."
+                    logger.warning(f"Comprobante duplicado detectado: clave_rastreo={clave_rastreo}")
             
-            if cuenta_valida and nombre_valido:
-                es_valido = True
-                mensaje_validacion = "Comprobante válido"
-            else:
-                mensaje_validacion = "La cuenta o el beneficiario no coinciden con la cuenta NetCash esperada"
+            # PASO 2: Si NO es duplicado, validar cuenta y beneficiario
+            if not es_duplicado:
+                # Validar cuenta
+                cuenta_valida = ocr_service.validar_cuenta_beneficiaria(
+                    datos_ocr.get("cuenta_beneficiaria", ""),
+                    CUENTA_DEPOSITO_CLIENTE["clabe"]
+                )
+                
+                # Validar nombre beneficiario
+                nombre_valido = ocr_service.validar_nombre_beneficiario(
+                    datos_ocr.get("nombre_beneficiario", ""),
+                    CUENTA_DEPOSITO_CLIENTE["razon_social"]
+                )
+                
+                if cuenta_valida and nombre_valido:
+                    es_valido = True
+                    mensaje_validacion = "Comprobante válido"
+                else:
+                    mensaje_validacion = "La cuenta o el beneficiario no coinciden con la cuenta NetCash esperada"
         
         # Crear comprobante
         comprobante = ComprobanteDepositoOCR(
             **datos_ocr,
             archivo_original=file.filename,
             es_valido=es_valido,
+            es_duplicado=es_duplicado,
             mensaje_validacion=mensaje_validacion
         )
         
