@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNuevaOperacion, setShowNuevaOperacion] = useState(false);
+  const [showComprobantes, setShowComprobantes] = useState(false);
+  const [operacionSeleccionada, setOperacionSeleccionada] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
     completadas: 0,
