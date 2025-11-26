@@ -236,6 +236,19 @@ const Clientes = () => {
                         </div>
                       )}
                     </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setClienteSeleccionado(cliente);
+                        setShowEditarCliente(true);
+                      }}
+                      className="shrink-0 ml-4"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
