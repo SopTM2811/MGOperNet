@@ -561,6 +561,138 @@ async def obtener_modo_mantenimiento():
     }
 
 
+# ============================================
+# RUTAS DE FLUJO MBCONTROL Y LAYOUT SPEI
+# ============================================
+
+@api_router.post("/operaciones/{operacion_id}/mbcontrol")
+async def registrar_clave_mbcontrol(
+    operacion_id: str,
+    clave_mbcontrol: str = Form(...)
+):
+    """
+    Registra la clave de MBControl para una operación y genera el layout SPEI.
+    """
+    try:
+        # Verificar que la operación exista
+        operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        
+        if not operacion:
+            raise HTTPException(status_code=404, detail="Operación no encontrada")
+        
+        # Validar que la operación tenga datos completos
+        if not operacion.get("cantidad_ligas") or not operacion.get("nombre_ligas"):
+            raise HTTPException(
+                status_code=400,
+                detail="La operación no tiene datos completos del titular"
+            )
+        
+        # Actualizar clave MBControl
+        await db.operaciones.update_one(
+            {"id": operacion_id},
+            {
+                "$set": {
+                    "clave_operacion_mbcontrol": clave_mbcontrol,
+                    "estado": "PENDIENTE_ENVIO_LAYOUT",
+                    "timestamp_mbcontrol": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Obtener datos de comprobantes para calcular monto total
+        comprobantes_validos = [c for c in operacion.get("comprobantes", []) if c.get("es_valido")]
+        monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+        
+        # Preparar beneficiarios para el layout
+        # SUPUESTO: Por ahora generamos una liga por el monto total
+        # En una fase posterior, Ana podrá dividir en múltiples beneficiarios
+        cantidad_ligas = operacion.get("cantidad_ligas", 1)
+        monto_por_liga = monto_total / cantidad_ligas if cantidad_ligas > 0 else monto_total
+        
+        beneficiarios = []
+        for i in range(cantidad_ligas):
+            beneficiarios.append({
+                "clabe": "646180139409481462",  # CLABE de MBco - debe venir de config
+                "titular": operacion.get("nombre_ligas", "TITULAR"),
+                "monto": monto_por_liga
+            })
+        
+        # Generar layout Excel
+        folio = operacion.get("folio_mbco", "N/A")
+        layout_path = layout_service.generar_layout_spei(
+            folio_mbco=folio,
+            clave_mbcontrol=clave_mbcontrol,
+            beneficiarios=beneficiarios
+        )
+        
+        # Intentar enviar por correo
+        enviado = layout_service.enviar_layout_por_correo(
+            layout_path=layout_path,
+            folio_mbco=folio,
+            clave_mbcontrol=clave_mbcontrol
+        )
+        
+        # Actualizar estado según si se envió o no
+        nuevo_estado = "LAYOUT_ENVIADO" if enviado else "PENDIENTE_ENVIO_LAYOUT"
+        await db.operaciones.update_one(
+            {"id": operacion_id},
+            {
+                "$set": {
+                    "estado": nuevo_estado,
+                    "layout_path": layout_path,
+                    "layout_enviado": enviado,
+                    "timestamp_layout": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        logger.info(f"Clave MBControl registrada para operación {operacion_id}. Layout generado: {layout_path}")
+        
+        mensaje = "Layout SPEI generado correctamente."
+        if enviado:
+            mensaje += " El layout fue enviado por correo a Tesorería."
+        else:
+            mensaje += " El layout fue generado pero no se pudo enviar por correo (configura SMTP en .env)."
+        
+        return {
+            "success": True,
+            "operacion_id": operacion_id,
+            "clave_mbcontrol": clave_mbcontrol,
+            "layout_path": layout_path,
+            "enviado": enviado,
+            "mensaje": mensaje
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error registrando clave MBControl: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/plataformas/recomendar")
+async def recomendar_plataforma(
+    tipo_operacion: str = "operaciones_netcash",
+    monto: float = 0,
+    urgencia: str = "normal"
+):
+    """
+    Recomienda la mejor plataforma/cuenta para realizar un layout.
+    """
+    try:
+        recomendacion = consejero_plataformas.recomendar_plataforma(
+            tipo_operacion=tipo_operacion,
+            monto_total=monto,
+            urgencia=urgencia
+        )
+        
+        return recomendacion
+        
+    except Exception as e:
+        logger.error(f"Error recomendando plataforma: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
