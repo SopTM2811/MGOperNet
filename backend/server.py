@@ -303,21 +303,15 @@ async def calcular_operacion(
         if monto_total <= 0:
             raise HTTPException(status_code=400, detail="El monto total debe ser mayor a 0")
         
-        # Usar comisión proporcionada o buscar en cliente
+        # Usar comisión proporcionada o la que está guardada en la operación
         if comision_cliente_porcentaje is None:
-            # Buscar cliente para obtener su comisión
-            cliente_telegram_id = operacion.get("cliente_telegram_id")
-            if cliente_telegram_id:
-                cliente = await db.clientes.find_one(
-                    {"telegram_id": cliente_telegram_id},
-                    {"_id": 0}
-                )
-                if cliente:
-                    comision_cliente_porcentaje = cliente.get("comision_porcentaje", 0.0065)
-                else:
-                    comision_cliente_porcentaje = 0.0065  # Default
-            else:
-                comision_cliente_porcentaje = 0.0065  # Default
+            # Usar la comisión guardada en la operación
+            comision_cliente_porcentaje = operacion.get("porcentaje_comision_usado", 0.65)
+        
+        # Convertir de porcentaje a decimal si es necesario
+        # Si es > 1, asumir que está en porcentaje (ej: 0.65) y dividir entre 100
+        if comision_cliente_porcentaje > 1:
+            comision_cliente_porcentaje = comision_cliente_porcentaje / 100
         
         # Realizar cálculos
         calculos_dict = calculos_service.calcular_operacion(
