@@ -65,14 +65,8 @@ IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar ún
                 file_contents=[file_content]
             )
             
-            # Enviar y obtener respuesta (método síncrono, ejecutar en loop)
-            import concurrent.futures
-            loop = asyncio.get_event_loop()
-            respuesta_texto, _ = await loop.run_in_executor(
-                None, 
-                chat.send_message_multimodal_response,
-                user_message
-            )
+            # Enviar y obtener respuesta
+            respuesta_texto, _ = await chat.send_message_multimodal_response(user_message)
             
             # Parsear respuesta JSON
             import json
