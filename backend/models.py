@@ -110,19 +110,34 @@ class Cliente(BaseModel):
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     nombre: str
+    email: str  # Obligatorio
+    pais: str = "MX"  # País por defecto México
+    prefijo_telefono: str = "+52"  # Prefijo por defecto México
+    telefono: str  # Número sin prefijo
+    telefono_completo: Optional[str] = None  # Prefijo + número (auto-generado)
     telegram_id: Optional[str] = None
-    telefono: Optional[str] = None
-    comision_porcentaje: float = 0.0065  # 0.65% por defecto
+    porcentaje_comision_cliente: float = 0.65  # Porcentaje (ej: 0.65 = 0.65%)
+    canal_preferido: Optional[str] = None  # "Telegram", "WhatsApp", "Correo"
     propietario: Propietario
     fecha_alta: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     activo: bool = True
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Auto-generar telefono_completo
+        if not self.telefono_completo and self.telefono:
+            self.telefono_completo = f"{self.prefijo_telefono}{self.telefono}"
 
 
 class ClienteCreate(BaseModel):
     nombre: str
+    email: str
+    pais: str = "MX"
+    prefijo_telefono: str = "+52"
+    telefono: str
     telegram_id: Optional[str] = None
-    telefono: Optional[str] = None
-    comision_porcentaje: float = 0.0065
+    porcentaje_comision_cliente: float = 0.65
+    canal_preferido: Optional[str] = None
     propietario: Propietario
 
 
