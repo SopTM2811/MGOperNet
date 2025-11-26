@@ -25,6 +25,8 @@ load_dotenv()
 
 # Estados del flujo conversacional
 ESPERANDO_TELEFONO, ESPERANDO_EMAIL = range(2)
+# Estados para flujo de operación extendido
+ESPERANDO_MAS_COMPROBANTES, ESPERANDO_CANTIDAD_LIGAS, ESPERANDO_NOMBRE_LIGAS, ESPERANDO_IDMEX = range(10, 14)
 
 # Mapeo de teléfonos a roles internos
 TELEFONO_A_ROL = {
