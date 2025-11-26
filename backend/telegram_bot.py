@@ -852,7 +852,13 @@ class TelegramBotNetCash:
                 monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
                 cliente_nombre = operacion.get("cliente_nombre", "N/A")
                 
-                # Mostrar resumen
+                # BLOQUE 2: Actualizar estado a DATOS_COMPLETOS
+                await db.operaciones.update_one(
+                    {"id": operacion_id},
+                    {"$set": {"estado": "DATOS_COMPLETOS"}}
+                )
+                
+                # BLOQUE 2: Mostrar resumen + mensaje de qué sigue
                 mensaje = "📋 **Resumen de tu operación NetCash**\n\n"
                 mensaje += f"**Folio MBco:** {folio}\n"
                 mensaje += f"**Cliente:** {cliente_nombre}\n"
@@ -860,7 +866,12 @@ class TelegramBotNetCash:
                 mensaje += f"**Cantidad de ligas:** {cantidad_ligas}\n"
                 mensaje += f"**Nombre en ligas:** {nombre_ligas}\n"
                 mensaje += f"**IDMEX:** {idmex}\n\n"
-                mensaje += "Si hay algún error en estos datos, avísale a Ana para corregirlo."
+                mensaje += "Si hay algún error en estos datos, avísale a Ana para corregirlo.\n\n"
+                mensaje += "✅ **Recibimos con éxito tu operación.**\n"
+                mensaje += "Vamos a validar tus comprobantes y, cuando tus ligas NetCash estén listas, te avisaremos por este mismo chat.\n\n"
+                mensaje += "Mientras tanto, puedes:\n"
+                mensaje += "• Crear otra operación NetCash\n"
+                mensaje += "• Ver tus operaciones en curso con \"Ver mis operaciones\" o /start."
                 
                 await update.message.reply_text(mensaje, parse_mode="Markdown")
                 
