@@ -391,11 +391,11 @@ class TelegramBotNetCash:
                 "telefono": context.user_data['telefono_cliente'].replace("+52", ""),
                 "telefono_completo": context.user_data['telefono_cliente'],
                 "telegram_id": str(update.effective_user.id),
-                "porcentaje_comision_cliente": 0,  # Ana lo ajustará
+                "porcentaje_comision_cliente": None,  # Ana lo definirá (NULL = pendiente)
                 "canal_preferido": "Telegram",
                 "propietario": "M",  # Ana
                 "rfc": None,
-                "notas": "Cliente creado desde Telegram (alta automática)",
+                "notas": "Cliente creado desde Telegram (alta automática). Comisión pendiente de configurar.",
                 "estado": "pendiente_validacion",  # Pendiente de validación por Ana
                 "fecha_alta": datetime.now(timezone.utc).isoformat(),
                 "activo": True
