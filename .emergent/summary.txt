@@ -1,226 +1,151 @@
-<analysis>Análisis y Resumen de la Sesión
-
-**original_problem_statement:**
-El usuario solicitó la creación de una aplicación full-stack llamada Asistente NetCash MBco. La aplicación debe gestionar un flujo de negocio complejo para una empresa financiera (MBco).
-
-**PRODUCT REQUIREMENTS:**
-1.  **Rol del Asistente:** Actuar como un asistente virtual que interactúa con diferentes roles: Clientes, Administración (Ana), Tesorería (Toño, Javier), Control (Claudia), Proveedor NetCash (Ximena, etc.) y Dirección (Samuel, Daniel).
-2.  **Flujo Principal de Operación:**
-    *   **Cliente:** Envía comprobantes de depósito (PDF, imagen, ZIP). El asistente debe leerlos usando OCR.
-    *   **Validación y Cálculo:** El asistente valida que el depósito se hizo a la cuenta correcta de MBco (JARDINERIA Y COMERCIO THABYETHA SA DE CV). Calcula , comisiones del cliente y comisiones del proveedor.
-    *   **Recopilación de Datos:** Pide al cliente los datos del titular de las ligas (nombre completo, IDMEX).
-    *   **Flujo Interno:**
-        *   Pasa la información a **Ana** para generar un código de operación.
-        *   Genera un layout de pagos para **Toño** (Tesorería), particionando los pagos al proveedor.
-        *   Envía instrucciones al **Proveedor NetCash** para generar las ligas (enlaces de pago).
-        *   Entrega las ligas al cliente.
-    *   **Control y Reportes:**
-        *   Envía un reporte diario a **Claudia** para control del día anterior.
-        *   Genera reportes diarios para la **Dirección** con métricas de volumen y comisiones.
-3.  **Integraciones:**
-    *   **OCR:** Usar OpenAI GPT-5.1 con visión para leer los comprobantes.
-    *   **Mensajería:** Implementar un bot de Telegram para la interacción con todos los roles.
-    - **Correo:** Enviar notificaciones y reportes por correo electrónico (usando un servicio recomendado por el agente).
-4.  **Modelo de Datos:**
-    *   Distinguir entre **Clientes** (catálogo con comisión personalizada) y **Operaciones** (transacciones individuales).
-    *   Evitar el procesamiento de **comprobantes duplicados** usando la .
-5.  **Interfaz de Usuario (Web):**
-    *   Un dashboard para visualizar y gestionar operaciones.
-    *   Modales para crear nuevos clientes y operaciones.
-    *   Funcionalidad para subir y visualizar el estado de los comprobantes.
-    *   Diseño visual prime inspirado en SpaceX/Apple con la paleta de colores de Market&Business.
-6.  **Bot de Telegram:**
-    *   Identificar a los usuarios por su número de teléfono ().
-    *   Asignar roles (cliente, interno, proveedor, desconocido) y mostrar menús personalizados.
-    *   El bot nunca debe quedarse en silencio; siempre debe dar una respuesta.
+<analysis>**original_problem_statement:**
+El usuario solicitó la creación de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero. Los requisitos han evolucionado para incluir:
+1.  **Separación de Flujos:** Distinción clara entre el Alta de Cliente y la Creación de Operación tanto en la interfaz web como en el bot de Telegram.
+2.  **Roles y Permisos (Ana):** Un rol de administrador (Ana) debe validar a los nuevos clientes. Los clientes creados por Telegram inician con estado  y no pueden operar hasta que Ana los cambie a  desde el panel web. Ana también puede crear y editar clientes directamente en el panel.
+3.  **Flujo de Operación Extendido (Telegram):**
+    *   El cliente crea una operación y recibe un folio ().
+    *   Sube comprobantes (PDF, imagen, ZIP) en un lote, finalizando con la palabra .
+    *   El bot procesa los comprobantes con OCR, acumula montos y confirma la recepción.
+    *   Una vez finalizada la carga, el bot solicita: cantidad de ligas de pago, nombre completo del titular (persona física) y su IDMEX.
+    *   El bot muestra un resumen completo y notifica al cliente que sus ligas se procesarán.
+4.  **Flujo de Cierre (MBControl y Toño):**
+    *   Después de que el cliente completa su parte, Ana introduce una  en el panel web o vía un comando de Telegram.
+    *   Esto dispara la generación de un layout en formato Excel () y lo envía por correo a Tesorería (Toño).
+5.  **Consistencia Web-Telegram:** El panel web debe actuar como un espejo de solo lectura para las operaciones creadas y cerradas en Telegram, deshabilitando la edición y la subida de nuevos archivos.
+6.  **Manejo de Inactividad:** Las operaciones en Telegram deben cancelarse automáticamente si el usuario permanece inactivo por más de 3 minutos durante la fase de captura de datos.
 
 **User's preferred language**: español
 
 **what currently exists?**
-Una aplicación full-stack con backend en FastAPI y frontend en React. La base de datos es MongoDB.
-- **Backend:**
-    - Modelos de datos para ,  y .
-    - Endpoints para crear/gestionar clientes y operaciones.
-    - Un servicio de OCR () que intenta usar la visión de OpenAI para procesar comprobantes.
-    - Lógica para detectar comprobantes duplicados por .
-    - Un script de bot de Telegram () con lógica para identificar usuarios y gestionar conversaciones por roles.
-- **Frontend:**
-    - Un dashboard que lista las operaciones.
-    - Un modal para crear nuevas operaciones, que incluye un selector para buscar o crear clientes.
-    - Una vista de detalle de operación con pestañas para subir y ver el estado de los comprobantes.
-    - El diseño visual ha sido actualizado para seguir las guías de estilo del usuario (SpaceX/Apple).
-- **Integraciones:** El token del bot de Telegram se ha configurado en el entorno. Se intenta usar  para las llamadas a OpenAI.
+-   Una aplicación full-stack con backend FastAPI, frontend React y base de datos MongoDB.
+-   **Backend:**
+    -   Servicio de OCR () funcional, que utiliza Gemini a través de  para leer comprobantes.
+    -   Modelos de datos () para ,  y , actualizados con campos como ,  (para clientes), , , , , y una enumeración de estados de operación más detallada.
+    -   Endpoints API para crear/listar/actualizar clientes y operaciones.
+    -   Un bot de Telegram () con un flujo conversacional basado en estados, que gestiona el alta de clientes y la creación de operaciones de forma separada. El bot está configurado para ejecutarse de forma persistente mediante Supervisor.
+-   **Frontend:**
+    -   Un panel de control () que lista operaciones y muestra el .
+    -   Una sección de Clientes () que lista todos los clientes, muestra su estado (, ) y si están vinculados a Telegram.
+    -   Modales funcionales para crear () y editar () clientes, permitiendo a Ana gestionar sus datos y estado.
+    -   El flujo de creación de operaciones está correctamente separado y requiere la selección de un cliente existente.
 
 **Last working item**:
-El agente estaba a punto de corregir un error recurrente en el servicio de OCR al procesar comprobantes.
+El agente estaba en medio de la implementación de un conjunto grande y detallado de requisitos del usuario para refinar la UX de Telegram, implementar el flujo de cierre con MBControl y asegurar que la web actúe como un espejo de Telegram.
 
--   **Last item agent was working**: Corregir el error  que ocurre al procesar un comprobante en PDF. El agente estaba inspeccionando el archivo  para localizar y arreglar la llamada incorrecta al SDK de OpenAI.
+-   **Last item agent was working**: Modificando el bot de Telegram () para implementar la subida de comprobantes en lote (usando la palabra  para finalizar), refinar las preguntas de captura de datos (ligas, titular, IDMEX) y el mensaje de resumen final. El agente también creó un script placeholder () para el temporizador de inactividad pero no implementó su lógica.
 -   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: Backend testing. El agente debe probar el flujo completo de subida de un archivo PDF a través de la UI del dashboard o usando  para llamar directamente al endpoint . Debe verificar que el backend procesa el archivo sin errores 4xx/5xx y que los datos extraídos son correctos. Es crucial revisar los logs del backend () en busca de errores.
+-   **Which testing method agent to use?**: both. Se requiere probar el flujo conversacional del bot de Telegram de extremo a extremo y verificar que los datos se reflejen correctamente (y en modo de solo lectura) en el frontend web. La generación del layout y el envío de correo también deben ser probados en el backend.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): El procesamiento de comprobantes PDF falla con un error del SDK de OpenAI.**
--   **Issue 2 (P1): El bot de Telegram () se vuelve no responsivo.**
--   **Issue 3 (P2): Falta de un flujo de prueba funcional y estable.**
+-   **Issue 1 (P0): Finalizar la implementación de la lógica del bot de Telegram según los últimos requisitos.**
+-   **Issue 2 (P1): Implementar el monitor de inactividad para cancelar operaciones.**
+-   **Issue 3 (P1): Implementar el flujo de MBControl y la generación/envío del layout SPEI.**
+-   **Issue 4 (P2): Asegurar que el frontend actúe como un espejo de solo lectura para operaciones de Telegram.**
 
 **Issues Detail:**
--   **Issue 1: El procesamiento de comprobantes PDF falla con un error del SDK de OpenAI.**
-    -   **Attempted fixes**: El agente ha intentado corregir esto varias veces. Inicialmente, el error era , luego una  por una clave hardcodeada. La corrección más reciente intentó usar la librería , pero resultó en el error actual: . Esto indica que la forma en que se construye el payload para la API de OpenAI es incorrecta según la versión del SDK.
+-   **Issue 1: Finalizar la implementación de la lógica del bot de Telegram.**
+    -   **Attempted fixes**: El agente realizó múltiples ediciones en  para ajustar los mensajes y la lógica de conversación, como manejar la palabra , pero el flujo completo no está terminado ni probado.
     -   **Next debug checklist**:
-        1.  Abrir .
-        2.  Localizar la línea donde se instancia  o donde se prepara el archivo para la llamada a OpenAI.
-        3.  Consultar la documentación del SDK de  o usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit para la versión actual y verificar la estructura correcta para enviar archivos para análisis de visión. El argumento  es incorrecto; probablemente deba ser  o una estructura diferente.
-        4.  Ajustar el código para que coincida con la firma correcta de la función/clase.
-        5.  Reiniciar el backend.
-        6.  Realizar una prueba subiendo un PDF y verificar que el error 500 ya no ocurre y el OCR funciona.
-    -   **Why fix this issue and what will be achieved with the fix?**: Este es el núcleo del flujo de negocio. Sin un OCR funcional, el asistente no puede validar los depósitos de los clientes, bloqueando todo el proceso.
+        1.  Revisar .
+        2.  Asegurarse de que el estado conversacional maneje correctamente la finalización de la subida de comprobantes con la palabra listo.
+        3.  Verificar que la transición a las preguntas de ,  e  se active correctamente.
+        4.  Confirmar que el resumen final se muestra con el mensaje qué sigue.
+    -   **Why fix this issue and what will be achieved with the fix?**: Mejora la experiencia del usuario en Telegram, haciéndola más fluida e intuitiva y capturando toda la información necesaria.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Both. El backend para la lógica de procesamiento y el frontend para asegurar que el resultado (éxito o error controlado) se muestre correctamente al usuario.
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Backend (bot)
     -   **Blocked on other issue**: No.
 
--   **Issue 2: El bot de Telegram () se vuelve no responsivo.**
-    -   **Attempted fixes**: El agente ha reiniciado el bot varias veces, solucionado conflictos de múltiples instancias () y ajustado la lógica de los handlers. Sin embargo, el usuario sigue reportando que el bot deja de responder a  después de un tiempo. El comando  para iniciar el bot en segundo plano también ha estado fallando con timeouts, lo cual podría ser una pista.
+-   **Issue 2: Implementar el monitor de inactividad para cancelar operaciones.**
+    -   **Attempted fixes**: Se creó el archivo  pero se dejó vacío. La lógica no fue implementada.
     -   **Next debug checklist**:
-        1.  Revisar el script  en busca de posibles bucles infinitos, condiciones que no se manejan o excepciones no capturadas que podrían hacer que el proceso se cuelgue silenciosamente.
-        2.  Asegurar que el  loop y la inicialización de la  de  estén configurados correctamente para un funcionamiento robusto y a largo plazo.
-        3.  Verificar los logs del bot () en busca de cualquier error o advertencia que no sea un 200 OK de la API de Telegram.
-        4.  Considerar añadir más logging dentro de los handlers clave (, , ) para trazar el flujo de ejecución y ver dónde se detiene.
-        5.  Revisar cómo se inicia el proceso del bot. El timeout de  es preocupante. Intentar ejecutar el bot directamente en primer plano por un corto tiempo para ver si arroja algún error inmediato en la consola.
-    -   **Why fix this issue and what will be achieved with the fix?**: El bot de Telegram es el principal canal de comunicación con los usuarios. Si no es fiable, la aplicación es inútil.
-    -   **Status**: NOT STARTED (en esta iteración, pero es un problema pendiente y recurrente).
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Backend. La prueba debe hacerse directamente en Telegram.
+        1.  Implementar la lógica en  para consultar operaciones en estados de captura (, , etc.).
+        2.  Calcular el tiempo transcurrido desde la última actualización ().
+        3.  Si han pasado más de 3 minutos, cambiar el estado a .
+        4.  Enviar el mensaje de cancelación al usuario a través del bot.
+        5.  Configurar este script para que se ejecute periódicamente (ej. con un cron job o dentro de un proceso de supervisor).
+    -   **Why fix this issue and what will be achieved with the fix?**: Evita que las operaciones queden en un estado intermedio indefinidamente, manteniendo la base de datos limpia.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Blocked on other issue**: No.
 
--   **Issue 3: Falta de un flujo de prueba funcional y estable.**
-    -   **Attempted fixes**: El usuario ha pedido explícitamente que el bot permita a usuarios desconocidos registrarse automáticamente para poder probar el flujo. El agente implementó una lógica para esto. Sin embargo, los problemas recurrentes sugieren que el flujo completo no ha sido probado de extremo a extremo con éxito.
+-   **Issue 3: Implementar el flujo de MBControl y la generación/envío del layout SPEI.**
+    -   **Attempted fixes**: Los modelos fueron actualizados, pero la lógica de generación y envío no fue implementada.
     -   **Next debug checklist**:
-        1.  Una vez solucionados los issues 1 y 2, realizar un recorrido completo del happy path:
-        2.  Iniciar una nueva conversación con el bot de Telegram como un usuario desconocido.
-        3.  Verificar que el bot pide el teléfono y crea un nuevo cliente.
-        4.  Crear una nueva operación a través del bot.
-        5.  Enviar un comprobante PDF al bot.
-        6.  Verificar en el dashboard web que la operación y el comprobante aparecen.
-        7.  Verificar que el estado del comprobante es procesado y los datos extraídos por el OCR son correctos.
-    -   **Why fix this issue and what will be achieved with the fix?**: Para validar que las correcciones son efectivas y que el sistema cumple con los requisitos mínimos del usuario.
-    -   **Status**: BLOCKED
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on other issue**: Issue 1 y Issue 2.
+        1.  Implementar el comando  para Ana en .
+        2.  En , crear una función que:
+            - Genere un archivo  usando una librería como  o , con las columnas , , , .
+            - El  debe ser .
+            - Envíe el archivo por correo a la dirección en la variable de entorno .
+        3.  Conectar esta función al endpoint de edición de operaciones en el panel web y al comando de Telegram.
+    -   **Why fix this issue and what will be achieved with the fix?**: Es el paso final del flujo operativo, permitiendo que la información recopilada se envíe a Tesorería para su procesamiento.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on other issue**: No.
+
+-   **Issue 4: Asegurar que el frontend actúe como un espejo de solo lectura.**
+    -   **Attempted fixes**: No se ha trabajado en esto todavía.
+    -   **Next debug checklist**:
+        1.  En , leer el  y el .
+        2.  Si  y el estado es uno de cierre (ej.  o posterior), deshabilitar los campos de entrada en las pestañas Titular y Comprobantes.
+        3.  Mostrar los mensajes informativos indicando que los datos fueron capturados por Telegram.
+        4.  Implementar la funcionalidad para ver/descargar los comprobantes subidos.
+    -   **Why fix this issue and what will be achieved with the fix?**: Garantiza la integridad de los datos, evitando que se modifiquen en el panel web después de haber sido confirmados por el cliente en Telegram.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: No.
 
 **In progress Task List**:
--   No hay tareas de desarrollo de nuevas funcionalidades en progreso. El trabajo actual está centrado en la corrección de errores críticos.
+-   **Task 1: Completar la implementación de los requisitos del usuario de msg 349.** (P0)
+    -   **Where to resume**: En , finalizando la lógica conversacional para el lote de comprobantes y las preguntas de cierre.
+    -   **What will be achieved with this?**: Un flujo de usuario completo y pulido en Telegram, la implementación del cierre operativo con MBControl y la consistencia entre la web y el bot.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
--   **(P0) Implementar flujos internos completos:** Generación de layouts de pago para Tesorería (Toño), envío de instrucciones al proveedor (Ximena).
--   **(P1) Enviar notificaciones por correo y Telegram:** Alertar a los diferentes roles (Ana, Toño, Javier, etc.) cuando se requiera su acción (ej. código de sistema pendiente, layout listo para pagar).
--   **(P2) Implementar el módulo de control de Claudia:** Generar el reporte diario de operaciones para que Claudia lo valide y procesar su respuesta para notificar a Ana/Toño sobre discrepancias.
--   **(P3) Implementar reportes para la Dirección:** Generar y enviar los resúmenes diarios y mensuales a Samuel y Daniel.
--   **(P4) Desarrollar el módulo de Comunicados para Ana.**
--   **(P5) Lógica de partición de pagos:** Implementar la regla de que las transferencias al proveedor no superen los 350,000.00.
+-   **Upcoming Tasks**:
+    -   (P0) Implementar el monitor de inactividad ().
+    -   (P0) Implementar la generación y envío del layout SPEI para Toño.
+    -   (P1) Implementar la lógica de espejo de solo lectura en el frontend.
+    -   (P2) Implementar la captura de la clave MBControl desde el comando de Telegram de Ana.
+-   **Future Tasks**:
+    -   Implementar el módulo de Comunicados para Ana.
+    -   Implementar el módulo de control de Claudia (reporte diario).
+    -   Implementar los reportes para la Dirección.
+    -   Lógica de partición de pagos para el proveedor.
 
 **Completed work in this session**
-- **Modelos de Datos:** Se crearon y refinaron los modelos para , , y  en .
-- **Flujo Cliente-Operación:** Se implementó la lógica para vincular operaciones a un catálogo de clientes, con comisiones personalizadas.
-- **UI de Creación:** Se mejoró el modal  para permitir la búsqueda de clientes existentes o la creación de nuevos.
-- **UI de Comprobantes:** Se añadió funcionalidad en el frontend para subir comprobantes () y ver su estado en el detalle de la operación.
-- **Detección de Duplicados:** Se implementó la lógica en el backend () para evitar procesar comprobantes con la misma .
-- **Rediseño Visual:** Se aplicó un nuevo estilo visual a la interfaz web, basado en las directrices del usuario (colores de Market&Business, estilo SpaceX/Apple) en ,  y .
-- **Bot de Telegram (Base):** Se configuró el bot con su token, y se implementó la lógica inicial para identificar usuarios por teléfono y asignarles roles en .
+-   **OCR Service Fixed**: Se corrigió un error recurrente del SDK de OpenAI/emergentintegrations, cambiando a un modelo Gemini compatible () y ajustando los parámetros de la llamada. El OCR ahora extrae datos de comprobantes de forma fiable.
+-   **Separación de Flujos (Cliente/Operación)**: Se refactorizó la aplicación para separar completamente el alta de clientes de la creación de operaciones, tanto en el frontend web como en el bot de Telegram.
+-   **Panel de Administración de Clientes**: Se creó una sección  en el frontend con una lista de clientes, y modales para crear y editar clientes, permitiendo a Ana gestionar el  (/) y otros datos.
+-   **Lógica de Estado de Cliente**: Se implementó la regla de negocio que impide a los clientes con estado  crear operaciones.
+-   **Bot de Telegram Estable y Funcional**: El bot se reescribió con un manejador de estados conversacionales, se configuró para ejecutarse persistentemente con Supervisor, y se implementó la funcionalidad Ver mis operaciones.
+-   **Folio de Operación**: Se reemplazó el  de cara al usuario por un folio secuencial más amigable ().
 
 **Earlier issues found/mentioned but not fixed**
--   Todos los problemas recurrentes (OCR, bot no responsivo) están listados en la sección All Pending/In progress Issue list. El agente ha estado en un ciclo de solucionar estos problemas sin lograr una solución definitiva.
+-   **Issue 1: Monitor de Inactividad no implementado.**
+    -   **Debug checklist**: Implementar la lógica en  y configurarlo para ejecución periódica.
+    -   **Why to solve this issue and what will be achieved with this?**: Evita operaciones zombis y mantiene la consistencia de la base de datos.
+    -   **Should Test frontend/backend/both after fix**: Backend
+    -   **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: N/A (Esta es la primera sesión de resumen).
--   **Recurrence count**: N/A
--   **Status**: N/A
+-   N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** React.js
--   **Backend:** FastAPI (Python)
--   **Database:** MongoDB (a través de  para acceso asíncrono)
--   **Integrations:**  para Telegram,  (o usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit) para el OCR con modelos de visión.
+-   **Frontend:** React.js, shadcn/ui
+-   **Backend:** FastAPI (Python),  (con )
+-   **Database:** MongoDB (usando )
+-   **Integrations:**  para OCR con Gemini, Supervisor para la gestión de procesos.
 
 **key DB schema**
 -   **clientes**: 
@@ -229,63 +154,68 @@ options:
 -   **usuarios_telegram**: 
 
 **changes in tech stack**
-- Ninguno. El stack se ha mantenido como FastAPI, React y MongoDB.
+-   Ninguno.
 
 **All files**
--   **Creados/Modificados Críticos**:
-    -   : Contiene los endpoints principales y la lógica de negocio.
-    -   : Define la estructura de la base de datos.
-    -   : Foco del error actual. Contiene la lógica para llamar a OpenAI.
-    -   : Foco del segundo error. Contiene toda la lógica del bot.
-    -   : UI para ver una operación y sus comprobantes.
-    -   : UI para crear operaciones.
-    -   : UI para la subida de archivos.
-    -   : Componente para seleccionar/crear clientes.
+-   **Creados o Modificados Críticamente**:
+    -   : Modificado extensivamente para implementar el flujo conversacional, validación de estado, y la lógica de captura extendida.
+    -   : Actualizado con nuevos campos y estados para clientes y operaciones.
+    -   : Se agregaron endpoints para actualizar clientes y la lógica para generar .
+    -   : Corregido para usar Gemini y solucionar errores del SDK.
+    -   : Página nueva para la gestión de clientes.
+    -   : Modal para crear clientes, actualizado con el campo .
+    -   : Nuevo modal para editar clientes.
+    -    y : Actualizados para mostrar .
+    -   : Creado como placeholder.
 
 **Areas that need refactoring**:
--   El archivo  ha sido modificado varias veces y podría beneficiarse de una reestructuración para separar mejor la lógica de handlers, identificación de roles y construcción de menús, para mejorar su legibilidad y mantenibilidad.
--   El archivo  ha tenido múltiples errores. Una vez que funcione, debería ser revisado para asegurar que sigue las mejores prácticas y maneja todos los casos de error de forma elegante.
+-    es un archivo muy grande y complejo. Aunque utiliza , podría beneficiarse de una mayor modularización para separar la lógica de los diferentes flujos y estados, mejorando su mantenibilidad.
 
 **key api endpoints**
--   : Crea una nueva operación.
--   : Lista todas las operaciones.
--   : Sube y procesa un comprobante para una operación.
--   : Busca clientes para el autocompletado.
 -   : Crea un nuevo cliente.
+-   : Actualiza un cliente existente.
+-   : Lista todos los clientes.
+-   : Crea una nueva operación (ahora requiere un  existente).
+-   : Lista todas las operaciones.
+-   : Sube y procesa un comprobante.
 
 **Critical Info for New Agent**
--   **Problemas Recurrentes:** El proyecto sufre de problemas recurrentes en el **servicio de OCR** y en la **fiabilidad del bot de Telegram**. Las correcciones anteriores no han sido definitivas. Debes ser extra cuidadoso al abordar estas áreas y probar exhaustivamente tus cambios.
--   **Flujo de Pruebas:** El usuario necesita un flujo de prueba estable. La lógica del bot de Telegram fue modificada para crear clientes automáticamente para usuarios desconocidos en Telegram. Debes verificar que esto funcione y te permita probar el flujo completo de extremo a extremo.
--   **Expectativas del Usuario:** El usuario es técnico en su descripción de problemas pero no es programador. Espera que el agente realice correcciones quirúrgicas y proporcione resúmenes claros en español. No quiere reescrituras ni cambios de arquitectura.
+-   **Prioridad Máxima**: Completar la implementación de los requisitos del último mensaje del usuario (msg 349). Esto incluye el temporizador de inactividad, la generación del layout SPEI y la lógica de espejo en el frontend.
+-   **Bot de Telegram**: La lógica del bot es el núcleo de la interacción con el cliente y es compleja. Cualquier cambio debe ser probado cuidadosamente para no romper los flujos conversacionales existentes. El archivo es .
+-   **Flujo de Estados**: Prestar mucha atención a los  del cliente y a los , ya que controlan toda la lógica de permisos y transiciones de flujo.
+-   **Archivo de Layout**: El usuario adjuntó un archivo  que debe usarse como plantilla para la generación del layout para Tesorería.
 
 **documents created in this job**
--   /app/CONFIGURACION_FASE1.md
--   /app/GUIA_TELEGRAM_BOT.md
--   /app/CONFIG_OCR.md
--   Varios resúmenes de finalización de tarea en formato .md.
+-   
+-   
+-   
+-   
 
 **Last 5 User Messages and any pending user messages**
-1.  **User Message (msg 234):** Reporte detallado de múltiples errores: , error de API key de OpenAI 401, y el error . También pide corregir el flujo de creación de clientes/operaciones en el dashboard y el flujo del bot de Telegram que envía a contacta a Ana incorrectamente. **Estado: Parcialmente atendido, pero los errores principales persisten.**
-2.  **User Message (msg 287 - TAREA 1):** Reporte específico del error . Pide una corrección y prueba del flujo de OCR. **Estado: En progreso.**
-3.  **User Message (msg 287 - TAREA 2):** Reporte específico de que el bot de Telegram  ya no responde a . Pide revisar el webhook y la lógica de estado para asegurar que el bot sea siempre responsivo. **Estado: Pendiente.**
+1.  **msg 253**: Solicitó implementar la regla de negocio solo clientes activos pueden operar, extender el flujo de Telegram post-OCR (pedir ligas, nombre, IDMEX) y habilitar la creación/edición de clientes en el panel para Ana. **Estado: Completado.**
+2.  **msg 316**: Reportó que el botón Nuevo Cliente no era visible y Ver mis operaciones no funcionaba. **Estado: Completado.** (Se determinó que el botón sí era visible y se implementó la función faltante).
+3.  **msg 349**: Proporcionó una especificación grande y consolidada para refinar la UX de Telegram (subida de comprobantes en lote), implementar un temporizador de inactividad, añadir el flujo de cierre de MBControl (clave interna y layout para Toño), y hacer que la web sea un espejo de solo lectura. **Estado: En progreso.**
+4.  **msg 350**: El usuario adjuntó el archivo de layout SPEI. **Estado: Recibido.**
+5.  Los mensajes restantes son del agente trabajando en el último gran requerimiento.
 
 **Project Health Check:**
--   **Broken**:
-    -   El procesamiento de comprobantes (OCR) está completamente roto debido a un error de SDK.
-    -   El bot de Telegram es inestable y se vuelve no responsivo, bloqueando la interacción por ese canal.
+-   **Broken**: Ninguna funcionalidad crítica previamente funcional está rota. Sin embargo, la implementación de la última gran solicitud de funciones está incompleta.
 -   **Mocked**: N/A
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: El servicio de OCR y la fiabilidad del bot de Telegram han regresado a un estado de fallo después de intentos de corrección previos.
+-   **Known regressions**: Ninguna.
 
 **Credentials to test flow:**
--   **Telegram Bot Token**:  (disponible en ).
--   **OpenAI Key**: Debe usarse la  a través de la librería . No se deben usar claves hardcodeadas.
+-   **Telegram Bot Token**: Disponible en .
+-   **Variables de Entorno Requeridas**:
+    -   : Para el servicio de OCR.
+    -   : Para notificaciones de nuevos clientes.
+    -   : Para enviar el layout SPEI (aún por implementar el envío).
 
 **What agent forgot to execute**
--   El agente no ha logrado realizar pruebas de extremo a extremo exitosas debido a los errores persistentes.
--   El agente parece no haber identificado la causa raíz de por qué el bot de Telegram se vuelve no responsivo, a pesar de múltiples reinicios.
--   El agente no ha validado que las correcciones del SDK de OpenAI sean compatibles con la versión actual, lo que lleva a errores recurrentes como el de .</analysis>
+-   El agente creó un archivo placeholder para el monitor de inactividad () pero pospuso su implementación para centrarse en otras partes del último gran requerimiento. Esta funcionalidad es crítica y está pendiente.
+-   El agente no llegó a implementar la lógica de generación y envío del layout SPEI, ni la funcionalidad completa del comando  para Ana.
+-   La lógica para que el frontend actúe como un espejo de solo lectura tampoco fue implementada.</analysis>

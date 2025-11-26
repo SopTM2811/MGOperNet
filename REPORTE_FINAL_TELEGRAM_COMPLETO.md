@@ -482,7 +482,7 @@ ANA_TELEGRAM_CHAT_ID=<chat_id de Ana>
 
 **Puedes probar ahora mismo:**
 - Bot: @Netcash_bot
-- Dashboard: https://treasury-hub-1.preview.emergentagent.com
+- Dashboard: https://treasury-hub-2.preview.emergentagent.com
 
 ---
 
