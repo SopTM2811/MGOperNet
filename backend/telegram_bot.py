@@ -885,18 +885,52 @@ class TelegramBotNetCash:
                 return
         
         if context.user_data.get('esperando_nombre_ligas'):
-            nombre_titular = update.message.text.strip()
+            respuesta = update.message.text.strip()
+            
+            # Verificar si el usuario respondió con un número (selección de beneficiario frecuente)
+            if respuesta.isdigit() and context.user_data.get('beneficiarios_frecuentes'):
+                idx = int(respuesta) - 1
+                beneficiarios = context.user_data.get('beneficiarios_frecuentes', [])
+                
+                if 0 <= idx < len(beneficiarios):
+                    # Usar beneficiario frecuente
+                    beneficiario_seleccionado = beneficiarios[idx]
+                    context.user_data['nombre_ligas'] = beneficiario_seleccionado['nombre']
+                    context.user_data['titular_idmex_guardado'] = beneficiario_seleccionado['idmex']
+                    context.user_data['esperando_nombre_ligas'] = False
+                    context.user_data['esperando_idmex'] = False
+                    
+                    # Continuar con resumen
+                    await self.finalizar_captura_operacion(update, context)
+                    return
+            
+            # Validar que solo contenga letras y espacios (sin números)
+            import re
+            if re.search(r'\d', respuesta):
+                await update.message.reply_text(
+                    "⚠️ Veo números en el nombre.\n"
+                    "Por favor envíame SOLO el nombre y dos apellidos (mínimo 3 palabras), sin el IDMEX."
+                )
+                return
             
             # Validar mínimo 3 palabras
-            if len(nombre_titular.split()) < 3:
+            palabras = respuesta.split()
+            if len(palabras) < 3:
                 await update.message.reply_text(
                     "⚠️ El nombre debe tener al menos 3 palabras (nombre y dos apellidos).\n"
                     "Por favor envíalo completo."
                 )
                 return
             
+            # Validar longitud razonable
+            if len(respuesta) > 80:
+                await update.message.reply_text(
+                    "⚠️ El nombre es demasiado largo. Por favor verifica que sea correcto."
+                )
+                return
+            
             context.user_data['esperando_nombre_ligas'] = False
-            context.user_data['nombre_ligas'] = nombre_titular
+            context.user_data['nombre_ligas'] = respuesta
             context.user_data['esperando_idmex'] = True
             
             # BLOQUE 2: Texto actualizado para IDMEX de INE
