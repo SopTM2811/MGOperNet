@@ -428,13 +428,16 @@ Validaré que el depósito sea a la cuenta correcta de MBco."""
         # Crear aplicación
         self.app = Application.builder().token(self.token).build()
         
-        # Agregar handlers
+        # Agregar handlers (el orden importa - los más específicos primero)
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("ayuda", self.ayuda))
         self.app.add_handler(CallbackQueryHandler(self.handle_callback))
         self.app.add_handler(MessageHandler(filters.CONTACT, self.handle_contact))
         self.app.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
         self.app.add_handler(MessageHandler(filters.PHOTO, self.handle_document))
+        
+        # Handler catch-all para mensajes de texto no reconocidos (DEBE IR AL FINAL)
+        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_mensaje_no_reconocido))
         
         # Iniciar bot
         logger.info("Bot de Telegram iniciado")
