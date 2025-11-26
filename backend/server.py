@@ -468,6 +468,43 @@ async def crear_cliente(cliente_input: ClienteCreate):
     return cliente
 
 
+@api_router.put("/clientes/{cliente_id}", response_model=Cliente)
+async def actualizar_cliente(cliente_id: str, cliente_input: dict):
+    """
+    Actualiza un cliente existente.
+    """
+    cliente_existente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
+    
+    if not cliente_existente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # Actualizar campos permitidos
+    campos_actualizables = [
+        "nombre", "email", "telefono", "rfc", "notas", 
+        "porcentaje_comision_cliente", "propietario", "estado", "activo"
+    ]
+    
+    update_data = {}
+    for campo in campos_actualizables:
+        if campo in cliente_input:
+            update_data[campo] = cliente_input[campo]
+    
+    if update_data:
+        await db.clientes.update_one(
+            {"id": cliente_id},
+            {"$set": update_data}
+        )
+    
+    # Obtener cliente actualizado
+    cliente_actualizado = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
+    
+    if isinstance(cliente_actualizado.get('fecha_alta'), str):
+        cliente_actualizado['fecha_alta'] = datetime.fromisoformat(cliente_actualizado['fecha_alta'])
+    
+    logger.info(f"Cliente actualizado: {cliente_id} - {cliente_actualizado.get('nombre')}")
+    return cliente_actualizado
+
+
 @api_router.get("/clientes/buscar")
 async def buscar_clientes(q: str = ""):
     """
