@@ -257,10 +257,21 @@ const Clientes = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modales */}
       {showNuevoCliente && (
         <NuevoClienteModal
           onClose={() => setShowNuevoCliente(false)}
+          onSuccess={cargarClientes}
+        />
+      )}
+      
+      {showEditarCliente && clienteSeleccionado && (
+        <EditarClienteModal
+          cliente={clienteSeleccionado}
+          onClose={() => {
+            setShowEditarCliente(false);
+            setClienteSeleccionado(null);
+          }}
           onSuccess={cargarClientes}
         />
       )}
