@@ -421,6 +421,34 @@ async def crear_cliente(cliente_input: ClienteCreate):
     return cliente
 
 
+@api_router.get("/clientes/buscar")
+async def buscar_clientes(q: str = ""):
+    """
+    Busca clientes por nombre, email o teléfono.
+    """
+    if not q:
+        # Si no hay búsqueda, devolver todos
+        clientes = await db.clientes.find({}, {"_id": 0}).limit(50).to_list(50)
+    else:
+        # Búsqueda por nombre, email o teléfono
+        query = {
+            "$or": [
+                {"nombre": {"$regex": q, "$options": "i"}},
+                {"email": {"$regex": q, "$options": "i"}},
+                {"telefono_completo": {"$regex": q, "$options": "i"}},
+                {"telefono": {"$regex": q, "$options": "i"}}
+            ]
+        }
+        clientes = await db.clientes.find(query, {"_id": 0}).limit(20).to_list(20)
+    
+    # Convertir timestamps
+    for cliente in clientes:
+        if isinstance(cliente.get('fecha_alta'), str):
+            cliente['fecha_alta'] = datetime.fromisoformat(cliente['fecha_alta'])
+    
+    return clientes
+
+
 # ============================================
 # RUTAS DE CONFIGURACIÓN
 # ============================================
