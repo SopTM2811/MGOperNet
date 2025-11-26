@@ -862,6 +862,41 @@ class TelegramBotNetCash:
                 {"$set": {"ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()}}
             )
         
+        # Manejo de selección de operación
+        if context.user_data.get('esperando_seleccion_operacion'):
+            operaciones_lista = context.user_data.get('operaciones_lista', [])
+            
+            # Verificar si es un número (índice)
+            if texto.isdigit():
+                idx = int(texto) - 1
+                if 0 <= idx < len(operaciones_lista):
+                    operacion = operaciones_lista[idx]
+                    await self.mostrar_detalle_operacion(update, context, operacion)
+                    context.user_data['esperando_seleccion_operacion'] = False
+                    return
+            
+            # Verificar si es un folio (ej. NC-000009)
+            if texto.upper().startswith('NC-'):
+                chat_id = str(update.effective_chat.id)
+                usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+                if usuario:
+                    operacion = await db.operaciones.find_one(
+                        {"folio_mbco": texto.upper(), "id_cliente": usuario.get("id_cliente")},
+                        {"_id": 0}
+                    )
+                    if operacion:
+                        await self.mostrar_detalle_operacion(update, context, operacion)
+                        context.user_data['esperando_seleccion_operacion'] = False
+                        return
+            
+            # No se encontró la operación
+            await update.message.reply_text(
+                "⚠️ No encontré esa operación. Por favor verifica el número o folio.\n"
+                "Escribe /start para ver tus operaciones de nuevo."
+            )
+            context.user_data['esperando_seleccion_operacion'] = False
+            return
+        
         # BLOQUE 2: Captura de cantidad de ligas
         if context.user_data.get('esperando_cantidad_ligas'):
             try:
