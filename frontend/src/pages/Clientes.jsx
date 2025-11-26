@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Search, Home as HomeIcon, User } from 'lucide-react';
+import { Plus, Search, Home as HomeIcon, User, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import NuevoClienteModal from '@/components/NuevoClienteModal';
+import EditarClienteModal from '@/components/EditarClienteModal';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -17,6 +18,8 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [showEditarCliente, setShowEditarCliente] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
   useEffect(() => {
     cargarClientes();
