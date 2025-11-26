@@ -329,15 +329,64 @@ const OperacionDetalle = () => {
                   Comprobantes de Depósito
                 </CardTitle>
                 <CardDescription>
-                  Sube y procesa comprobantes de depósito con validación automática
+                  {esSoloLectura 
+                    ? "Comprobantes procesados por el cliente en Telegram"
+                    : "Sube y procesa comprobantes de depósito con validación automática"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ComprobantesUpload
-                  operacionId={operacion.id}
-                  comprobantes={operacion.comprobantes || []}
-                  onComprobantesActualizados={cargarOperacion}
-                />
+                {esSoloLectura && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-amber-800">
+                      ℹ️ Los comprobantes fueron subidos por el cliente en Telegram. No se permite agregar más desde el panel web.
+                    </p>
+                  </div>
+                )}
+                
+                {/* Mostrar comprobantes existentes */}
+                {operacion.comprobantes && operacion.comprobantes.length > 0 ? (
+                  <div className="space-y-3">
+                    {operacion.comprobantes.map((comp, idx) => (
+                      <div 
+                        key={idx}
+                        className={`border rounded-lg p-4 ${comp.es_valido ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">
+                              {comp.es_valido ? '✅' : '❌'} Comprobante {idx + 1}
+                            </p>
+                            <p className="text-sm text-slate-600 mt-1">
+                              Monto: ${comp.monto?.toLocaleString('es-MX', {minimumFractionDigits: 2}) || '0.00'}
+                            </p>
+                            {comp.clave_rastreo && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Clave rastreo: {comp.clave_rastreo}
+                              </p>
+                            )}
+                          </div>
+                          <Badge variant={comp.es_valido ? 'success' : 'destructive'}>
+                            {comp.es_valido ? 'Válido' : 'Inválido'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm">No hay comprobantes registrados</p>
+                )}
+                
+                {/* Solo mostrar componente de subida si NO es solo lectura */}
+                {!esSoloLectura && (
+                  <div className="mt-4">
+                    <ComprobantesUpload
+                      operacionId={operacion.id}
+                      comprobantes={operacion.comprobantes || []}
+                      onComprobantesActualizados={cargarOperacion}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
