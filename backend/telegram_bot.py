@@ -317,35 +317,112 @@ Para iniciar una nueva operación:
 Contacto: gestion.ngdl@gmail.com"""
             await query.edit_message_text(mensaje, parse_mode="Markdown")
     
-    async def nueva_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def registrar_cliente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
-        Inicia una nueva operación NetCash.
+        Registra un nuevo cliente en el sistema.
         """
         query = update.callback_query
         user = update.effective_user
         telegram_id = str(user.id)
+        chat_id = str(update.effective_chat.id)
         
-        # Buscar o crear cliente
-        cliente = await db.clientes.find_one({"telegram_id": telegram_id}, {"_id": 0})
+        # Verificar si ya está registrado
+        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+        cliente_existente = await db.clientes.find_one({"telegram_id": telegram_id}, {"_id": 0})
+        
+        if cliente_existente and usuario and usuario.get("id_cliente"):
+            await query.edit_message_text("Ya estás registrado como cliente. Puedes crear operaciones.")
+            return
+        
+        try:
+            # Obtener datos del usuario de Telegram
+            nombre_cliente = f"{user.first_name} {user.last_name or ''}".strip()
+            telefono = usuario.get("telefono", f"+telegram_{telegram_id}") if usuario else f"+telegram_{telegram_id}"
+            
+            # Crear nuevo cliente
+            nuevo_cliente = {
+                "id": str(uuid.uuid4()),
+                "nombre": nombre_cliente,
+                "email": None,  # Opcional
+                "pais": "MX",
+                "prefijo_telefono": "+52",
+                "telefono": telefono,
+                "telefono_completo": telefono,
+                "telegram_id": telegram_id,
+                "porcentaje_comision_cliente": 0.65,
+                "canal_preferido": "Telegram",
+                "propietario": "M",  # Market Business por defecto
+                "rfc": None,
+                "notas": f"Registrado vía Telegram Bot - {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+                "fecha_alta": datetime.now(timezone.utc).isoformat(),
+                "activo": True
+            }
+            
+            await db.clientes.insert_one(nuevo_cliente)
+            
+            # Actualizar o crear usuario de telegram
+            await db.usuarios_telegram.update_one(
+                {"chat_id": chat_id},
+                {"$set": {
+                    "rol": "cliente",
+                    "id_cliente": nuevo_cliente["id"],
+                    "rol_info": {"nombre": nombre_cliente, "descripcion": "Cliente NetCash"}
+                }},
+                upsert=True
+            )
+            
+            logger.info(f"Cliente registrado: {nuevo_cliente['id']} - {nombre_cliente}")
+            
+            mensaje = f"✅ ¡Listo! Ya te di de alta como cliente NetCash MBco.\n\n"
+            mensaje += f"**Nombre:** {nombre_cliente}\n"
+            mensaje += f"**Teléfono:** {telefono}\n\n"
+            mensaje += "Ahora ya puedes crear operaciones. Usa /start para ver el menú."
+            
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
+            
+        except Exception as e:
+            logger.error(f"Error registrando cliente: {str(e)}")
+            mensaje_error = "Hubo un error al registrarte. Por favor intenta de nuevo con /start"
+            await query.edit_message_text(mensaje_error)
+    
+    async def nueva_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Inicia una nueva operación NetCash (requiere estar registrado como cliente).
+        """
+        query = update.callback_query
+        user = update.effective_user
+        telegram_id = str(user.id)
+        chat_id = str(update.effective_chat.id)
+        
+        # Verificar que el usuario esté registrado como cliente
+        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+        
+        if not usuario or not usuario.get("id_cliente"):
+            mensaje = "⚠️ Para crear una operación primero necesito darte de alta como cliente.\n\n"
+            mensaje += "Por favor, elige la opción **1️⃣ Registrarme como cliente** en el menú.\n\n"
+            mensaje += "Usa /start para ver el menú."
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
+            return
+        
+        # Buscar cliente
+        cliente = await db.clientes.find_one({"id": usuario["id_cliente"]}, {"_id": 0})
         
         if not cliente:
-            # Cliente nuevo - necesita alta
-            mensaje = """Es tu primera operación con NetCash 🎉
-
-Para continuar, necesito que te des de alta. Por favor contacta a Ana:
-
-📧 gestion.ngdl@gmail.com
-📱 +52 33 1218 6685
-
-Menciona que quieres usar el Asistente NetCash."""
+            mensaje = "Error: No se encontró tu registro de cliente. Contacta a Ana:\n\n"
+            mensaje += "📧 gestion.ngdl@gmail.com\n📱 +52 33 1218 6685"
             await query.edit_message_text(mensaje)
             return
         
-        # Crear nueva operación
+        # Crear nueva operación usando el id_cliente
+        from models import OperacionNetCash, EstadoOperacion
+        
         operacion = OperacionNetCash(
-            cliente_telegram_id=telegram_id,
+            id_cliente=cliente["id"],
             cliente_nombre=cliente.get("nombre"),
-            cliente_telefono=cliente.get("telefono"),
+            cliente_email=cliente.get("email"),
+            cliente_telefono_completo=cliente.get("telefono_completo"),
+            cliente_telegram_id=telegram_id,
+            porcentaje_comision_usado=cliente.get("porcentaje_comision_cliente"),
             propietario=cliente.get("propietario"),
             estado=EstadoOperacion.ESPERANDO_COMPROBANTES
         )
@@ -357,16 +434,13 @@ Menciona que quieres usar el Asistente NetCash."""
         # Guardar ID de operación en contexto
         context.user_data['operacion_actual'] = operacion.id
         
-        mensaje = f"""Operación iniciada ✅
-
-**ID:** `{operacion.id}`
-
-Ahora envíame tu comprobante de depósito:
-• PDF del banco
-• Captura de pantalla
-• Archivo ZIP con varios comprobantes
-
-Validaré que el depósito sea a la cuenta correcta de MBco."""
+        mensaje = f"✅ Operación creada exitosamente\n\n"
+        mensaje += f"**ID:** `{operacion.id}`\n\n"
+        mensaje += "Ahora envíame tu comprobante de depósito:\n"
+        mensaje += "• PDF del banco\n"
+        mensaje += "• Captura de pantalla\n"
+        mensaje += "• Archivo ZIP con varios comprobantes\n\n"
+        mensaje += "Validaré que el depósito sea a la cuenta correcta de MBco."
         
         await query.edit_message_text(mensaje, parse_mode="Markdown")
     
