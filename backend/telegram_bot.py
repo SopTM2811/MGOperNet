@@ -496,40 +496,56 @@ class TelegramBotNetCash:
             await query.edit_message_text("Error al crear la operación. Por favor intenta de nuevo más tarde.")
     
     async def ver_operaciones(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Muestra las operaciones del usuario"""
+        """Muestra las operaciones del usuario (BLOQUE B)"""
         query = update.callback_query
         await query.answer()
         
         chat_id = str(update.effective_chat.id)
         
+        # Verificar si está vinculado a un cliente
         usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
         
         if not usuario or not usuario.get("id_cliente"):
-            await query.edit_message_text("Primero necesitas registrarte como cliente. Usa /start")
+            mensaje = "⚠️ **Aún no encuentro un cliente vinculado a tu número.**\n\n"
+            mensaje += "Primero necesito darte de alta como cliente NetCash.\n"
+            mensaje += "Elige la opción **'Registrarme como cliente NetCash'** en el menú."
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
             return
         
+        # Consultar últimas 5 operaciones del cliente
         operaciones = await db.operaciones.find(
             {"id_cliente": usuario["id_cliente"]},
             {"_id": 0}
-        ).sort("fecha_creacion", -1).limit(10).to_list(10)
+        ).sort("fecha_creacion", -1).limit(5).to_list(5)
         
+        # Caso SIN operaciones
         if not operaciones:
-            await query.edit_message_text("Aún no tienes operaciones NetCash.")
+            mensaje = "ℹ️ **Por ahora no tengo operaciones registradas para tu cuenta.**\n\n"
+            mensaje += "Cuando crees tu primera operación, podrás consultarla aquí."
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
             return
         
-        mensaje = "**Tus operaciones NetCash:**\n\n"
+        # Caso CON operaciones
+        mensaje = "📋 **Estas son tus últimas operaciones NetCash:**\n\n"
         
-        for op in operaciones:
+        for idx, op in enumerate(operaciones, 1):
             folio = op.get("folio_mbco", "N/A")
-            estado = op.get("estado", "DESCONOCIDO")
-            fecha = op.get("fecha_creacion", "")
-            if isinstance(fecha, str):
-                fecha = datetime.fromisoformat(fecha).strftime("%d/%m/%Y %H:%M")
+            estado = op.get("estado", "DESCONOCIDO").replace("_", " ").title()
             
-            mensaje += f"• Folio: **{folio}** - {estado}\n"
-            mensaje += f"  Fecha: {fecha}\n\n"
+            # Calcular monto total de comprobantes válidos
+            comprobantes = op.get("comprobantes", [])
+            if isinstance(comprobantes, list):
+                comprobantes_validos = [c for c in comprobantes if isinstance(c, dict) and c.get("es_valido")]
+                monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+            else:
+                monto_total = op.get("monto_depositado_cliente", 0)
+            
+            mensaje += f"{idx}) **{folio}** — ${monto_total:,.2f} — {estado}\n"
+        
+        mensaje += "\nSi necesitas detalle de alguna, díselo a Ana por ahora."
         
         await query.edit_message_text(mensaje, parse_mode="Markdown")
+        logger.info(f"Usuario {chat_id} consultó sus operaciones: {len(operaciones)} encontradas")
     
     async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /ayuda"""
