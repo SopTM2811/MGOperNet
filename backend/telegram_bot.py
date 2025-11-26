@@ -418,6 +418,7 @@ Validaré que el depósito sea a la cuenta correcta de MBco."""
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("ayuda", self.ayuda))
         self.app.add_handler(CallbackQueryHandler(self.handle_callback))
+        self.app.add_handler(MessageHandler(filters.CONTACT, self.handle_contact))
         self.app.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
         self.app.add_handler(MessageHandler(filters.PHOTO, self.handle_document))
         
