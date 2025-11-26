@@ -46,11 +46,12 @@ Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo
 IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar únicamente cada transacción."""
             
             # Crear chat con emergentintegrations usando Emergent LLM Key
+            # IMPORTANTE: Para análisis de archivos/imágenes se debe usar Gemini
             chat = LlmChat(
                 api_key=self.api_key,
                 session_id=f"ocr_{os.path.basename(archivo_path)}",
                 system_message="Eres un asistente experto en leer y extraer información de comprobantes bancarios en español."
-            ).with_model("openai", "gpt-4o")
+            ).with_model("gemini", "gemini-2.0-flash-exp")
             
             # Para imágenes y PDFs, crear FileContentWithMimeType correctamente
             # El constructor acepta: mime_type y file_path
