@@ -56,13 +56,14 @@ const Home = () => {
             </Button>
             
             <Button
-              data-testid="about-btn"
-              variant="outline"
+              data-testid="mbcontrol-btn"
+              onClick={() => navigate('/pendientes-mbcontrol')}
               size="lg"
-              className="border border-slate-300 text-slate-700 hover:bg-slate-50 px-10 py-6 text-base rounded-lg font-medium"
+              className="bg-amber-600 hover:bg-amber-700 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
             >
-              <FileText className="mr-2 h-5 w-5" />
-              Documentación
+              <Shield className="mr-2 h-5 w-5" />
+              MBControl
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
