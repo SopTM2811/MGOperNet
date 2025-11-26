@@ -75,6 +75,23 @@ const NuevaOperacionModal = ({ onClose, onSuccess }) => {
             </div>
 
             {/* Comisión específica de esta operación */}
-            {clienteSeleccionado && (\n              <div className=\"bg-slate-50 rounded-lg p-4\">\n                <Label htmlFor=\"comision_operacion\">Comisión de esta operación (%)</Label>\n                <Input\n                  id=\"comision_operacion\"\n                  type=\"number\"\n                  step=\"0.01\"\n                  min=\"0\"\n                  value={comisionOperacion === null ? clienteSeleccionado.porcentaje_comision_cliente : comisionOperacion}\n                  onChange={(e) => setComisionOperacion(parseFloat(e.target.value))}\n                  data-testid=\"operation-commission-input\"\n                />\n                <p className=\"text-xs text-slate-500 mt-1\">\n                  Por defecto se usa la comisión del cliente ({clienteSeleccionado.porcentaje_comision_cliente}%).\n                  Puedes modificarla solo para esta operación.\n                </p>\n              </div>\n            )}\n\n            <div className=\"bg-blue-50 border border-blue-200 rounded-lg p-4\">\n              <p className=\"text-sm text-blue-800\">\n                <strong>Siguiente paso:</strong> Después de crear la operación, podrás subir los comprobantes de depósito.\n              </p>\n            </div>\n\n            <div className=\"flex gap-3 mt-6\">\n              <Button\n                type=\"button\"\n                variant=\"outline\"\n                onClick={onClose}\n                className=\"flex-1\"\n                data-testid=\"cancel-btn\"\n              >\n                Cancelar\n              </Button>\n              <Button\n                type=\"submit\"\n                disabled={loading || !clienteSeleccionado}\n                className=\"flex-1 bg-blue-600 hover:bg-blue-700\"\n                data-testid=\"create-operation-btn\"\n              >\n                {loading ? 'Creando...' : (\n                  <>\n                    Crear Operación\n                    <ArrowRight className=\"ml-2 h-4 w-4\" />\n                  </>\n                )}\n              </Button>\n            </div>\n          </form>\n        </div>\n      </div>\n    </div>\n  );\n};
+            {clienteSeleccionado && (
+              <div className="bg-slate-50 rounded-lg p-4">
+                <Label htmlFor="comision_operacion">Comisión de esta operación (%)</Label>
+                <Input
+                  id="comision_operacion"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={comisionOperacion === null ? clienteSeleccionado.porcentaje_comision_cliente : comisionOperacion}
+                  onChange={(e) => setComisionOperacion(parseFloat(e.target.value))}
+                  data-testid="operation-commission-input"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Por defecto se usa la comisión del cliente ({clienteSeleccionado.porcentaje_comision_cliente}%).
+                  Puedes modificarla solo para esta operación.
+                </p>
+              </div>
+            )}\n\n            <div className=\"bg-blue-50 border border-blue-200 rounded-lg p-4\">\n              <p className=\"text-sm text-blue-800\">\n                <strong>Siguiente paso:</strong> Después de crear la operación, podrás subir los comprobantes de depósito.\n              </p>\n            </div>\n\n            <div className=\"flex gap-3 mt-6\">\n              <Button\n                type=\"button\"\n                variant=\"outline\"\n                onClick={onClose}\n                className=\"flex-1\"\n                data-testid=\"cancel-btn\"\n              >\n                Cancelar\n              </Button>\n              <Button\n                type=\"submit\"\n                disabled={loading || !clienteSeleccionado}\n                className=\"flex-1 bg-blue-600 hover:bg-blue-700\"\n                data-testid=\"create-operation-btn\"\n              >\n                {loading ? 'Creando...' : (\n                  <>\n                    Crear Operación\n                    <ArrowRight className=\"ml-2 h-4 w-4\" />\n                  </>\n                )}\n              </Button>\n            </div>\n          </form>\n        </div>\n      </div>\n    </div>\n  );\n};
 
 export default NuevaOperacionModal;
