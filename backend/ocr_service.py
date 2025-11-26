@@ -62,7 +62,7 @@ IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar ún
             # Crear mensaje con archivo
             user_message = UserMessage(
                 text=prompt,
-                files=[file_content]
+                file_contents=[file_content]
             )
             
             # Enviar y obtener respuesta
