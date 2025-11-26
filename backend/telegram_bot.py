@@ -168,9 +168,10 @@ class TelegramBotNetCash:
         user = update.effective_user
         rol = usuario.get("rol", "desconocido")
         rol_info = usuario.get("rol_info", {})
+        id_cliente = usuario.get("id_cliente")
         
-        if rol == "cliente":
-            # Menú para clientes
+        if rol == "cliente" and id_cliente:
+            # Menú para clientes REGISTRADOS
             nombre_cliente = rol_info.get("nombre", user.first_name) if rol_info else user.first_name
             
             mensaje = f"Bienvenido {nombre_cliente} 😊\n\n{MENSAJE_BIENVENIDA_CUENTA}"
