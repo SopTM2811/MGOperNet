@@ -102,32 +102,33 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8">
-      <div className="container mx-auto px-6">
+    <div className="min-h-screen bg-white py-8">
+      <div className="container mx-auto px-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-12">
           <div>
             <h1 
-              className="text-4xl font-bold mb-2"
-              style={{ fontFamily: 'Cormorant Garamond, serif' }}
+              className="text-4xl font-bold mb-2 tracking-tight"
+              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               data-testid="dashboard-title"
             >
               Dashboard NetCash
             </h1>
-            <p className="text-slate-600">Gestión de operaciones y monitoreo en tiempo real</p>
+            <p className="text-slate-600 font-light">Gestión de operaciones y monitoreo en tiempo real</p>
           </div>
           <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={() => navigate('/')}
               data-testid="home-nav-btn"
+              className="border-slate-300"
             >
               <HomeIcon className="h-4 w-4 mr-2" />
               Inicio
             </Button>
             <Button
               onClick={() => setShowNuevaOperacion(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 shadow-soft"
               data-testid="new-operation-btn"
             >
               <Plus className="h-4 w-4 mr-2" />
