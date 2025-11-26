@@ -142,15 +142,19 @@ class TelegramBotNetCash:
         usuario = await self.obtener_o_crear_usuario(chat_id)
         
         if not usuario:
-            # Primera vez - pedir teléfono
-            from telegram import KeyboardButton, ReplyKeyboardMarkup
-            
+            # Primera vez - pedir teléfono con botón de compartir contacto
             mensaje = f"Hola {user.first_name} 😊\n\n"
             mensaje += "Para identificarte y darte el menú correcto de NetCash, necesito tu número de celular.\n\n"
             mensaje += "👇 Por favor toca el botón de abajo para compartirlo:"
             
+            # Crear teclado con botón para compartir contacto
             keyboard = [[KeyboardButton("📱 Compartir mi teléfono", request_contact=True)]]
-            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard,
+                one_time_keyboard=True,
+                resize_keyboard=True,
+                input_field_placeholder="Toca el botón para compartir tu teléfono"
+            )
             
             await update.message.reply_text(mensaje, reply_markup=reply_markup)
             return
