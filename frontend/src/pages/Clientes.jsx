@@ -171,6 +171,9 @@ const Clientes = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold">{cliente.nombre}</h3>
                         {getPropietarioBadge(cliente.propietario)}
+                        {cliente.estado === 'pendiente_validacion' && (
+                          <Badge className="bg-yellow-100 text-yellow-800">Pendiente Validación</Badge>
+                        )}
                         {!cliente.activo && (
                           <Badge variant="secondary">Inactivo</Badge>
                         )}
