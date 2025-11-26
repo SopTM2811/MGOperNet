@@ -970,6 +970,7 @@ class TelegramBotNetCash:
         # Agregar handlers
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("ayuda", self.ayuda))
+        self.app.add_handler(CommandHandler("mbcontrol", self.comando_mbcontrol))
         self.app.add_handler(conv_handler)
         self.app.add_handler(CallbackQueryHandler(self.handle_callback))
         self.app.add_handler(MessageHandler(filters.CONTACT, self.handle_contact))
