@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
+import Clientes from "@/pages/Clientes";
 import OperacionDetalle from "@/pages/OperacionDetalle";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -17,6 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/clientes" element={<Clientes />} />
           <Route path="/operacion/:id" element={<OperacionDetalle />} />
         </Routes>
       </BrowserRouter>
