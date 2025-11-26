@@ -480,12 +480,21 @@ class TelegramBotNetCash:
                         context.user_data['operacion_actual'] = operacion_id
                         context.user_data['folio_actual'] = folio
                         
+                        # BLOQUE 1: Mensaje mejorado al crear operación
                         mensaje = f"✅ **Creé tu operación NetCash**\n\n"
                         mensaje += f"**Folio MBco:** {folio}\n\n"
-                        mensaje += "Ahora mándame el comprobante del depósito (PDF o imagen) para procesarlo.\n\n"
+                        mensaje += "Ahora mándame los comprobantes del depósito para esta operación.\n"
+                        mensaje += "Puedes enviar:\n"
+                        mensaje += "• PDFs\n"
+                        mensaje += "• Imágenes (JPG, PNG)\n"
+                        mensaje += "• Archivos ZIP con varios comprobantes adentro\n\n"
+                        mensaje += "Envíalos todos seguidos y al final escribe **'listo'** cuando hayas terminado.\n\n"
                         mensaje += f"**Recuerda:** El depósito debe ser a la cuenta:\n"
                         mensaje += f"JARDINERIA Y COMERCIO THABYETHA SA DE CV\n"
                         mensaje += f"CLABE: 646180139409481462"
+                        
+                        # Marcar que está recibiendo comprobantes
+                        context.user_data['recibiendo_comprobantes'] = True
                         
                         await query.edit_message_text(mensaje, parse_mode="Markdown")
                         logger.info(f"Operación creada: {operacion_id} (Folio: {folio}) para cliente {cliente['id']}")
