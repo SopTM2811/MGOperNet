@@ -127,6 +127,14 @@ const Dashboard = () => {
               Inicio
             </Button>
             <Button
+              variant="outline"
+              onClick={() => navigate('/clientes')}
+              className="border-slate-300"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ver Clientes
+            </Button>
+            <Button
               onClick={() => setShowNuevaOperacion(true)}
               className="bg-blue-600 hover:bg-blue-700 shadow-soft"
               data-testid="new-operation-btn"
