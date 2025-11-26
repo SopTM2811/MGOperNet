@@ -212,15 +212,69 @@ class TelegramBotNetCash:
             await update.message.reply_text(mensaje, parse_mode="Markdown")
             
         else:
-            # Desconocido
+            # Desconocido - En modo pruebas, crear cliente automáticamente
             mensaje = f"Hola {user.first_name} 😊\n\n"
-            mensaje += "Es tu primera operación con NetCash 🎉\n\n"
-            mensaje += "Para continuar, necesito que te des de alta. Por favor contacta a Ana:\n\n"
-            mensaje += "📧 gestion.ngdl@gmail.com\n"
-            mensaje += "📱 +52 33 1218 6685\n\n"
-            mensaje += "Menciona que quieres usar el Asistente NetCash."
+            mensaje += "¡Bienvenido a NetCash! 🎉\n\n"
+            mensaje += "Te he registrado como cliente de prueba.\n"
+            mensaje += "Ahora puedes crear operaciones y enviar comprobantes.\n\n"
             
-            await update.message.reply_text(mensaje)
+            # Crear cliente automáticamente en modo prueba
+            try:
+                # Crear cliente de prueba
+                from models import Cliente, Propietario
+                
+                nombre_cliente = f"{user.first_name} {user.last_name or ''}".strip()
+                telefono = usuario.get("telefono", f"+telegram_{chat_id}")
+                
+                nuevo_cliente = {
+                    "id": str(uuid.uuid4()),
+                    "nombre": nombre_cliente,
+                    "email": f"telegram_{chat_id}@netcash.test",
+                    "pais": "MX",
+                    "prefijo_telefono": "+52",
+                    "telefono": telefono,
+                    "telefono_completo": telefono,
+                    "telegram_id": str(user.id),
+                    "porcentaje_comision_cliente": 0.65,
+                    "canal_preferido": "Telegram",
+                    "propietario": "M",  # Market Business por defecto
+                    "fecha_alta": datetime.now(timezone.utc).isoformat(),
+                    "activo": True
+                }
+                
+                await db.clientes.insert_one(nuevo_cliente)
+                
+                # Actualizar usuario de telegram con el rol cliente
+                await db.usuarios_telegram.update_one(
+                    {"chat_id": chat_id},
+                    {"$set": {
+                        "rol": "cliente",
+                        "id_cliente": nuevo_cliente["id"],
+                        "rol_info": {"nombre": nombre_cliente, "descripcion": "Cliente NetCash"}
+                    }}
+                )
+                
+                logger.info(f"Cliente de prueba creado automáticamente: {nuevo_cliente['id']}")
+                
+                mensaje += "Usa los botones de abajo para comenzar:"
+                
+                keyboard = [
+                    [InlineKeyboardButton("📎 Nueva operación NetCash", callback_data="nueva_operacion")],
+                    [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
+                    [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await update.message.reply_text(mensaje, reply_markup=reply_markup)
+                
+            except Exception as e:
+                logger.error(f"Error creando cliente automático: {str(e)}")
+                # Fallback al mensaje de contactar a Ana
+                mensaje_error = "Hubo un error al registrarte automáticamente.\n\n"
+                mensaje_error += "Por favor contacta a Ana para darte de alta:\n\n"
+                mensaje_error += "📧 gestion.ngdl@gmail.com\n"
+                mensaje_error += "📱 +52 33 1218 6685"
+                await update.message.reply_text(mensaje_error)
     
     async def handle_contact(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Maneja cuando el usuario comparte su contacto"""
