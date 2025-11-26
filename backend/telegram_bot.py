@@ -639,12 +639,12 @@ class TelegramBotNetCash:
                                 mensaje += "Si hay algún error en los datos, por favor avísale a Ana."
                                 await update.message.reply_text(mensaje, parse_mode="Markdown")
                                 
-                                # BLOQUE 2: Preguntar si quiere agregar más comprobantes
+                                # BLOQUE 1: NO preguntar por más comprobantes, esperar "listo"
                                 await asyncio.sleep(0.5)
-                                pregunta = "📎 ¿Vas a agregar otro comprobante para esta misma operación?\n"
-                                pregunta += "Responde *sí* o *no*."
-                                await update.message.reply_text(pregunta, parse_mode="Markdown")
-                                context.user_data['esperando_mas_comprobantes'] = True
+                                await update.message.reply_text(
+                                    "Puedes enviar más comprobantes o escribe **'listo'** cuando hayas terminado.",
+                                    parse_mode="Markdown"
+                                )
                             else:
                                 mensaje = "⚠️ **No pude leer bien el comprobante.**\n\n"
                                 mensaje += "Intenta enviarlo de nuevo con mejor calidad o súbelo por el panel web."
@@ -710,12 +710,12 @@ class TelegramBotNetCash:
                                 mensaje += "Si hay algún error en los datos, por favor avísale a Ana."
                                 await update.message.reply_text(mensaje, parse_mode="Markdown")
                                 
-                                # BLOQUE 2: Preguntar si quiere agregar más comprobantes
+                                # BLOQUE 1: NO preguntar por más comprobantes, esperar "listo"
                                 await asyncio.sleep(0.5)
-                                pregunta = "📎 ¿Vas a agregar otro comprobante para esta misma operación?\n"
-                                pregunta += "Responde *sí* o *no*."
-                                await update.message.reply_text(pregunta, parse_mode="Markdown")
-                                context.user_data['esperando_mas_comprobantes'] = True
+                                await update.message.reply_text(
+                                    "Puedes enviar más comprobantes o escribe **'listo'** cuando hayas terminado.",
+                                    parse_mode="Markdown"
+                                )
                             else:
                                 mensaje = "⚠️ **No pude leer bien el comprobante.**\n\n"
                                 mensaje += "Intenta enviarlo de nuevo con mejor calidad o súbelo por el panel web."
