@@ -36,8 +36,10 @@ class ComprobanteDepositoOCR(BaseModel):
     cuenta_beneficiaria: Optional[str] = None
     nombre_beneficiario: Optional[str] = None
     referencia: Optional[str] = None
+    clave_rastreo: Optional[str] = None  # Identificador único del comprobante
     archivo_original: Optional[str] = None
     es_valido: bool = False
+    es_duplicado: bool = False  # Marca si es un comprobante repetido
     mensaje_validacion: Optional[str] = None
 
 
