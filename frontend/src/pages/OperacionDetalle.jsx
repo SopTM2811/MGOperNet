@@ -161,7 +161,14 @@ const OperacionDetalle = () => {
               >
                 Operación NetCash
               </h1>
-              <code className="text-sm font-mono bg-white px-3 py-1 rounded border">{operacion.id}</code>
+              <div className="flex items-center gap-3">
+                {operacion.folio_mbco && (
+                  <Badge className="bg-blue-600 text-white font-semibold text-lg px-4 py-1">
+                    {operacion.folio_mbco}
+                  </Badge>
+                )}
+                <code className="text-sm font-mono bg-white px-3 py-1 rounded border text-slate-500">{operacion.id}</code>
+              </div>
             </div>
             <Badge variant="default" className="text-base px-4 py-2">
               {operacion.estado.replace(/_/g, ' ')}
