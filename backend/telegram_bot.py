@@ -229,20 +229,29 @@ class TelegramBotNetCash:
         telefono = contact.phone_number
         nombre = f"{contact.first_name or ''} {contact.last_name or ''}".strip()
         
+        logger.info(f"Contacto recibido: {telefono} de {nombre} (chat_id: {chat_id})")
+        
         # Crear o actualizar usuario
         usuario = await self.obtener_o_crear_usuario(chat_id, telefono, nombre)
         
         if usuario:
-            # Agradecer y mostrar menú
-            mensaje = "✅ ¡Gracias por compartir tu teléfono!\n\n"
+            # Remover el teclado del botón de contacto
+            await update.message.reply_text(
+                "✅ ¡Gracias por compartir tu teléfono!",
+                reply_markup=ReplyKeyboardRemove()
+            )
             
-            from telegram import ReplyKeyboardRemove
-            await update.message.reply_text(mensaje, reply_markup=ReplyKeyboardRemove())
+            # Pequeña pausa para que se vea el mensaje
+            import asyncio
+            await asyncio.sleep(0.5)
             
             # Mostrar menú según rol
             await self.mostrar_menu_segun_rol(update, usuario)
         else:
-            await update.message.reply_text("Hubo un error al registrarte. Por favor intenta de nuevo.")
+            await update.message.reply_text(
+                "Hubo un error al registrarte. Por favor intenta de nuevo con /start",
+                reply_markup=ReplyKeyboardRemove()
+            )
     
     async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
