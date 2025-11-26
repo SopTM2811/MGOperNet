@@ -40,7 +40,18 @@ const Home = () => {
               className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
             >
               <BarChart3 className="mr-2 h-5 w-5" />
-              Ir al Dashboard
+              Operaciones
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            
+            <Button
+              data-testid="clientes-btn"
+              onClick={() => navigate('/clientes')}
+              size="lg"
+              className="bg-slate-700 hover:bg-slate-800 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Clientes
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             
