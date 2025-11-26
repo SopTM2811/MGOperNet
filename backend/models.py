@@ -140,7 +140,7 @@ class Cliente(BaseModel):
 
 class ClienteCreate(BaseModel):
     nombre: str
-    email: str
+    email: Optional[str] = None  # Opcional
     pais: str = "MX"
     prefijo_telefono: str = "+52"
     telefono: str
@@ -148,6 +148,8 @@ class ClienteCreate(BaseModel):
     porcentaje_comision_cliente: float = 0.65
     canal_preferido: Optional[str] = None
     propietario: Propietario
+    rfc: Optional[str] = None  # RFC opcional
+    notas: Optional[str] = None  # Notas opcionales
 
 
 class LayoutPagoProveedor(BaseModel):
