@@ -44,10 +44,13 @@ class OCRService:
   "banco_emisor": [nombre del banco que emite el comprobante],
   "cuenta_beneficiaria": [CLABE o número de cuenta del beneficiario, puede estar parcialmente enmascarada con asteriscos],
   "nombre_beneficiario": [nombre completo o razón social del beneficiario],
-  "referencia": [referencia o folio si está disponible]
+  "referencia": [número de referencia o folio del depósito],
+  "clave_rastreo": [clave de rastreo única de la transacción bancaria]
 }
 
-Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo no está visible, usa null."""
+Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo no está visible, usa null.
+
+IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar únicamente cada transacción."""
             
             # Para OpenAI, usamos directamente el archivo
             # Nota: OpenAI no usa FileContentWithMimeType, sino que procesa directamente
