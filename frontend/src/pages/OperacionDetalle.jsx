@@ -179,33 +179,88 @@ const OperacionDetalle = () => {
 
           {/* Tab General */}
           <TabsContent value="general">
-            <Card>
-              <CardHeader>
-                <CardTitle>Información General</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-slate-600">Cliente</Label>
-                    <p className="font-medium">{operacion.cliente_nombre || 'Sin nombre'}</p>
+            <div className="space-y-6">
+              {/* Información del Cliente */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Información del Cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-600 text-sm">Nombre del Cliente</Label>
+                      <p className="font-semibold text-lg">{operacion.cliente_nombre || '-'}</p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-slate-600 text-sm">Propietario</Label>
+                      <p className="font-medium">{operacion.propietario || '-'}</p>
+                    </div>
+                    
+                    {operacion.cliente_email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <Label className="text-slate-600 text-sm">Email</Label>
+                          <p className="font-medium">{operacion.cliente_email}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {operacion.cliente_telefono_completo && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <Label className="text-slate-600 text-sm">Teléfono / WhatsApp</Label>
+                          <p className="font-medium">{operacion.cliente_telefono_completo}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {operacion.cliente_telegram_id && (
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <Label className="text-slate-600 text-sm">Telegram</Label>
+                          <p className="font-medium">{operacion.cliente_telegram_id}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {operacion.porcentaje_comision_usado !== null && (
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <Label className="text-slate-600 text-sm">Comisión de esta operación</Label>
+                        <p className="font-semibold text-blue-700 text-lg">{operacion.porcentaje_comision_usado}%</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <Label className="text-slate-600">Propietario</Label>
-                    <p className="font-medium">{operacion.propietario || '-'}</p>
+                </CardContent>
+              </Card>
+
+              {/* Información de la Operación */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Detalles de la Operación</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-600 text-sm">Fecha de creación</Label>
+                      <p className="font-medium">
+                        {new Date(operacion.fecha_creacion).toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-600 text-sm">Código del Sistema</Label>
+                      <p className="font-medium">{operacion.codigo_operacion_sistema || 'Pendiente'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-slate-600">Fecha de creación</Label>
-                    <p className="font-medium">
-                      {new Date(operacion.fecha_creacion).toLocaleString('es-MX')}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-slate-600">Código del Sistema</Label>
-                    <p className="font-medium">{operacion.codigo_operacion_sistema || 'Pendiente'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Tab Comprobantes */}
