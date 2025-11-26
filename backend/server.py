@@ -150,6 +150,10 @@ async def crear_operacion(operacion_input: OperacionNetCashCreate):
     if operacion_dict.get("porcentaje_comision_usado") is None:
         operacion_dict["porcentaje_comision_usado"] = cliente.get("porcentaje_comision_cliente", 0.65)
     
+    # Generar folio MBco
+    folio = await generar_folio_mbco()
+    operacion_dict["folio_mbco"] = folio
+    
     operacion = OperacionNetCash(**operacion_dict)
     
     # Convertir a dict y serializar datetime
@@ -158,7 +162,7 @@ async def crear_operacion(operacion_input: OperacionNetCashCreate):
     
     await db.operaciones.insert_one(doc)
     
-    logger.info(f"Operación creada: {operacion.id} para cliente {cliente.get('nombre')}")
+    logger.info(f"Operación creada: {operacion.id} (Folio: {folio}) para cliente {cliente.get('nombre')}")
     return operacion
 
 
