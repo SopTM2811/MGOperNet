@@ -725,8 +725,17 @@ class TelegramBotNetCash:
             )
     
     async def handle_mensaje_no_reconocido(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Maneja mensajes de texto no reconocidos y flujo extendido de operación"""
+        """Maneja mensajes de texto no reconocidos y flujo extendido de operación (BLOQUES 1, 2, 3)"""
         texto = update.message.text.strip().lower()
+        user_name = update.effective_user.first_name
+        
+        # Actualizar timestamp de último mensaje si hay operación en curso
+        if context.user_data.get('operacion_actual'):
+            operacion_id = context.user_data['operacion_actual']
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {"$set": {"ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()}}
+            )
         
         # BLOQUE 2: Flujo extendido después de comprobantes
         if context.user_data.get('esperando_mas_comprobantes'):
