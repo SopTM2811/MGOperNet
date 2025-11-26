@@ -19,7 +19,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const ClienteSelector = ({ onClienteSeleccionado, clienteSeleccionado }) => {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [buscando, setB uscando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
   const [clientes, setClientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [creando, setCreando] = useState(false);
