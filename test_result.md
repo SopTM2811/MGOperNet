@@ -114,101 +114,167 @@ user_problem_statement: |
 backend:
   - task: "Bot de Telegram - Flujo de subida de comprobantes en lote con palabra 'listo'"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/telegram_bot.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           Implementado flujo mejorado donde al escribir 'listo' se cierra la captura de comprobantes 
           y pasa directamente a solicitar cantidad de ligas (sin confirmación redundante).
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Bot de Telegram funcionando correctamente.
+          - Flujo de comprobantes implementado con trigger 'listo'
+          - Función cerrar_comprobantes_y_continuar() funciona correctamente
+          - Transición automática a captura de cantidad de ligas
+          - Validación de comprobantes válidos antes de cerrar
+          - Servicio telegram_bot corriendo en Supervisor (PID 1134)
           
   - task: "Bot de Telegram - Captura de datos extendidos (cantidad ligas, nombre titular, IDMEX)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/telegram_bot.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           Flujo completo: cantidad de ligas, nombre completo del titular (mínimo 3 palabras),
           IDMEX, y resumen final con toda la información capturada.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Captura de datos extendidos implementada correctamente.
+          - Estados conversacionales: ESPERANDO_CANTIDAD_LIGAS, ESPERANDO_NOMBRE_LIGAS, ESPERANDO_IDMEX
+          - Validación de nombre mínimo 3 palabras
+          - Captura de IDMEX de INE
+          - Resumen final con todos los datos
+          - Actualización de estado a DATOS_COMPLETOS
           
   - task: "Monitor de inactividad - Cancelar operaciones tras 3 minutos"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/inactividad_monitor.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           Monitor configurado en Supervisor. Revisa cada minuto, cancela operaciones con más
           de 3 minutos sin actividad, notifica al cliente por Telegram.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Monitor de inactividad funcionando correctamente.
+          - Servicio inactividad_monitor corriendo en Supervisor (PID 817)
+          - Función revisar_operaciones_inactivas() probada exitosamente
+          - Cancela operaciones con más de 3 minutos sin actividad
+          - Actualiza estado a CANCELADA_POR_INACTIVIDAD
+          - Notificación por Telegram implementada
           
   - task: "Comando /mbcontrol para Ana - Registrar clave MBControl"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/telegram_bot.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           Comando /mbcontrol implementado. Solo para admin_mbco. Formato: /mbcontrol FOLIO CLAVE.
           Genera layout y notifica resultado.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Comando /mbcontrol implementado correctamente.
+          - Validación de rol admin_mbco configurada (Ana: +523312186685)
+          - Mapeo TELEFONO_A_ROL funcional
+          - Formato: /mbcontrol FOLIO CLAVE_MBCONTROL
+          - Integración con endpoint /operaciones/{id}/mbcontrol
+          - Generación y notificación de layout
           
   - task: "Servicio de generación de layouts SPEI Excel"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/layout_service.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           LayoutService genera Excel con columnas correctas, concepto con folio y clave MBControl.
           Envío por SMTP configurable, documenta archivo si no hay credenciales.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Servicio de layouts SPEI funcionando correctamente.
+          - LayoutService inicializado correctamente
+          - Generación de Excel con formato correcto (Clabe, Titular, Concepto, Monto)
+          - Concepto: "PAGO NETCASH {folio} CLAVE {clave_mbcontrol}"
+          - Archivos guardados en /tmp/netcash_layouts/
+          - SMTP configurado pero sin credenciales (comportamiento esperado)
+          - Documentación de archivos generados cuando no hay SMTP
           
   - task: "Endpoint POST /operaciones/{id}/mbcontrol"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           Endpoint registra clave_operacion_mbcontrol, genera layout Excel, intenta enviar por correo,
           actualiza estado según resultado.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Endpoint MBControl funcionando correctamente.
+          - POST /operaciones/{id}/mbcontrol acepta Form data
+          - Registra clave_operacion_mbcontrol en BD
+          - Genera layout Excel automáticamente
+          - Actualiza estado a PENDIENTE_ENVIO_LAYOUT o LAYOUT_ENVIADO
+          - Respuesta JSON con detalles del proceso
+          - Validación de datos completos del titular
           
   - task: "Consejero de plataformas/cuentas para layouts"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/plataformas_config.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
           ConsejeroPlataformas evalúa criterios múltiples, advierte sobre empalmes, proporciona
           explicación detallada. Endpoint GET /plataformas/recomendar disponible.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Consejero de plataformas funcionando correctamente.
+          - GET /plataformas/recomendar funcional
+          - Parámetros: tipo_operacion, monto, urgencia
+          - Recomendación: NetCash STP (score: 95, apto: true)
+          - Evaluación de criterios múltiples implementada
+          - Advertencias sobre empalmes configuradas
+          - Explicación detallada en respuesta
 
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
