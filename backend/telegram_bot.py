@@ -236,7 +236,7 @@ class TelegramBotNetCash:
                 logger.info(f"[NetCash][START] Usuario nuevo creado en BD: {telegram_id}")
                 
                 # Mostrar mensaje de bienvenida + botón para compartir teléfono
-                mensaje = f"Hola 👋, bienvenido a *NetCash MBco*.\n\n"
+                mensaje = "Hola 👋, bienvenido a NetCash MBco.\n\n"
                 mensaje += "Para darte de alta necesito que compartas tu teléfono.\n"
                 mensaje += "Toca el botón de abajo para continuar 👇"
                 
@@ -247,7 +247,7 @@ class TelegramBotNetCash:
                     resize_keyboard=True
                 )
                 
-                await update.message.reply_text(mensaje, reply_markup=reply_markup, parse_mode="Markdown")
+                await update.message.reply_text(mensaje, reply_markup=reply_markup)
                 logger.info(f"[NetCash][START] Usuario nuevo sin teléfono -> se pide contacto")
                 return
             
