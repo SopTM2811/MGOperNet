@@ -843,13 +843,15 @@ class TelegramBotNetCash:
                             # Limpiar archivo temporal
                             file_path.unlink(missing_ok=True)
                         else:
+                            error_text = await response.text()
+                            logger.error(f"Error del backend procesando documento: {error_text}")
                             await update.message.reply_text(
-                                "Error al procesar el comprobante. Por favor intenta de nuevo más tarde."
+                                "❌ **No pude leer bien el comprobante.** Por favor intenta de nuevo o súbelo por el panel web."
                             )
         except Exception as e:
-            logger.error(f"Error procesando comprobante: {str(e)}")
+            logger.error(f"Error procesando documento: {str(e)}")
             await update.message.reply_text(
-                "Error al procesar el comprobante. Por favor intenta de nuevo o súbelo por el panel web."
+                "❌ Error al procesar el documento. Por favor intenta de nuevo o súbelo por el panel web."
             )
     
     async def handle_mensaje_no_reconocido(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
