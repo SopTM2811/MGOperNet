@@ -928,9 +928,10 @@ class TelegramBotNetCash:
                 )
                 
                 if usuario_telegram and usuario_telegram.get("chat_id"):
-                    mensaje_cliente = "✅ **¡Tu registro como cliente NetCash fue aprobado!**\n\n"
-                    mensaje_cliente += "Ya puedes crear operaciones y enviar comprobantes.\n\n"
-                    mensaje_cliente += "Usa /start para ver el menú."
+                    mensaje_cliente = "✅ **¡Ya estás dado de alta como cliente NetCash!**\n\n"
+                    mensaje_cliente += f"**Comisión asignada:** {comision_pct:.3f}%\n\n"
+                    mensaje_cliente += "Ya puedes operar desde este bot.\n"
+                    mensaje_cliente += "Escribe /start para ver el menú de operaciones."
                     
                     await self.app.bot.send_message(
                         chat_id=usuario_telegram["chat_id"],
