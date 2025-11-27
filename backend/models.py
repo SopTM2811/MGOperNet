@@ -128,6 +128,7 @@ class OperacionNetCash(BaseModel):
     # Timestamps de seguimiento
     timestamp_confirmacion_cliente: Optional[datetime] = None
     timestamp_codigo_sistema: Optional[datetime] = None
+    timestamp_mbcontrol: Optional[str] = None  # ISO string cuando Ana registra clave MBco
     timestamp_pago_proveedor: Optional[datetime] = None
     timestamp_ligas_recibidas: Optional[datetime] = None
     timestamp_entrega_cliente: Optional[datetime] = None
