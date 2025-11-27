@@ -901,7 +901,7 @@ class TelegramBotNetCash:
                     return
             
             # Verificar si es un folio (ej. NC-000009)
-            if texto.upper().startswith('NC-'):
+            if texto_lower.startswith('nc-'):
                 chat_id = str(update.effective_chat.id)
                 usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
                 if usuario:
