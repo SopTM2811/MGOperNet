@@ -14,6 +14,7 @@ class EstadoOperacion(str, Enum):
     DATOS_COMPLETOS = "DATOS_COMPLETOS"  # Todos los datos del cliente capturados
     ESPERANDO_CONFIRMACION_CLIENTE = "ESPERANDO_CONFIRMACION_CLIENTE"
     CANCELADA_POR_INACTIVIDAD = "CANCELADA_POR_INACTIVIDAD"  # Timer de 3 min expiró
+    CON_CLAVE_MBCO = "CON_CLAVE_MBCO"  # Ana registró la clave MBControl
     ESPERANDO_CODIGO_SISTEMA = "ESPERANDO_CODIGO_SISTEMA"  # Esperando clave MBControl
     PENDIENTE_ENVIO_LAYOUT = "PENDIENTE_ENVIO_LAYOUT"  # Tiene clave MBControl, listo para layout
     LAYOUT_ENVIADO = "LAYOUT_ENVIADO"  # Layout enviado a Toño
