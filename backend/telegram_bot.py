@@ -170,6 +170,33 @@ class TelegramBotNetCash:
         await db.usuarios_telegram.insert_one(nuevo_usuario)
         logger.info(f"Usuario creado: {chat_id} - Rol: {rol}")
         
+        # Si es usuario desconocido (no cliente ni rol interno), notificar a Ana
+        if rol == "desconocido" and self.ana_telegram_id:
+            try:
+                # Obtener telegram_id del usuario
+                from telegram import Update
+                telegram_id = chat_id  # El chat_id ES el telegram_id
+                username = nuevo_usuario.get("nombre_telegram", "N/A")
+                
+                mensaje_ana = f"🆕 **Nuevo usuario escribió al bot NetCash y NO está vinculado como cliente.**\n\n"
+                mensaje_ana += f"📲 **Telegram ID:** `{telegram_id}`\n"
+                mensaje_ana += f"👤 **Usuario:** {username}\n"
+                mensaje_ana += f"📱 **Teléfono:** {telefono_normalizado}\n"
+                mensaje_ana += f"📅 **Fecha/hora:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC\n\n"
+                mensaje_ana += "**Instrucción:**\n"
+                mensaje_ana += "1) Darlo de alta como cliente.\n"
+                mensaje_ana += "2) Asignarle comisión con `/aprobar_cliente`.\n\n"
+                mensaje_ana += f"Para aprobar: `/aprobar_cliente {telegram_id} 1.00`"
+                
+                await self.app.bot.send_message(
+                    chat_id=self.ana_telegram_id,
+                    text=mensaje_ana,
+                    parse_mode="Markdown"
+                )
+                logger.info(f"Notificación enviada a Ana sobre nuevo usuario desconocido: {chat_id}")
+            except Exception as e:
+                logger.error(f"Error notificando a Ana sobre usuario nuevo: {str(e)}")
+        
         return nuevo_usuario
     
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
