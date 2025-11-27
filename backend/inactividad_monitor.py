@@ -44,8 +44,8 @@ async def revisar_operaciones_inactivas():
             "origen_operacion": "telegram",
             "estado": {"$in": ESTADOS_EN_CAPTURA},
             "$or": [
-                {"ultimo_mensaje_cliente": {"$exists": False}},
-                {"ultimo_mensaje_cliente": {"$lt": limite_inactividad.isoformat()}}
+                {"timestamp_actualizacion": {"$exists": False}},
+                {"timestamp_actualizacion": {"$lt": limite_inactividad}}
             ]
         }
         
