@@ -653,11 +653,14 @@ class TelegramBotNetCash:
             return
         
         # Parsear parámetros: /mbco NC-000016 MBC-2025-00089
-        # maxsplit=2 permite que la clave MBControl tenga espacios si fuera necesario
         try:
-            partes = mensaje_texto.split(maxsplit=2)
+            # Dividir en todas las partes para detectar sintaxis incorrecta
+            partes_todas = mensaje_texto.split()
             
-            if len(partes) < 3:
+            logger.info(f"[NetCash][MBCO] Partes detectadas: {len(partes_todas)} - {partes_todas}")
+            
+            # Verificar que tenga exactamente 3 partes (comando + 2 parámetros)
+            if len(partes_todas) < 3:
                 mensaje = "⚠️ **Formato incorrecto.**\n\n"
                 mensaje += "**Usa:** `/mbco CLAVE_NETCASH CLAVE_MBCO`\n\n"
                 mensaje += "**Ejemplo:** `/mbco NC-000016 MBC-2025-00089`\n\n"
