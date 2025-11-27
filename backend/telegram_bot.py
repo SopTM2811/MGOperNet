@@ -1037,18 +1037,39 @@ class TelegramBotNetCash:
                                 file_path.unlink(missing_ok=True)
                                 return
                             
+                            # Verificar si es duplicado (puede venir en nivel superior o en comprobante)
+                            es_duplicado = result.get("es_duplicado", False)
+                            operacion_duplicada = result.get("operacion_duplicada", {})
+                            
+                            if es_duplicado:
+                                # Intentar obtener información de la operación original
+                                if operacion_duplicada and isinstance(operacion_duplicada, dict):
+                                    folio_original = operacion_duplicada.get("folio_mbco")
+                                    estado_original = operacion_duplicada.get("estado")
+                                    
+                                    if folio_original and estado_original:
+                                        mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                        mensaje += f"🔑 **Operación:** {folio_original}\n"
+                                        mensaje += f"📊 **Estatus:** {estado_original}\n\n"
+                                        mensaje += "Por favor confirma con Ana antes de continuar."
+                                        logger.info(f"[NetCash][DUPLICADO] Comprobante duplicado - Op: {folio_original}, Estado: {estado_original}")
+                                    else:
+                                        mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                        mensaje += "No pude identificar la operación exacta.\n"
+                                        mensaje += "Por favor confirma con Ana antes de continuar."
+                                        logger.warning(f"[NetCash][DUPLICADO] Comprobante duplicado pero sin info de operación")
+                                else:
+                                    mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                    mensaje += "No pude identificar la operación exacta.\n"
+                                    mensaje += "Por favor confirma con Ana antes de continuar."
+                                    logger.warning(f"[NetCash][DUPLICADO] Comprobante duplicado pero operacion_duplicada es None o no dict")
+                                
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                file_path.unlink(missing_ok=True)
+                                return
+                            
                             # Manejar respuesta de comprobante individual
                             comprobante = result.get("comprobante", {})
-                            
-                            if comprobante.get("es_duplicado"):
-                                folio_original = result.get("operacion_duplicada", {}).get("folio_mbco", "N/A")
-                                estado_original = result.get("operacion_duplicada", {}).get("estado", "DESCONOCIDO")
-                                
-                                mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
-                                mensaje += f"🔑 **Operación:** {folio_original}\n"
-                                mensaje += f"📊 **Estatus:** {estado_original}\n\n"
-                                mensaje += "Por favor confirma con Ana antes de continuar."
-                                await update.message.reply_text(mensaje, parse_mode="Markdown")
                             elif comprobante.get("es_valido"):
                                 monto = comprobante.get("monto", 0)
                                 referencia = comprobante.get("referencia", "N/A")
@@ -1146,18 +1167,39 @@ class TelegramBotNetCash:
                                 file_path.unlink(missing_ok=True)
                                 return
                             
+                            # Verificar si es duplicado (puede venir en nivel superior o en comprobante)
+                            es_duplicado = result.get("es_duplicado", False)
+                            operacion_duplicada = result.get("operacion_duplicada", {})
+                            
+                            if es_duplicado:
+                                # Intentar obtener información de la operación original
+                                if operacion_duplicada and isinstance(operacion_duplicada, dict):
+                                    folio_original = operacion_duplicada.get("folio_mbco")
+                                    estado_original = operacion_duplicada.get("estado")
+                                    
+                                    if folio_original and estado_original:
+                                        mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                        mensaje += f"🔑 **Operación:** {folio_original}\n"
+                                        mensaje += f"📊 **Estatus:** {estado_original}\n\n"
+                                        mensaje += "Por favor confirma con Ana antes de continuar."
+                                        logger.info(f"[NetCash][DUPLICADO] Comprobante duplicado - Op: {folio_original}, Estado: {estado_original}")
+                                    else:
+                                        mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                        mensaje += "No pude identificar la operación exacta.\n"
+                                        mensaje += "Por favor confirma con Ana antes de continuar."
+                                        logger.warning(f"[NetCash][DUPLICADO] Comprobante duplicado pero sin info de operación")
+                                else:
+                                    mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                    mensaje += "No pude identificar la operación exacta.\n"
+                                    mensaje += "Por favor confirma con Ana antes de continuar."
+                                    logger.warning(f"[NetCash][DUPLICADO] Comprobante duplicado pero operacion_duplicada es None o no dict")
+                                
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                file_path.unlink(missing_ok=True)
+                                return
+                            
                             # Manejar respuesta de comprobante individual
                             comprobante = result.get("comprobante", {})
-                            
-                            if comprobante.get("es_duplicado"):
-                                folio_original = result.get("operacion_duplicada", {}).get("folio_mbco", "N/A")
-                                estado_original = result.get("operacion_duplicada", {}).get("estado", "DESCONOCIDO")
-                                
-                                mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
-                                mensaje += f"🔑 **Operación:** {folio_original}\n"
-                                mensaje += f"📊 **Estatus:** {estado_original}\n\n"
-                                mensaje += "Por favor confirma con Ana antes de continuar."
-                                await update.message.reply_text(mensaje, parse_mode="Markdown")
                             elif comprobante.get("es_valido"):
                                 monto = comprobante.get("monto", 0)
                                 referencia = comprobante.get("referencia", "N/A")
