@@ -588,14 +588,30 @@ class TelegramBotNetCash:
         Comando /mbco para que Ana registre la clave MBControl de una operación
         Formato: /mbco NC-000016 MBC-2025-00089
         """
-        chat_id = str(update.effective_chat.id)
+        from_user_id = update.effective_user.id
+        from_user_name = update.effective_user.first_name
+        mensaje_texto = update.message.text
         
-        # Verificar que el usuario sea Ana (admin_mbco)
+        logger.info(f"[NetCash][MBCO] Comando /mbco recibido")
+        logger.info(f"[NetCash][MBCO] from_user.id = {from_user_id}, text = '{mensaje_texto}'")
+        
+        # Obtener ANA_TELEGRAM_CHAT_ID del env
+        ana_chat_id_env = self.ana_telegram_id
+        ana_id_int = int(ana_chat_id_env) if ana_chat_id_env else None
+        
+        # Verificar permisos: Ana por chat_id O admin_mbco por rol
+        chat_id = str(update.effective_chat.id)
         usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
         
-        if not usuario or usuario.get("rol") != "admin_mbco":
+        is_ana_by_chatid = (ana_id_int and from_user_id == ana_id_int)
+        is_admin_mbco = (usuario and usuario.get("rol") == "admin_mbco")
+        
+        logger.info(f"[NetCash][MBCO] is_ana_by_chatid={is_ana_by_chatid}, is_admin_mbco={is_admin_mbco}")
+        
+        if not (is_ana_by_chatid or is_admin_mbco):
+            logger.warning(f"[NetCash][MBCO] Usuario {from_user_name} (ID {from_user_id}) sin permisos para /mbco")
             await update.message.reply_text(
-                "⛔ Este comando solo puede usarlo Ana.\n"
+                "⛔ Este comando solo puede usarlo Ana / admin_mbco.\n"
                 "Si necesitas ayuda, contacta a Ana."
             )
             return
@@ -603,7 +619,7 @@ class TelegramBotNetCash:
         # Parsear parámetros: /mbco NC-000016 MBC-2025-00089
         # maxsplit=2 permite que la clave MBControl tenga espacios si fuera necesario
         try:
-            partes = update.message.text.split(maxsplit=2)
+            partes = mensaje_texto.split(maxsplit=2)
             
             if len(partes) < 3:
                 mensaje = "⚠️ **Formato incorrecto.**\n\n"
