@@ -251,12 +251,28 @@ class TelegramBotNetCash:
         usuario = await self.obtener_o_crear_usuario(chat_id, telefono, nombre)
         
         if usuario:
-            await update.message.reply_text(
-                "✅ ¡Gracias por compartir tu teléfono!",
-                reply_markup=ReplyKeyboardRemove()
-            )
-            await asyncio.sleep(0.5)
-            await self.mostrar_menu_principal(update, usuario)
+            # Si es usuario desconocido (sin cliente vinculado), mostrar mensaje especial
+            if usuario.get("rol") == "desconocido":
+                mensaje = "✅ **¡Gracias por compartir tu contacto!**\n\n"
+                mensaje += "Te estamos dando de alta como cliente NetCash.\n"
+                mensaje += "Ana revisará tu información y te asignará una comisión.\n\n"
+                mensaje += "Te avisaremos por este mismo chat cuando ya puedas operar."
+                
+                await update.message.reply_text(
+                    mensaje,
+                    reply_markup=ReplyKeyboardRemove(),
+                    parse_mode="Markdown"
+                )
+                logger.info(f"[NetCash][CONTACTO] Usuario {chat_id} compartió contacto, rol=desconocido, esperando aprobación de Ana")
+                return
+            else:
+                # Usuario ya conocido
+                await update.message.reply_text(
+                    "✅ ¡Gracias por compartir tu teléfono!",
+                    reply_markup=ReplyKeyboardRemove()
+                )
+                await asyncio.sleep(0.5)
+                await self.mostrar_menu_principal(update, usuario)
         else:
             await update.message.reply_text(
                 "Hubo un error al registrarte. Por favor intenta de nuevo con /start",
