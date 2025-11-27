@@ -1172,6 +1172,12 @@ class TelegramBotNetCash:
                 }}
             )
             
+            # 🔔 NOTIFICAR A ANA de nueva operación lista
+            operacion_actualizada = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+            if operacion_actualizada:
+                from notificaciones_ana import notificar_ana_telegram
+                await notificar_ana_telegram(operacion_actualizada)
+            
             # BLOQUE 6: Resumen con desglose económico
             mensaje = "📋 **Resumen de tu operación NetCash**\n\n"
             mensaje += f"**Folio MBco:** {folio}\n"
