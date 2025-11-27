@@ -828,6 +828,15 @@ class TelegramBotNetCash:
             )
             return
         
+        # Actualizar timestamp de actividad
+        await db.operaciones.update_one(
+            {"id": operacion_id},
+            {"$set": {
+                "ultimo_mensaje_cliente": datetime.now(timezone.utc),
+                "timestamp_actualizacion": datetime.now(timezone.utc)
+            }}
+        )
+        
         await update.message.reply_text("🔍 Procesando comprobante...")
         
         try:
