@@ -741,6 +741,152 @@ class TelegramBotNetCash:
                 parse_mode="Markdown"
             )
     
+    async def aprobar_cliente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Comando /aprobar_cliente para que Ana apruebe clientes y defina comisión
+        Formato: /aprobar_cliente TELEGRAM_ID COMISION_%
+        Ejemplo: /aprobar_cliente 123456789 1.00
+        """
+        from_user_id = update.effective_user.id
+        from_user_name = update.effective_user.first_name
+        mensaje_texto = update.message.text
+        
+        logger.info(f"[NetCash][AprobarCliente] Comando /aprobar_cliente recibido")
+        logger.info(f"[NetCash][AprobarCliente] from_user.id = {from_user_id}, text = '{mensaje_texto}'")
+        
+        # Obtener ANA_TELEGRAM_CHAT_ID del env
+        ana_chat_id_env = self.ana_telegram_id
+        ana_id_int = int(ana_chat_id_env) if ana_chat_id_env else None
+        
+        # Verificar permisos: Ana por chat_id O admin_mbco por rol
+        chat_id = str(update.effective_chat.id)
+        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+        
+        is_ana_by_chatid = (ana_id_int and from_user_id == ana_id_int)
+        is_admin_mbco = (usuario and usuario.get("rol") == "admin_mbco")
+        
+        logger.info(f"[NetCash][AprobarCliente] is_ana_by_chatid={is_ana_by_chatid}, is_admin_mbco={is_admin_mbco}")
+        
+        if not (is_ana_by_chatid or is_admin_mbco):
+            logger.warning(f"[NetCash][AprobarCliente] Usuario {from_user_name} (ID {from_user_id}) sin permisos")
+            await update.message.reply_text(
+                "⛔ Este comando solo puede usarlo Ana / admin_mbco.\n"
+                "Si necesitas ayuda, contacta a Ana."
+            )
+            return
+        
+        # Parsear parámetros
+        try:
+            partes = mensaje_texto.split(maxsplit=2)
+            
+            if len(partes) < 3:
+                await update.message.reply_text(
+                    "⚠️ **Formato incorrecto.**\n\n"
+                    "**Usa:** `/aprobar_cliente TELEGRAM_ID COMISION_%`\n\n"
+                    "**Ejemplo:** `/aprobar_cliente 123456789 1.00`\n\n"
+                    "(donde 1.00 = 1.00%)",
+                    parse_mode="Markdown"
+                )
+                return
+            
+            _, telegram_id_str, comision_str = partes
+            
+            # Validar números
+            try:
+                telegram_id_cliente = int(telegram_id_str)
+                comision_pct = float(comision_str)
+            except ValueError:
+                await update.message.reply_text(
+                    "⚠️ TELEGRAM_ID debe ser entero y la comisión un número (ej. 1.00)."
+                )
+                return
+            
+            logger.info(f"[NetCash][AprobarCliente] telegram_id={telegram_id_cliente}, comision={comision_pct}%")
+            
+            # Regla de mínimo 0.375%
+            if comision_pct < 0.375:
+                logger.warning(f"[NetCash][AprobarCliente] Comisión rechazada: {comision_pct}% < 0.375%")
+                await update.message.reply_text(
+                    "⛔ **La comisión no puede ser menor a 0.375%.**\n\n"
+                    f"Comisión enviada: {comision_pct:.3f}%"
+                )
+                return
+            
+            # Buscar cliente por telegram_id
+            cliente = await db.clientes.find_one(
+                {"telegram_id": str(telegram_id_cliente)},
+                {"_id": 0}
+            )
+            
+            if not cliente:
+                logger.warning(f"[NetCash][AprobarCliente] No se encontró cliente con Telegram ID {telegram_id_cliente}")
+                await update.message.reply_text(
+                    f"❌ No encontré cliente con Telegram ID `{telegram_id_cliente}`.\n\n"
+                    "Verifica que el usuario se haya registrado en el bot.",
+                    parse_mode="Markdown"
+                )
+                return
+            
+            cliente_id = cliente.get("id")
+            nombre_cliente = cliente.get("nombre", "N/A")
+            
+            logger.info(f"[NetCash][AprobarCliente] Cliente encontrado: {nombre_cliente} (ID: {cliente_id})")
+            
+            # Actualizar comisión y estado
+            await db.clientes.update_one(
+                {"id": cliente_id},
+                {"$set": {
+                    "porcentaje_comision_cliente": comision_pct,
+                    "estado": "activo",
+                    "fecha_aprobacion": datetime.now(timezone.utc).isoformat(),
+                    "notas": f"Cliente aprobado por Ana desde Telegram con comisión {comision_pct}%"
+                }}
+            )
+            
+            logger.info(f"[NetCash][AprobarCliente] Cliente {cliente_id} aprobado con comisión {comision_pct}%")
+            
+            # Confirmar a Ana
+            mensaje = "✅ **Cliente aprobado y comisión asignada.**\n\n"
+            mensaje += f"📲 **Telegram ID:** `{telegram_id_cliente}`\n"
+            mensaje += f"👤 **Nombre:** {nombre_cliente}\n"
+            mensaje += f"💰 **Comisión:** `{comision_pct:.3f}%`\n"
+            mensaje += f"🆔 **Cliente ID:** `{cliente_id}`\n\n"
+            mensaje += "El cliente ahora puede crear operaciones."
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+            # Notificar al cliente (opcional - si quieren que el cliente sepa que fue aprobado)
+            try:
+                usuario_telegram = await db.usuarios_telegram.find_one(
+                    {"id_cliente": cliente_id},
+                    {"_id": 0, "chat_id": 1}
+                )
+                
+                if usuario_telegram and usuario_telegram.get("chat_id"):
+                    mensaje_cliente = "✅ **¡Tu registro como cliente NetCash fue aprobado!**\n\n"
+                    mensaje_cliente += "Ya puedes crear operaciones y enviar comprobantes.\n\n"
+                    mensaje_cliente += "Usa /start para ver el menú."
+                    
+                    await self.app.bot.send_message(
+                        chat_id=usuario_telegram["chat_id"],
+                        text=mensaje_cliente,
+                        parse_mode="Markdown"
+                    )
+                    logger.info(f"[NetCash][AprobarCliente] Notificación de aprobación enviada al cliente {cliente_id}")
+            except Exception as notif_error:
+                logger.error(f"[NetCash][AprobarCliente] Error notificando al cliente: {str(notif_error)}")
+            
+        except Exception as e:
+            logger.error(f"[NetCash][AprobarCliente][ERROR] {type(e).__name__}: {str(e)}")
+            import traceback
+            logger.error(f"[NetCash][AprobarCliente][ERROR] Traceback:\n{traceback.format_exc()}")
+            await update.message.reply_text(
+                "❌ Ocurrió un error al aprobar el cliente.\n"
+                "Verifica el formato:\n"
+                "`/aprobar_cliente TELEGRAM_ID COMISION_%`",
+                parse_mode="Markdown"
+            )
+    
     async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /ayuda"""
         mensaje = "**Ayuda - Asistente NetCash MBco** 🤖\n\n"
