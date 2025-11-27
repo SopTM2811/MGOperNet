@@ -67,9 +67,17 @@ async def revisar_operaciones_inactivas():
             for op in operaciones_inactivas:
                 folio = op.get("folio_mbco", "N/A")
                 operacion_id = op.get("id")
+                estado_actual = op.get("estado")
+                ts_actualizacion = op.get("timestamp_actualizacion")
+                
+                logger.info(f"[NetCash][Inactividad] Operación candidata a cancelar:")
+                logger.info(f"  - Folio: {folio}")
+                logger.info(f"  - ID: {operacion_id}")
+                logger.info(f"  - Estado: {estado_actual}")
+                logger.info(f"  - timestamp_actualizacion: {ts_actualizacion}")
                 
                 # Actualizar estado a cancelada
-                await db.operaciones.update_one(
+                resultado = await db.operaciones.update_one(
                     {"id": operacion_id},
                     {"$set": {
                         "estado": "CANCELADA_POR_INACTIVIDAD",
@@ -77,6 +85,8 @@ async def revisar_operaciones_inactivas():
                         "motivo_cancelacion": f"Inactividad mayor a {TIMEOUT_MINUTOS} minutos"
                     }}
                 )
+                
+                logger.info(f"[NetCash][Inactividad] Estado actualizado: matched={resultado.matched_count}, modified={resultado.modified_count}")
                 
                 # Marcar comprobantes como descartados
                 comprobantes = op.get("comprobantes", [])
@@ -92,7 +102,7 @@ async def revisar_operaciones_inactivas():
                         {"$set": {"comprobantes": comprobantes_descartados}}
                     )
                 
-                logger.info(f"Operación {folio} cancelada por inactividad ({TIMEOUT_MINUTOS} min)")
+                logger.info(f"[NetCash][Inactividad] Operación {folio} cancelada exitosamente ({TIMEOUT_MINUTOS} min)")
                 
                 # Notificar al cliente por Telegram
                 chat_id = op.get("cliente_telegram_id")
