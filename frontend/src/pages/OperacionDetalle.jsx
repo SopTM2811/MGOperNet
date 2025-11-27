@@ -565,6 +565,42 @@ const OperacionDetalle = () => {
                       </div>
                     </div>
 
+                    {/* Datos internos DNS - SOLO PARA BACKOFFICE */}
+                    {(operacion.costo_proveedor_monto || operacion.utilidad_neta) && (
+                      <div className="mt-6 p-4 bg-slate-50 border-l-4 border-slate-600">
+                        <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                          <Lock className="h-4 w-4" />
+                          Cálculos internos (Solo MBco)
+                        </h4>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {operacion.costo_proveedor_monto && (
+                            <div className="bg-orange-50 rounded-lg p-4">
+                              <Label className="text-slate-600 text-sm">
+                                Costo proveedor DNS ({(operacion.costo_proveedor_pct * 100).toFixed(3)}%)
+                              </Label>
+                              <p className="text-2xl font-bold text-orange-700">
+                                ${operacion.costo_proveedor_monto.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">Sobre capital NetCash</p>
+                            </div>
+                          )}
+                          
+                          {operacion.utilidad_neta && (
+                            <div className="bg-green-50 rounded-lg p-4">
+                              <Label className="text-slate-600 text-sm">Utilidad neta MBco</Label>
+                              <p className="text-2xl font-bold text-green-700">
+                                ${operacion.utilidad_neta.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">Comisión - Costo DNS</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3 text-xs text-slate-600 bg-yellow-50 p-2 rounded">
+                          ⚠️ <strong>INFORMACIÓN CONFIDENCIAL:</strong> Estos datos NO deben mostrarse al cliente en ningún reporte, PDF o comunicación.
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Datos avanzados (solo si existe calculos completo) */}
                     {operacion.calculos && (
                       <>
