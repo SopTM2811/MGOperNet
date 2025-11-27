@@ -645,9 +645,57 @@ class TelegramBotNetCash:
             
             operacion_id = operacion.get("id")
             
+            # 1) Si la operación ya tiene clave, es idempotente (permitir re-ejecutar)
+            if operacion.get("clave_operacion_mbcontrol"):
+                clave_existente = operacion.get("clave_operacion_mbcontrol")
+                if clave_existente == clave_mbco:
+                    logger.info(f"[NetCash][MBCO] Operación {clave_netcash} ya tiene la clave '{clave_mbco}' (idempotente)")
+                    await update.message.reply_text(
+                        f"ℹ️ **Esta operación ya tiene esa clave MBco asignada.**\n\n"
+                        f"🔑 **NetCash:** `{clave_netcash}`\n"
+                        f"🔐 **MBControl:** `{clave_mbco}`",
+                        parse_mode="Markdown"
+                    )
+                    return
+                else:
+                    logger.warning(f"[NetCash][MBCO] Intento de cambiar clave de {clave_netcash} de '{clave_existente}' a '{clave_mbco}'")
+                    await update.message.reply_text(
+                        f"⚠️ **Esta operación ya tiene una clave MBco diferente.**\n\n"
+                        f"🔑 **NetCash:** `{clave_netcash}`\n"
+                        f"🔐 **Clave actual:** `{clave_existente}`\n"
+                        f"🔐 **Clave nueva:** `{clave_mbco}`\n\n"
+                        f"Si necesitas cambiarla, contacta a soporte.",
+                        parse_mode="Markdown"
+                    )
+                    return
+            
+            # 2) Verificar si la clave_mbco ya está usada en OTRA operación
+            operacion_conflictiva = await db.operaciones.find_one(
+                {
+                    "clave_operacion_mbcontrol": clave_mbco,
+                    "folio_mbco": {"$ne": clave_netcash}
+                },
+                {"_id": 0, "folio_mbco": 1, "cliente_nombre": 1}
+            )
+            
+            if operacion_conflictiva:
+                logger.warning(
+                    f"[NetCash][MBCO] Intento de reutilizar clave MBco '{clave_mbco}' para {clave_netcash}, "
+                    f"ya usada en {operacion_conflictiva.get('folio_mbco')}"
+                )
+                await update.message.reply_text(
+                    "⛔ **Esta clave MBco ya está asignada a otra operación.**\n\n"
+                    f"🔐 **MBControl:** `{clave_mbco}`\n"
+                    f"🔑 **NetCash existente:** `{operacion_conflictiva.get('folio_mbco')}`\n"
+                    f"👤 **Cliente:** {operacion_conflictiva.get('cliente_nombre', 'N/A')}\n\n"
+                    f"Por favor usa una clave MBco diferente.",
+                    parse_mode="Markdown"
+                )
+                return
+            
             logger.info(f"[NetCash][MBCO] Guardando clave '{clave_mbco}' para operación {clave_netcash} (ID: {operacion_id})")
             
-            # Guardar clave MBControl directamente en la operación
+            # 3) Guardar clave MBControl
             resultado = await db.operaciones.update_one(
                 {"id": operacion_id},
                 {
