@@ -1028,7 +1028,12 @@ class TelegramBotNetCash:
                             comprobante = result.get("comprobante", {})
                             
                             if comprobante.get("es_duplicado"):
-                                mensaje = "⚠️ **Este comprobante parece estar duplicado de una operación anterior.**\n\n"
+                                folio_original = result.get("operacion_duplicada", {}).get("folio_mbco", "N/A")
+                                estado_original = result.get("operacion_duplicada", {}).get("estado", "DESCONOCIDO")
+                                
+                                mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                mensaje += f"🔑 **Operación:** {folio_original}\n"
+                                mensaje += f"📊 **Estatus:** {estado_original}\n\n"
                                 mensaje += "Por favor confirma con Ana antes de continuar."
                                 await update.message.reply_text(mensaje, parse_mode="Markdown")
                             elif comprobante.get("es_valido"):
@@ -1132,7 +1137,12 @@ class TelegramBotNetCash:
                             comprobante = result.get("comprobante", {})
                             
                             if comprobante.get("es_duplicado"):
-                                mensaje = "⚠️ **Este comprobante parece estar duplicado de una operación anterior.**\n\n"
+                                folio_original = result.get("operacion_duplicada", {}).get("folio_mbco", "N/A")
+                                estado_original = result.get("operacion_duplicada", {}).get("estado", "DESCONOCIDO")
+                                
+                                mensaje = "⚠️ **Este comprobante ya fue utilizado en una operación anterior.**\n\n"
+                                mensaje += f"🔑 **Operación:** {folio_original}\n"
+                                mensaje += f"📊 **Estatus:** {estado_original}\n\n"
                                 mensaje += "Por favor confirma con Ana antes de continuar."
                                 await update.message.reply_text(mensaje, parse_mode="Markdown")
                             elif comprobante.get("es_valido"):
