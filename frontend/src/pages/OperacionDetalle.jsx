@@ -510,7 +510,8 @@ const OperacionDetalle = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {operacion.calculos ? (
+                {/* Mostrar cálculos si existen (formato calculos) o si tienen los datos básicos guardados */}
+                {(operacion.calculos || (operacion.monto_total_comprobantes && operacion.comision_cobrada)) ? (
                   <div className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="bg-blue-50 rounded-lg p-4">
