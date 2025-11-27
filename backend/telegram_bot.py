@@ -203,36 +203,96 @@ class TelegramBotNetCash:
         """Comando /start"""
         user = update.effective_user
         chat_id = str(update.effective_chat.id)
+        telegram_id = str(user.id)
         
-        logger.info(f"/start recibido de {user.first_name} (chat_id: {chat_id})")
+        logger.info(f"[NetCash][START] Comando recibido de {user.first_name} (chat_id: {chat_id}, telegram_id: {telegram_id})")
         
-        # Verificar modo mantenimiento
-        if MODO_MANTENIMIENTO == "ON":
-            await update.message.reply_text(MENSAJE_MANTENIMIENTO)
-            return
-        
-        # Verificar si el usuario ya está registrado
-        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
-        
-        if not usuario:
-            # Primera vez - pedir teléfono con botón de compartir contacto
-            mensaje = f"Hola {user.first_name} 😊\n\n"
-            mensaje += "¡Bienvenido a NetCash MBco!\n\n"
-            mensaje += "Para identificarte, necesito tu número de celular.\n\n"
-            mensaje += "👇 Por favor toca el botón de abajo para compartirlo:"
+        try:
+            # Verificar modo mantenimiento
+            if MODO_MANTENIMIENTO == "ON":
+                await update.message.reply_text(MENSAJE_MANTENIMIENTO)
+                return
             
-            keyboard = [[KeyboardButton("📱 Compartir mi teléfono", request_contact=True)]]
-            reply_markup = ReplyKeyboardMarkup(
-                keyboard,
-                one_time_keyboard=True,
-                resize_keyboard=True
+            # Buscar usuario por telegram_id (más confiable que chat_id)
+            usuario = await db.usuarios_telegram.find_one({"telegram_id": telegram_id}, {"_id": 0})
+            
+            if not usuario:
+                # Usuario completamente nuevo - crear registro básico
+                logger.info(f"[NetCash][START] Usuario nuevo detectado: {telegram_id}")
+                
+                nuevo_usuario = {
+                    "telegram_id": telegram_id,
+                    "chat_id": chat_id,
+                    "username": user.username or None,
+                    "nombre": f"{user.first_name or ''} {user.last_name or ''}".strip(),
+                    "telefono": None,
+                    "rol": "desconocido",
+                    "id_cliente": None,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.usuarios_telegram.insert_one(nuevo_usuario)
+                logger.info(f"[NetCash][START] Usuario nuevo creado en BD: {telegram_id}")
+                
+                # Mostrar mensaje de bienvenida + botón para compartir teléfono
+                mensaje = f"Hola 👋, bienvenido a *NetCash MBco*.\n\n"
+                mensaje += "Para darte de alta necesito que compartas tu teléfono.\n"
+                mensaje += "Toca el botón de abajo para continuar 👇"
+                
+                keyboard = [[KeyboardButton("📱 Compartir mi teléfono", request_contact=True)]]
+                reply_markup = ReplyKeyboardMarkup(
+                    keyboard,
+                    one_time_keyboard=True,
+                    resize_keyboard=True
+                )
+                
+                await update.message.reply_text(mensaje, reply_markup=reply_markup, parse_mode="Markdown")
+                logger.info(f"[NetCash][START] Usuario nuevo sin teléfono -> se pide contacto")
+                return
+            
+            # Usuario ya registrado - verificar estado
+            rol = usuario.get("rol")
+            telefono = usuario.get("telefono")
+            
+            if rol == "cliente_activo":
+                # Cliente aprobado -> menú completo
+                logger.info(f"[NetCash][START] Cliente activo -> menú")
+                await self.mostrar_menu_principal(update, usuario)
+            elif telefono:
+                # Ya compartió contacto pero no aprobado -> mensaje de espera
+                logger.info(f"[NetCash][START] Usuario con teléfono esperando aprobación")
+                mensaje = "📋 **Tu registro está en proceso.**\n\n"
+                mensaje += "Ana revisará tu información y te asignará una comisión.\n\n"
+                mensaje += "Te avisaremos por este mismo chat cuando ya puedas operar."
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+            else:
+                # Sin teléfono -> pedir contacto nuevamente
+                logger.info(f"[NetCash][START] Usuario sin teléfono -> se pide contacto")
+                mensaje = f"Hola 👋, bienvenido a *NetCash MBco*.\n\n"
+                mensaje += "Para darte de alta necesito que compartas tu teléfono.\n"
+                mensaje += "Toca el botón de abajo para continuar 👇"
+                
+                keyboard = [[KeyboardButton("📱 Compartir mi teléfono", request_contact=True)]]
+                reply_markup = ReplyKeyboardMarkup(
+                    keyboard,
+                    one_time_keyboard=True,
+                    resize_keyboard=True
+                )
+                
+                await update.message.reply_text(mensaje, reply_markup=reply_markup, parse_mode="Markdown")
+        
+        except Exception as e:
+            logger.error(f"[NetCash][START][ERROR] {type(e).__name__}: {str(e)}")
+            import traceback
+            logger.error(f"[NetCash][START][ERROR] Traceback:\n{traceback.format_exc()}")
+            
+            # Mensaje de fallback para que el usuario no quede sin respuesta
+            await update.message.reply_text(
+                "Hola 👋\n\n"
+                "Tu registro en NetCash tuvo un problema temporal.\n"
+                "Intenta de nuevo en unos minutos o contacta a soporte."
             )
-            
-            await update.message.reply_text(mensaje, reply_markup=reply_markup)
-            return
-        
-        # Usuario ya registrado - mostrar menú según rol
-        await self.mostrar_menu_principal(update, usuario)
     
     async def handle_contact(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Maneja cuando el usuario comparte su contacto"""
