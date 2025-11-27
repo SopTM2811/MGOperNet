@@ -1128,6 +1128,11 @@ class TelegramBotNetCash:
             comision_cobrada = round(monto_total * (comision_porcentaje / 100), 2)
             capital_netcash = round(monto_total - comision_cobrada, 2)
             
+            # Calcular costo proveedor DNS (0.375% del capital) - SOLO INTERNO
+            costo_proveedor_pct = operacion.get("costo_proveedor_pct", 0.00375)
+            costo_proveedor_monto = round(capital_netcash * costo_proveedor_pct, 2)
+            utilidad_neta = round(comision_cobrada - costo_proveedor_monto, 2)
+            
             # Guardar cálculos en la operación
             await db.operaciones.update_one(
                 {"id": operacion_id},
@@ -1135,7 +1140,9 @@ class TelegramBotNetCash:
                     "estado": "DATOS_COMPLETOS",
                     "monto_total_comprobantes": monto_total,
                     "comision_cobrada": comision_cobrada,
-                    "capital_netcash": capital_netcash
+                    "capital_netcash": capital_netcash,
+                    "costo_proveedor_monto": costo_proveedor_monto,
+                    "utilidad_neta": utilidad_neta
                 }}
             )
             
