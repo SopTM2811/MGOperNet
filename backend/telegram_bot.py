@@ -888,7 +888,7 @@ class TelegramBotNetCash:
             
             logger.info(f"[NetCash][AprobarCliente] Cliente encontrado: {nombre_cliente} (ID: {cliente_id})")
             
-            # Actualizar comisión y estado
+            # Actualizar comisión y estado del cliente
             await db.clientes.update_one(
                 {"id": cliente_id},
                 {"$set": {
@@ -899,7 +899,16 @@ class TelegramBotNetCash:
                 }}
             )
             
-            logger.info(f"[NetCash][AprobarCliente] Cliente {cliente_id} aprobado con comisión {comision_pct}%")
+            # Actualizar rol del usuario de Telegram
+            await db.usuarios_telegram.update_one(
+                {"telegram_id": str(telegram_id_cliente)},
+                {"$set": {
+                    "rol": "cliente_activo",
+                    "id_cliente": cliente_id
+                }}
+            )
+            
+            logger.info(f"[NetCash][AprobarCliente] Cliente {cliente_id} aprobado con comisión {comision_pct}%, rol actualizado")
             
             # Confirmar a Ana
             mensaje = "✅ **Cliente aprobado y comisión asignada.**\n\n"
