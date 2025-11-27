@@ -425,13 +425,14 @@ async def procesar_comprobante(
                 else:
                     mensaje_validacion = "La cuenta o el beneficiario no coinciden con la cuenta NetCash esperada"
         
-        # Crear comprobante con file_url
+        # Crear comprobante con file_url y hash
         comprobante_dict = {
             **datos_ocr,
             "archivo_original": file.filename,
             "nombre_archivo": file.filename,
             "file_url": file_url,
             "file_path": str(file_path),
+            "file_hash": file_hash,
             "es_valido": es_valido,
             "es_duplicado": es_duplicado,
             "mensaje_validacion": mensaje_validacion
