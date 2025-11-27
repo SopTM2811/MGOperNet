@@ -28,13 +28,13 @@ const AltaClienteTelegram = () => {
     
     // Validaciones básicas
     if (!formData.email || !formData.nombre || !formData.telegram_id || !formData.comision_pct) {
-      toast.error('Todos los campos son obligatorios');
+      alert('Todos los campos son obligatorios');
       return;
     }
 
     const comision = parseFloat(formData.comision_pct);
     if (isNaN(comision) || comision < 0.375) {
-      toast.error('La comisión debe ser al menos 0.375%');
+      alert('La comisión debe ser al menos 0.375%');
       return;
     }
 
