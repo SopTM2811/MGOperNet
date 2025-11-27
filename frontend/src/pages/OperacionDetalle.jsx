@@ -352,18 +352,44 @@ const OperacionDetalle = () => {
                         key={idx}
                         className={`border rounded-lg p-4 ${comp.es_valido ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1">
+                            <p className="font-medium mb-2">
                               {comp.es_valido ? '✅' : '❌'} Comprobante {idx + 1}
+                              {comp.nombre_archivo && (
+                                <span className="text-xs text-slate-500 ml-2">({comp.nombre_archivo})</span>
+                              )}
                             </p>
-                            <p className="text-sm text-slate-600 mt-1">
-                              Monto: ${comp.monto?.toLocaleString('es-MX', {minimumFractionDigits: 2}) || '0.00'}
-                            </p>
-                            {comp.clave_rastreo && (
-                              <p className="text-xs text-slate-500 mt-1">
-                                Clave rastreo: {comp.clave_rastreo}
-                              </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
+                              <div>
+                                <span className="font-medium">Monto:</span> ${comp.monto?.toLocaleString('es-MX', {minimumFractionDigits: 2}) || '0.00'}
+                              </div>
+                              {comp.banco_origen && (
+                                <div>
+                                  <span className="font-medium">Banco del cliente:</span> {comp.banco_origen}
+                                </div>
+                              )}
+                              {comp.clave_rastreo && (
+                                <div>
+                                  <span className="font-medium">Clave rastreo:</span> {comp.clave_rastreo}
+                                </div>
+                              )}
+                              {comp.cuenta_origen && (
+                                <div>
+                                  <span className="font-medium">Cuenta origen:</span> {comp.cuenta_origen}
+                                </div>
+                              )}
+                            </div>
+                            {comp.file_url && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-3"
+                                onClick={() => window.open(comp.file_url, '_blank')}
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                Ver comprobante
+                              </Button>
                             )}
                           </div>
                           <Badge variant={comp.es_valido ? 'success' : 'destructive'}>
