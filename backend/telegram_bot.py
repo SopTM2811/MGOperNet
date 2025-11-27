@@ -925,7 +925,7 @@ class TelegramBotNetCash:
         # BLOQUE 2: Captura de cantidad de ligas
         if context.user_data.get('esperando_cantidad_ligas'):
             try:
-                cantidad = int(texto)
+                cantidad = int(texto_lower)
                 if cantidad < 1:
                     await update.message.reply_text("Por favor ingresa un número válido mayor a 0.")
                     return
