@@ -893,6 +893,59 @@ async def recomendar_plataforma(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================
+# RUTAS DE GMAIL API
+# ============================================
+
+@api_router.get("/gmail/status")
+async def verificar_gmail_status():
+    """
+    Verifica el estado de la configuración de Gmail API
+    """
+    return verificar_configuracion_gmail()
+
+
+@api_router.post("/gmail/enviar-prueba")
+async def enviar_correo_prueba(
+    destinatario: str,
+    asunto: str = "Correo de prueba NetCash",
+    cuerpo: str = "Este es un correo de prueba del sistema NetCash"
+):
+    """
+    Envía un correo de prueba para verificar que Gmail API funciona
+    """
+    try:
+        exito = gmail_service.enviar_correo(
+            destinatario=destinatario,
+            asunto=asunto,
+            cuerpo_html=f"<html><body><p>{cuerpo}</p></body></html>"
+        )
+        
+        if exito:
+            return {"success": True, "mensaje": f"Correo enviado a {destinatario}"}
+        else:
+            return {"success": False, "mensaje": "Error enviando correo. Revisa logs."}
+            
+    except Exception as e:
+        logger.error(f"Error en enviar_correo_prueba: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/gmail/correos-pendientes")
+async def listar_correos_pendientes(etiqueta: str = "NETCASH_INBOX"):
+    """
+    Lista correos pendientes de procesar
+    """
+    try:
+        correos = gmail_service.leer_correos_pendientes(etiqueta=etiqueta)
+        return {
+            "total": len(correos),
+            "correos": correos
+        }
+    except Exception as e:
+        logger.error(f"Error listando correos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Montar archivos estáticos para comprobantes
 uploads_dir = Path("/app/backend/uploads")
 uploads_dir.mkdir(parents=True, exist_ok=True)
