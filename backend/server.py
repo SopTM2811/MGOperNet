@@ -704,6 +704,11 @@ async def recomendar_plataforma(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Montar archivos estáticos para comprobantes
+uploads_dir = Path("/app/backend/uploads")
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
 # Include the router in the main app
 app.include_router(api_router)
 
