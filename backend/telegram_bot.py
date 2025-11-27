@@ -913,7 +913,10 @@ class TelegramBotNetCash:
             operacion_id = context.user_data['operacion_actual']
             await db.operaciones.update_one(
                 {"id": operacion_id},
-                {"$set": {"ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()}}
+                {"$set": {
+                    "ultimo_mensaje_cliente": datetime.now(timezone.utc),
+                    "timestamp_actualizacion": datetime.now(timezone.utc)
+                }}
             )
         
         # ⚡ PRIORIDAD 1: Detectar sinónimos de "listo" ANTES de otros handlers
