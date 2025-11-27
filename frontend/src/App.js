@@ -23,6 +23,7 @@ function App() {
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/operacion/:id" element={<OperacionDetalle />} />
           <Route path="/pendientes-mbcontrol" element={<PendientesMBControl />} />
+          <Route path="/alta-cliente-telegram" element={<AltaClienteTelegram />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
