@@ -105,7 +105,17 @@ class OperacionNetCash(BaseModel):
     # Timestamp para control de inactividad
     ultimo_mensaje_cliente: Optional[datetime] = None
     
-    # Cálculos financieros
+    # Cálculos financieros básicos (guardados directamente en la operación)
+    monto_total_comprobantes: Optional[float] = None  # Suma de comprobantes válidos
+    comision_cobrada: Optional[float] = None  # Monto de comisión al cliente
+    capital_netcash: Optional[float] = None  # Capital a dispersar (total - comisión)
+    
+    # Costo proveedor DNS (SOLO INTERNO - NUNCA MOSTRAR AL CLIENTE)
+    costo_proveedor_pct: float = 0.00375  # 0.375% del capital
+    costo_proveedor_monto: Optional[float] = None  # Capital * 0.00375
+    utilidad_neta: Optional[float] = None  # Comisión - Costo proveedor
+    
+    # Cálculos financieros (objeto completo, opcional)
     calculos: Optional[CalculosNetCash] = None
     
     # Código del sistema (generado por Ana)
