@@ -1096,17 +1096,19 @@ class TelegramBotNetCash:
             return
         
         # BLOQUE 1: Trigger "listo" y sinónimos para cerrar comprobantes
-        # Normalizar texto: lowercase, quitar tildes
+        # Normalizar texto: lowercase primero, luego quitar tildes
         import unicodedata
+        texto_lower = texto.lower().strip()
         texto_normalizado = ''.join(
-            c for c in unicodedata.normalize('NFD', texto)
+            c for c in unicodedata.normalize('NFD', texto_lower)
             if unicodedata.category(c) != 'Mn'
         )
         
         palabras_cierre = [
             'listo', 'lista', 'ya quedo', 'ya quede', 'ya esta', 'ya estas',
             'ok', 'de acuerdo', 'terminado', 'termine', 'termino',
-            'eso es todo', 'ya', 'vale', 'perfecto'
+            'eso es todo', 'ya', 'vale', 'perfecto', 'ya termine',
+            'ya termino', 'es todo'
         ]
         
         if texto_normalizado in palabras_cierre:
