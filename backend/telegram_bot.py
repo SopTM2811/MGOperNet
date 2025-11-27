@@ -86,20 +86,29 @@ class TelegramBotNetCash:
             return
         
         try:
-            mensaje = f"🆕 **Nuevo cliente creado desde Telegram (pendiente de validación)**\n\n"
-            mensaje += f"**Nombre:** {cliente.get('nombre')}\n"
-            mensaje += f"**Teléfono:** {cliente.get('telefono_completo')}\n"
-            mensaje += f"**Email:** {cliente.get('email') or 'No proporcionado'}\n"
-            mensaje += f"**Cliente ID:** `{cliente.get('id')}`\n"
-            mensaje += f"**Estado:** Pendiente de validación\n"
-            mensaje += f"**Fecha:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
+            telegram_id = cliente.get('telegram_id', 'N/A')
+            
+            mensaje = f"🆕 **Nuevo usuario escribió al bot NetCash y NO está vinculado como cliente.**\n\n"
+            mensaje += f"📲 **Telegram ID:** `{telegram_id}`\n"
+            mensaje += f"👤 **Nombre:** {cliente.get('nombre')}\n"
+            mensaje += f"📱 **Teléfono:** {cliente.get('telefono_completo')}\n"
+            mensaje += f"📧 **Email:** {cliente.get('email') or 'No proporcionado'}\n"
+            mensaje += f"🆔 **Cliente ID:** `{cliente.get('id')}`\n"
+            mensaje += f"📅 **Fecha/hora:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC\n\n"
+            mensaje += "**Instrucción:**\n"
+            mensaje += "1) Aprobar al cliente.\n"
+            mensaje += "2) Asignar comisión (% NetCash, mínimo 0.375%).\n"
+            mensaje += "3) Vincular Telegram ID al cliente.\n\n"
+            mensaje += "**Para aprobar desde aquí, usa:**\n"
+            mensaje += f"`/aprobar_cliente {telegram_id} 1.00`\n\n"
+            mensaje += "(donde 1.00 = 1.00%)"
             
             await self.app.bot.send_message(
                 chat_id=self.ana_telegram_id,
                 text=mensaje,
                 parse_mode="Markdown"
             )
-            logger.info(f"Notificación enviada a Ana sobre nuevo cliente: {cliente.get('id')}")
+            logger.info(f"Notificación enviada a Ana sobre nuevo cliente: {cliente.get('id')} (TG ID: {telegram_id})")
         except Exception as e:
             logger.error(f"Error enviando notificación a Ana: {str(e)}")
     
