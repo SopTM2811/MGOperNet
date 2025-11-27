@@ -199,12 +199,12 @@ def calcular_hash_archivo(file_path: Path) -> str:
 async def verificar_duplicado_por_hash(file_hash: str) -> dict:
     """
     Verifica si un comprobante con el mismo hash ya existe.
-    Returns: dict con 'es_duplicado', 'operacion_id', 'folio_mbco'
+    Returns: dict con 'es_duplicado', 'operacion_id', 'folio_mbco', 'estado'
     """
     # Buscar en todas las operaciones si existe un comprobante con este hash
     operacion_existente = await db.operaciones.find_one(
         {"comprobantes.file_hash": file_hash},
-        {"_id": 0, "id": 1, "folio_mbco": 1, "cliente_nombre": 1}
+        {"_id": 0, "id": 1, "folio_mbco": 1, "cliente_nombre": 1, "estado": 1}
     )
     
     if operacion_existente:
@@ -212,7 +212,8 @@ async def verificar_duplicado_por_hash(file_hash: str) -> dict:
             "es_duplicado": True,
             "operacion_id": operacion_existente.get("id"),
             "folio_mbco": operacion_existente.get("folio_mbco", "N/A"),
-            "cliente_nombre": operacion_existente.get("cliente_nombre", "N/A")
+            "cliente_nombre": operacion_existente.get("cliente_nombre", "N/A"),
+            "estado": operacion_existente.get("estado", "DESCONOCIDO")
         }
     
     return {"es_duplicado": False}
