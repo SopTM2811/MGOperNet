@@ -82,6 +82,16 @@ async def procesar_zip_comprobantes(operacion_id: str, zip_path: Path, operacion
         
         for archivo_info in archivos_validos:
             try:
+                # Calcular hash del archivo extraído
+                file_hash = calcular_hash_archivo(Path(archivo_info["path"]))
+                
+                # Verificar duplicado
+                resultado_duplicado = await verificar_duplicado_por_hash(file_hash)
+                if resultado_duplicado["es_duplicado"]:
+                    logger.warning(f"Archivo {archivo_info['nombre']} del ZIP es duplicado")
+                    comprobantes_con_error.append(f"{archivo_info['nombre']} (duplicado en {resultado_duplicado['folio_mbco']})")
+                    continue
+                
                 # Procesar con OCR
                 datos_ocr = await ocr_service.leer_comprobante(
                     archivo_info["path"],
