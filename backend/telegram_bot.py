@@ -666,9 +666,19 @@ class TelegramBotNetCash:
                 mensaje += "**Ejemplo:** `/mbco NC-000016 MBC-2025-00089`\n\n"
                 mensaje += "Esto registrará la clave MBControl para esa operación."
                 await update.message.reply_text(mensaje, parse_mode="Markdown")
+                logger.warning(f"[NetCash][MBCO] Sintaxis incorrecta: muy pocos parámetros")
                 return
             
-            _, clave_netcash, clave_mbco = partes
+            if len(partes_todas) > 3:
+                mensaje = "⚠️ **Formato incorrecto.**\n\n"
+                mensaje += "**Usa:** `/mbco CLAVE_NETCASH CLAVE_MBCO`\n\n"
+                mensaje += "**Ejemplo:** `/mbco NC-000024 16501-388-S-11`\n\n"
+                mensaje += "⚠️ Detecté más de 2 parámetros. Por favor verifica el formato."
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                logger.warning(f"[NetCash][MBCO] Sintaxis incorrecta: demasiados parámetros ({len(partes_todas)} partes)")
+                return
+            
+            _, clave_netcash, clave_mbco = partes_todas
             clave_netcash = clave_netcash.strip()
             clave_mbco = clave_mbco.strip()
             
