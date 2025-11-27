@@ -645,8 +645,10 @@ class TelegramBotNetCash:
             
             operacion_id = operacion.get("id")
             
+            logger.info(f"[NetCash][MBCO] Guardando clave '{clave_mbco}' para operación {clave_netcash} (ID: {operacion_id})")
+            
             # Guardar clave MBControl directamente en la operación
-            await db.operaciones.update_one(
+            resultado = await db.operaciones.update_one(
                 {"id": operacion_id},
                 {
                     "$set": {
@@ -657,6 +659,9 @@ class TelegramBotNetCash:
                 }
             )
             
+            logger.info(f"[NetCash][MBCO] Update result: matched={resultado.matched_count}, modified={resultado.modified_count}")
+            logger.info(f"[NetCash][MBCO] Clave '{clave_mbco}' guardada exitosamente para {clave_netcash}")
+            
             # Confirmar a Ana
             mensaje = "✅ **Clave MBco registrada correctamente.**\n\n"
             mensaje += f"🔑 **NetCash:** `{clave_netcash}`\n"
@@ -666,8 +671,7 @@ class TelegramBotNetCash:
             mensaje += f"💵 **Monto:** ${operacion.get('monto_total_comprobantes', 0):,.2f}"
             
             await update.message.reply_text(mensaje, parse_mode="Markdown")
-            
-            logger.info(f"Clave MBco '{clave_mbco}' registrada para operación {operacion_id} ({clave_netcash}) por Ana")
+            logger.info(f"[NetCash][MBCO] Confirmación enviada a Ana")
             
         except Exception as e:
             logger.error(f"Error en comando /mbco: {str(e)}")
