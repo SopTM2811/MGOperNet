@@ -124,13 +124,14 @@ async def procesar_zip_comprobantes(operacion_id: str, zip_path: Path, operacion
                     else:
                         mensaje_validacion = "La cuenta o el beneficiario no coinciden"
                 
-                # Crear comprobante
+                # Crear comprobante con hash
                 comprobante_dict = {
                     **datos_ocr,
                     "archivo_original": archivo_info["nombre"],
                     "nombre_archivo": archivo_info["nombre"],
                     "file_url": file_url,
                     "file_path": archivo_info["path"],
+                    "file_hash": file_hash,
                     "es_valido": es_valido,
                     "es_duplicado": False,
                     "mensaje_validacion": mensaje_validacion
