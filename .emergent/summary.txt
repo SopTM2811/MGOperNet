@@ -1,138 +1,139 @@
 <analysis>**original_problem_statement:**
-El usuario solicitó la creación de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero. Los requisitos han evolucionado para incluir:
-1.  **Separación de Flujos:** Distinción clara entre el Alta de Cliente y la Creación de Operación tanto en la interfaz web como en el bot de Telegram.
-2.  **Roles y Permisos (Ana):** Un rol de administrador (Ana) debe validar a los nuevos clientes. Los clientes creados por Telegram inician con estado  y no pueden operar hasta que Ana los cambie a  desde el panel web. Ana también puede crear y editar clientes directamente en el panel.
-3.  **Flujo de Operación Extendido (Telegram):**
-    *   El cliente crea una operación y recibe un folio ().
-    *   Sube comprobantes (PDF, imagen, ZIP) en un lote, finalizando con la palabra .
-    *   El bot procesa los comprobantes con OCR, acumula montos y confirma la recepción.
-    *   Una vez finalizada la carga, el bot solicita: cantidad de ligas de pago, nombre completo del titular (persona física) y su IDMEX.
-    *   El bot muestra un resumen completo y notifica al cliente que sus ligas se procesarán.
-4.  **Flujo de Cierre (MBControl y Toño):**
-    *   Después de que el cliente completa su parte, Ana introduce una  en el panel web o vía un comando de Telegram.
-    *   Esto dispara la generación de un layout en formato Excel () y lo envía por correo a Tesorería (Toño).
-5.  **Consistencia Web-Telegram:** El panel web debe actuar como un espejo de solo lectura para las operaciones creadas y cerradas en Telegram, deshabilitando la edición y la subida de nuevos archivos.
-6.  **Manejo de Inactividad:** Las operaciones en Telegram deben cancelarse automáticamente si el usuario permanece inactivo por más de 3 minutos durante la fase de captura de datos.
+El usuario solicitó la creación de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero. Los requisitos se han expandido para incluir:
+1.  **Flujos Separados**: Distinción entre Alta de Cliente y Creación de Operación en la web y Telegram.
+2.  **Roles y Permisos**: Un rol de administrador (Ana) valida nuevos clientes. Los clientes de Telegram deben ser activados por Ana.
+3.  **Flujo de Operación en Telegram**:
+    *   Creación de operación y asignación de folio ().
+    *   Subida de comprobantes en lote, finalizando con sinónimos de  (ej. ya está, ok). El sistema debe soportar archivos PDF, imágenes y ZIP (descomprimiendo y procesando el contenido).
+    *   El bot usa OCR para procesar comprobantes y previene la subida de duplicados usando un hash del archivo.
+    *   Tras la subida, el bot solicita: cantidad de ligas, nombre completo del titular (validando que solo contenga letras), e IDMEX, sugiriendo beneficiarios frecuentes.
+    *   El bot muestra un resumen económico detallado (Total, Comisión, Capital a dispersar) y notifica al cliente.
+4.  **Flujo de Cierre (MBControl)**:
+    *   Ana recibe una notificación (Telegram y correo) cuando una operación está lista.
+    *   Ana introduce una  usando un comando explícito en Telegram ().
+    *   Esto dispara la generación de un layout Excel () y lo envía por correo a Tesorería (Toño).
+5.  **Flujo por Correo Electrónico**: Implementar un canal para recibir y procesar operaciones a través de un buzón de correo dedicado, con lógica de validación y comunicación con el cliente por la misma vía.
+6.  **Consistencia Web-Telegram**: El panel web debe actuar como un espejo de solo lectura para operaciones creadas en Telegram, deshabilitando la edición y la subida de archivos, y permitiendo ver los comprobantes.
+7.  **Manejo de Inactividad**: Las operaciones en Telegram deben cancelarse automáticamente si el usuario está inactivo por más de 3 minutos.
 
 **User's preferred language**: español
 
 **what currently exists?**
--   Una aplicación full-stack con backend FastAPI, frontend React y base de datos MongoDB.
--   **Backend:**
-    -   Servicio de OCR () funcional, que utiliza Gemini a través de  para leer comprobantes.
-    -   Modelos de datos () para ,  y , actualizados con campos como ,  (para clientes), , , , , y una enumeración de estados de operación más detallada.
-    -   Endpoints API para crear/listar/actualizar clientes y operaciones.
-    -   Un bot de Telegram () con un flujo conversacional basado en estados, que gestiona el alta de clientes y la creación de operaciones de forma separada. El bot está configurado para ejecutarse de forma persistente mediante Supervisor.
--   **Frontend:**
-    -   Un panel de control () que lista operaciones y muestra el .
-    -   Una sección de Clientes () que lista todos los clientes, muestra su estado (, ) y si están vinculados a Telegram.
-    -   Modales funcionales para crear () y editar () clientes, permitiendo a Ana gestionar sus datos y estado.
-    -   El flujo de creación de operaciones está correctamente separado y requiere la selección de un cliente existente.
+-   Una aplicación full-stack con backend FastAPI, frontend React y MongoDB.
+-   **Backend**:
+    -   Servicio de OCR () con Gemini.
+    -   Modelos de datos () que incluyen campos para los flujos de operación, costos de proveedor, y claves de control.
+    -   Bot de Telegram () con un  para gestionar los flujos de alta y operación. Incluye lógica para sinónimos de listo, beneficiarios frecuentes y el comando .
+    -   Mecanismo de detección de duplicados de comprobantes basado en hash SHA-256.
+    -   Soporte para descomprimir y procesar archivos ZIP.
+    -   Servicio de monitor de inactividad () configurado en Supervisor.
+    -   Infraestructura base para integración con Gmail API ().
+    -   Endpoints API para servir archivos de comprobantes subidos.
+-   **Frontend**:
+    -   Panel de control () y detalle de operaciones ().
+    -   Lógica de modo espejo parcialmente implementada en  para deshabilitar controles en operaciones de Telegram.
+    -   Pestaña Cálculos que muestra el desglose financiero interno (comisión, costo proveedor, utilidad).
+    -   Componente () para que Ana gestione las claves de operación.
 
 **Last working item**:
-El agente estaba en medio de la implementación de un conjunto grande y detallado de requisitos del usuario para refinar la UX de Telegram, implementar el flujo de cierre con MBControl y asegurar que la web actúe como un espejo de Telegram.
+El agente estaba ajustando el flujo del bot de Telegram para que Ana pudiera registrar la clave de MBControl de forma explícita, sin depender de responder a un mensaje específico.
 
--   **Last item agent was working**: Modificando el bot de Telegram () para implementar la subida de comprobantes en lote (usando la palabra  para finalizar), refinar las preguntas de captura de datos (ligas, titular, IDMEX) y el mensaje de resumen final. El agente también creó un script placeholder () para el temporizador de inactividad pero no implementó su lógica.
+-   **Last item agent was working**: Modificando el comando  en  para aceptar el formato  y actualizando la notificación que recibe Ana en  para instruirla sobre el nuevo formato.
 -   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. Se requiere probar el flujo conversacional del bot de Telegram de extremo a extremo y verificar que los datos se reflejen correctamente (y en modo de solo lectura) en el frontend web. La generación del layout y el envío de correo también deben ser probados en el backend.
+-   **Which testing method agent to use?**: both. Se necesita una prueba de extremo a extremo del bot de Telegram para validar que el comando  funciona como se espera y que Ana recibe la notificación correcta. También se debe verificar en el panel web que la clave se guarda correctamente en la operación.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Finalizar la implementación de la lógica del bot de Telegram según los últimos requisitos.**
--   **Issue 2 (P1): Implementar el monitor de inactividad para cancelar operaciones.**
--   **Issue 3 (P1): Implementar el flujo de MBControl y la generación/envío del layout SPEI.**
--   **Issue 4 (P2): Asegurar que el frontend actúe como un espejo de solo lectura para operaciones de Telegram.**
+-   **Issue 1 (P0): El bot de Telegram NO responde.** El usuario reportó que el bot dejó de responder a cualquier comando o mensaje, bloqueando todas las pruebas.
+-   **Issue 2 (P0): Los sinónimos de listo siguen fallando.** A pesar de las correcciones, el usuario reporta que palabras como Ya está no cierran la fase de carga de comprobantes.
+-   **Issue 3 (P0): El monitor de inactividad no funciona.** Las operaciones no se cancelan después de 3 minutos de inactividad del usuario, y no se envía ninguna notificación.
+-   **Issue 4 (P1): El modo espejo de la web está incompleto.** Las operaciones de Telegram aún permiten editar datos del titular y subir nuevos comprobantes en la web.
+-   **Issue 5 (P1): Los botones y badges de la web son poco visibles.** El usuario reporta problemas de contraste y visibilidad en elementos de la UI, lo que dificulta la interacción.
+-   **Issue 6 (P2): La pestaña Cálculos no se activa correctamente.** Aunque se implementó la lógica, el usuario reporta que sigue viendo un mensaje de placeholder.
+-   **Issue 7 (P2): Los filtros de búsqueda de la web no funcionan.** Esta funcionalidad fue reportada como no operativa y aún no ha sido abordada.
+-   **Issue 8 (P2): Falta validación en el nombre del titular.** El bot no valida que el nombre del titular contenga solo letras y un mínimo de palabras.
 
 **Issues Detail:**
--   **Issue 1: Finalizar la implementación de la lógica del bot de Telegram.**
-    -   **Attempted fixes**: El agente realizó múltiples ediciones en  para ajustar los mensajes y la lógica de conversación, como manejar la palabra , pero el flujo completo no está terminado ni probado.
+-   **Issue 1: El bot de Telegram NO responde.**
+    -   **Attempted fixes**: El agente verificó el estado del servicio (backend                          RUNNING   pid 30, uptime 0:00:02
+code-server                      STOPPED   Not started
+frontend                         STOPPED   Nov 27 05:54 PM
+inactividad_monitor              RUNNING   pid 36, uptime 0:00:02
+mongodb                          RUNNING   pid 37, uptime 0:00:02
+nginx-code-proxy                 STARTING  
+telegram_bot                     RUNNING   pid 39, uptime 0:00:02) y los logs, que no mostraban errores. Se reinició el servicio del bot para intentar limpiar cualquier estado de conversación atascado.
     -   **Next debug checklist**:
-        1.  Revisar .
-        2.  Asegurarse de que el estado conversacional maneje correctamente la finalización de la subida de comprobantes con la palabra listo.
-        3.  Verificar que la transición a las preguntas de ,  e  se active correctamente.
-        4.  Confirmar que el resumen final se muestra con el mensaje qué sigue.
-    -   **Why fix this issue and what will be achieved with the fix?**: Mejora la experiencia del usuario en Telegram, haciéndola más fluida e intuitiva y capturando toda la información necesaria.
+        1.  Revisar los logs de  y  en  en busca de errores silenciosos.
+        2.  Asegurarse de que el  no tenga un  que capture todos los mensajes y no los libere, o un estado persistente corrupto.
+        3.  Verificar que el token del bot en  sea correcto y que no haya conflictos de múltiples instancias (error ).
+    -   **Why fix this issue and what will be achieved with the fix?**: Es un bloqueante crítico. Sin el bot, no se puede probar ninguna funcionalidad de Telegram.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
+    -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Backend (bot)
-    -   **Blocked on other issue**: No.
 
--   **Issue 2: Implementar el monitor de inactividad para cancelar operaciones.**
-    -   **Attempted fixes**: Se creó el archivo  pero se dejó vacío. La lógica no fue implementada.
+-   **Issue 2: Los sinónimos de listo siguen fallando.**
+    -   **Attempted fixes**: El agente movió la lógica de reconocimiento de sinónimos al principio de la función  en  para darle prioridad.
     -   **Next debug checklist**:
-        1.  Implementar la lógica en  para consultar operaciones en estados de captura (, , etc.).
-        2.  Calcular el tiempo transcurrido desde la última actualización ().
-        3.  Si han pasado más de 3 minutos, cambiar el estado a .
-        4.  Enviar el mensaje de cancelación al usuario a través del bot.
-        5.  Configurar este script para que se ejecute periódicamente (ej. con un cron job o dentro de un proceso de supervisor).
-    -   **Why fix this issue and what will be achieved with the fix?**: Evita que las operaciones queden en un estado intermedio indefinidamente, manteniendo la base de datos limpia.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: N
+        1.  Revisar  en .
+        2.  Asegurarse de que el estado conversacional en el que se esperan los comprobantes () no esté siendo interceptado por otro handler antes de llegar a la lógica de sinónimos.
+        3.  Probar manualmente con varias frases (ok, ya está, termine) para confirmar que la normalización de texto (, ) y la comparación funcionen.
+    -   **Why fix this issue and what will be achieved with the fix?**: Mejora la UX del bot, haciéndolo más flexible y natural para el usuario.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Backend (bot)
+
+-   **Issue 3: El monitor de inactividad no funciona.**
+    -   **Attempted fixes**: El agente actualizó los estados monitoreados en  para incluir  y otros estados intermedios.
+    -   **Next debug checklist**:
+        1.  Revisar la consulta a la base de datos en . Verificar que el filtro por  y los estados sea correcto.
+        2.  Asegurarse de que el  se esté actualizando correctamente en la operación con cada interacción del usuario en .
+        3.  Verificar que la lógica para enviar la notificación de cancelación a través del bot está funcionando.
+    -   **Why fix this issue and what will be achieved with the fix?**: Evita que las operaciones queden en estados intermedios indefinidamente, manteniendo la base de datos limpia.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on other issue**: No.
-
--   **Issue 3: Implementar el flujo de MBControl y la generación/envío del layout SPEI.**
-    -   **Attempted fixes**: Los modelos fueron actualizados, pero la lógica de generación y envío no fue implementada.
-    -   **Next debug checklist**:
-        1.  Implementar el comando  para Ana en .
-        2.  En , crear una función que:
-            - Genere un archivo  usando una librería como  o , con las columnas , , , .
-            - El  debe ser .
-            - Envíe el archivo por correo a la dirección en la variable de entorno .
-        3.  Conectar esta función al endpoint de edición de operaciones en el panel web y al comando de Telegram.
-    -   **Why fix this issue and what will be achieved with the fix?**: Es el paso final del flujo operativo, permitiendo que la información recopilada se envíe a Tesorería para su procesamiento.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on other issue**: No.
-
--   **Issue 4: Asegurar que el frontend actúe como un espejo de solo lectura.**
-    -   **Attempted fixes**: No se ha trabajado en esto todavía.
-    -   **Next debug checklist**:
-        1.  En , leer el  y el .
-        2.  Si  y el estado es uno de cierre (ej.  o posterior), deshabilitar los campos de entrada en las pestañas Titular y Comprobantes.
-        3.  Mostrar los mensajes informativos indicando que los datos fueron capturados por Telegram.
-        4.  Implementar la funcionalidad para ver/descargar los comprobantes subidos.
-    -   **Why fix this issue and what will be achieved with the fix?**: Garantiza la integridad de los datos, evitando que se modifiquen en el panel web después de haber sido confirmados por el cliente en Telegram.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: No.
 
 **In progress Task List**:
--   **Task 1: Completar la implementación de los requisitos del usuario de msg 349.** (P0)
-    -   **Where to resume**: En , finalizando la lógica conversacional para el lote de comprobantes y las preguntas de cierre.
-    -   **What will be achieved with this?**: Un flujo de usuario completo y pulido en Telegram, la implementación del cierre operativo con MBControl y la consistencia entre la web y el bot.
+-   **Task 1: Implementar el flujo de creación de operaciones por correo electrónico.** (P2)
+    -   **Where to resume**: En  y . La infraestructura base (autenticación, envío/lectura) está creada. Se necesita implementar la lógica de negocio: parsear correos, validar datos, crear operaciones y enviar respuestas.
+    -   **What will be achieved with this?**: Se abrirá un nuevo canal para que los clientes operen, aumentando la flexibilidad del sistema.
     -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on something**: No.
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Blocked on something**: Requiere que el usuario proporcione el archivo  para la cuenta de Gmail.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P0) Implementar el monitor de inactividad ().
-    -   (P0) Implementar la generación y envío del layout SPEI para Toño.
-    -   (P1) Implementar la lógica de espejo de solo lectura en el frontend.
-    -   (P2) Implementar la captura de la clave MBControl desde el comando de Telegram de Ana.
+    -   (P1) Finalizar el modo espejo en el frontend para que sea 100% de solo lectura en operaciones de Telegram. ()
+    -   (P1) Mejorar la visibilidad (contraste, colores) de botones y badges en toda la UI.
+    -   (P2) Implementar los filtros de búsqueda funcionales en el listado de operaciones y otras pantallas.
+    -   (P2) Añadir la validación para que el nombre del titular solo acepte letras y tenga un mínimo de palabras. ()
 -   **Future Tasks**:
     -   Implementar el módulo de Comunicados para Ana.
-    -   Implementar el módulo de control de Claudia (reporte diario).
+    -   Implementar el módulo de control diario para Claudia.
     -   Implementar los reportes para la Dirección.
-    -   Lógica de partición de pagos para el proveedor.
+    -   Implementar la lógica de partición de pagos para el proveedor.
 
 **Completed work in this session**
--   **OCR Service Fixed**: Se corrigió un error recurrente del SDK de OpenAI/emergentintegrations, cambiando a un modelo Gemini compatible () y ajustando los parámetros de la llamada. El OCR ahora extrae datos de comprobantes de forma fiable.
--   **Separación de Flujos (Cliente/Operación)**: Se refactorizó la aplicación para separar completamente el alta de clientes de la creación de operaciones, tanto en el frontend web como en el bot de Telegram.
--   **Panel de Administración de Clientes**: Se creó una sección  en el frontend con una lista de clientes, y modales para crear y editar clientes, permitiendo a Ana gestionar el  (/) y otros datos.
--   **Lógica de Estado de Cliente**: Se implementó la regla de negocio que impide a los clientes con estado  crear operaciones.
--   **Bot de Telegram Estable y Funcional**: El bot se reescribió con un manejador de estados conversacionales, se configuró para ejecutarse persistentemente con Supervisor, y se implementó la funcionalidad Ver mis operaciones.
--   **Folio de Operación**: Se reemplazó el  de cara al usuario por un folio secuencial más amigable ().
+-   **Comando  explícito**: Se refactorizó el comando en  para que Ana especifique el folio y la clave (), y se actualizó la notificación que recibe.
+-   **Soporte para ZIP**: Se implementó la lógica en  y  para descomprimir archivos ZIP y procesar los comprobantes internos.
+-   **Botón Ver comprobante**: Se agregó un botón visible en  y se implementó la lógica en  para guardar y servir los archivos de comprobantes subidos.
+-   **Detección de duplicados**: Se añadió una comprobación por hash SHA-256 en  para evitar que se suban comprobantes idénticos.
+-   **Cálculo de costo de proveedor**: Se agregaron los campos  y  al modelo  y se implementó su cálculo en el backend y visualización en el frontend.
+-   **Infraestructura Gmail API**: Se crearon los archivos base (, ) y endpoints en  para la futura integración del flujo por correo.
+-   **Mejoras en el bot**: Se implementó la sugerencia de beneficiarios frecuentes y la interactividad en la lista Ver mis operaciones.
+-   **Mejoras en la web**: Se reorganizaron las tarjetas de cliente en  y se añadió una página .
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Monitor de Inactividad no implementado.**
-    -   **Debug checklist**: Implementar la lógica en  y configurarlo para ejecución periódica.
-    -   **Why to solve this issue and what will be achieved with this?**: Evita operaciones zombis y mantiene la consistencia de la base de datos.
-    -   **Should Test frontend/backend/both after fix**: Backend
+-   **Issue 1: Validación del nombre del titular.**
+    -   **Debug checklist**: En , en el handler que recibe el nombre del titular, agregar una validación con una expresión regular para permitir solo letras y espacios, y verificar que haya al menos 3 palabras.
+    -   **Why to solve this issue and what will be achieved with this?**: Asegura la calidad de los datos y evita que se guarde información incorrecta (como el IDMEX) en el campo del nombre.
+    -   **Should Test frontend/backend/both after fix**: Backend (bot)
+    -   **Is recurring issue?**: N
+-   **Issue 2: Filtros de búsqueda de la web no funcionan.**
+    -   **Debug checklist**: Revisar los endpoints  y  en . Implementar la lógica para recibir parámetros de consulta (query params) para folio, cliente, fechas y estado, y aplicarlos a la consulta de MongoDB.
+    -   **Why to solve this issue and what will be achieved with this?**: Es una funcionalidad básica y esencial para que los administradores puedan encontrar información rápidamente.
+    -   **Should Test frontend/backend/both after fix**: Both
     -   **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
@@ -143,79 +144,68 @@ El agente estaba en medio de la implementación de un conjunto grande y detallad
 
 **Key Technical Concepts**
 -   **Frontend:** React.js, shadcn/ui
--   **Backend:** FastAPI (Python),  (con )
+-   **Backend:** FastAPI,  (con )
 -   **Database:** MongoDB (usando )
--   **Integrations:**  para OCR con Gemini, Supervisor para la gestión de procesos.
+-   **Integrations:**  (OCR), Supervisor, Gmail API (en progreso).
 
 **key DB schema**
 -   **clientes**: 
 -   **operaciones**: 
 -   **comprobantes**: 
--   **usuarios_telegram**: 
 
 **changes in tech stack**
--   Ninguno.
+-   Ninguno. Se está preparando la integración de la API de Gmail.
 
 **All files**
 -   **Creados o Modificados Críticamente**:
-    -   : Modificado extensivamente para implementar el flujo conversacional, validación de estado, y la lógica de captura extendida.
-    -   : Actualizado con nuevos campos y estados para clientes y operaciones.
-    -   : Se agregaron endpoints para actualizar clientes y la lógica para generar .
-    -   : Corregido para usar Gemini y solucionar errores del SDK.
-    -   : Página nueva para la gestión de clientes.
-    -   : Modal para crear clientes, actualizado con el campo .
-    -   : Nuevo modal para editar clientes.
-    -    y : Actualizados para mostrar .
-    -   : Creado como placeholder.
+    -   : Modificado extensivamente para refinar el flujo conversacional, añadir el comando  explícito, beneficiarios frecuentes, etc.
+    -   : Modificado para soportar subida y servicio de archivos, detección de duplicados, procesamiento de ZIPs y endpoints para Gmail.
+    -   : Actualizado con campos para costos de proveedor, utilidad y hashes de comprobantes.
+    -   : Modificado para implementar el modo espejo, el botón Ver comprobante y la visualización de nuevos cálculos.
+    -   : Creado para manejar la descompresión y procesamiento de archivos ZIP.
+    -   : Creado para centralizar las notificaciones a Ana.
+    -   : Creado como base para la integración con Gmail.
+    -   : Actualizado para monitorear más estados.
 
 **Areas that need refactoring**:
--    es un archivo muy grande y complejo. Aunque utiliza , podría beneficiarse de una mayor modularización para separar la lógica de los diferentes flujos y estados, mejorando su mantenibilidad.
+-    sigue creciendo en complejidad. Separar la lógica de los diferentes estados y comandos en módulos o clases más pequeñas mejoraría drásticamente su mantenibilidad.
 
 **key api endpoints**
--   : Crea un nuevo cliente.
--   : Actualiza un cliente existente.
--   : Lista todos los clientes.
--   : Crea una nueva operación (ahora requiere un  existente).
--   : Lista todas las operaciones.
--   : Sube y procesa un comprobante.
+-   : Sube y procesa un comprobante (ahora maneja ZIPs y detecta duplicados).
+-   : Nuevo endpoint para servir los archivos de comprobantes.
+-   , , : Nuevos endpoints para gestionar la integración con Gmail.
 
 **Critical Info for New Agent**
--   **Prioridad Máxima**: Completar la implementación de los requisitos del último mensaje del usuario (msg 349). Esto incluye el temporizador de inactividad, la generación del layout SPEI y la lógica de espejo en el frontend.
--   **Bot de Telegram**: La lógica del bot es el núcleo de la interacción con el cliente y es compleja. Cualquier cambio debe ser probado cuidadosamente para no romper los flujos conversacionales existentes. El archivo es .
--   **Flujo de Estados**: Prestar mucha atención a los  del cliente y a los , ya que controlan toda la lógica de permisos y transiciones de flujo.
--   **Archivo de Layout**: El usuario adjuntó un archivo  que debe usarse como plantilla para la generación del layout para Tesorería.
+-   **BLOQUEANTE CRÍTICO**: El bot de Telegram no responde. La prioridad número uno es diagnosticar y resolver este problema para poder continuar con las pruebas y el desarrollo.
+-   **Feedback del Usuario**: El usuario ha proporcionado feedback muy detallado y específico en sus últimos mensajes. Es crucial revisar los mensajes 157, 202, 237, 288, 311 y 338 y abordar cada punto sistemáticamente.
+-   **Integración por Correo**: Esta es una nueva funcionalidad importante. La base está sentada, pero la lógica de negocio principal está pendiente y depende de que el usuario proporcione las credenciales de la API de Google.
+-   **Pruebas exhaustivas**: Varias funcionalidades (sinónimos, inactividad, modo espejo) han sido implementadas o corregidas pero siguen fallando según el usuario. El próximo agente debe realizar pruebas internas rigurosas antes de entregar.
 
 **documents created in this job**
 -   
--   
--   
--   
 
 **Last 5 User Messages and any pending user messages**
-1.  **msg 253**: Solicitó implementar la regla de negocio solo clientes activos pueden operar, extender el flujo de Telegram post-OCR (pedir ligas, nombre, IDMEX) y habilitar la creación/edición de clientes en el panel para Ana. **Estado: Completado.**
-2.  **msg 316**: Reportó que el botón Nuevo Cliente no era visible y Ver mis operaciones no funcionaba. **Estado: Completado.** (Se determinó que el botón sí era visible y se implementó la función faltante).
-3.  **msg 349**: Proporcionó una especificación grande y consolidada para refinar la UX de Telegram (subida de comprobantes en lote), implementar un temporizador de inactividad, añadir el flujo de cierre de MBControl (clave interna y layout para Toño), y hacer que la web sea un espejo de solo lectura. **Estado: En progreso.**
-4.  **msg 350**: El usuario adjuntó el archivo de layout SPEI. **Estado: Recibido.**
-5.  Los mensajes restantes son del agente trabajando en el último gran requerimiento.
+1.  **msg 237**: Solicitó un botón Ver comprobante visible en la web y soporte real para archivos ZIP (descomprimir y procesar). **Estado: Implementado, pendiente de validación.**
+2.  **msg 288**: Solicitó la implementación del flujo completo por correo, detección de duplicados, una pestaña de Cálculos funcional, filtros de búsqueda web y un flujo de notificación a Ana para capturar la clave MBControl. **Estado: Parcialmente implementado (duplicados, notificación a Ana). El resto está pendiente.**
+3.  **msg 311**: Solicitó agregar el costo del proveedor DNS (0.375%) a los cálculos internos y establecer la infraestructura para la integración de la API de Gmail. **Estado: Implementado, pendiente de validación.**
+4.  **msg 338**: Solicitó refactorizar el comando  para que Ana especifique explícitamente el folio de la operación y la clave MBControl, eliminando la dependencia de responder al mensaje. **Estado: Implementado, pendiente de validación.**
+5.  **msg 202**: Reportó problemas críticos: el bot de Telegram no responde, los sinónimos de listo y el monitor de inactividad siguen fallando, el modo espejo está incompleto y los elementos de la UI son poco visibles. **Estado: Sin resolver. Es el punto de partida más importante.**
 
 **Project Health Check:**
--   **Broken**: Ninguna funcionalidad crítica previamente funcional está rota. Sin embargo, la implementación de la última gran solicitud de funciones está incompleta.
--   **Mocked**: N/A
+-   **Broken**: El bot de Telegram está inoperativo, lo que constituye una falla crítica que bloquea una parte fundamental del flujo de la aplicación.
+-   **Mocked**: La lógica de envío de correo electrónico a través de la API de Gmail está en su lugar pero no se puede utilizar hasta que el usuario proporcione las credenciales.
 
 **Testing status**
--   **Testing agent used after significant changes**: NO
+-   **Testing agent used after significant changes**: YES
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: Ninguna.
+-   **Known regressions**: El bot de Telegram, que antes funcionaba, ahora no responde.
 
 **Credentials to test flow:**
 -   **Telegram Bot Token**: Disponible en .
--   **Variables de Entorno Requeridas**:
-    -   : Para el servicio de OCR.
-    -   : Para notificaciones de nuevos clientes.
-    -   : Para enviar el layout SPEI (aún por implementar el envío).
+-   **ANA_TELEGRAM_CHAT_ID**:  (ya configurado en el código/env).
+-   **Gmail API**: Requiere el archivo  del usuario para completar la configuración.
 
 **What agent forgot to execute**
--   El agente creó un archivo placeholder para el monitor de inactividad () pero pospuso su implementación para centrarse en otras partes del último gran requerimiento. Esta funcionalidad es crítica y está pendiente.
--   El agente no llegó a implementar la lógica de generación y envío del layout SPEI, ni la funcionalidad completa del comando  para Ana.
--   La lógica para que el frontend actúe como un espejo de solo lectura tampoco fue implementada.</analysis>
+-   No se implementó la validación específica para el **nombre del titular** (solo letras, mínimo 3 palabras), a pesar de haber sido solicitada.
+-   No se abordó la corrección de los **filtros de búsqueda de la web**, que el usuario reportó como no funcionales.</analysis>
