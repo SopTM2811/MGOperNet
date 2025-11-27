@@ -1119,28 +1119,7 @@ class TelegramBotNetCash:
             await update.message.reply_text("Error al guardar los datos. Por favor contacta a Ana.")
             return
         
-        # BLOQUE 1: Trigger "listo" y sinónimos para cerrar comprobantes
-        # Normalizar texto: lowercase primero, luego quitar tildes
-        import unicodedata
-        texto_lower = texto.lower().strip()
-        texto_normalizado = ''.join(
-            c for c in unicodedata.normalize('NFD', texto_lower)
-            if unicodedata.category(c) != 'Mn'
-        )
-        
-        palabras_cierre = [
-            'listo', 'lista', 'ya quedo', 'ya quede', 'ya esta', 'ya estas',
-            'ok', 'de acuerdo', 'terminado', 'termine', 'termino',
-            'eso es todo', 'ya', 'vale', 'perfecto', 'ya termine',
-            'ya termino', 'es todo'
-        ]
-        
-        if texto_normalizado in palabras_cierre:
-            if context.user_data.get('operacion_actual') and context.user_data.get('recibiendo_comprobantes'):
-                await self.cerrar_comprobantes_y_continuar(update, context)
-                return
-        
-        # Mensaje por defecto para mensajes no reconocidos (BLOQUE 1: saludo más humano)
+        # Mensaje por defecto para mensajes no reconocidos
         mensaje_respuesta = f"Hola, {user_name} 😊\n"
         mensaje_respuesta += "Soy el Asistente NetCash 🤖\n\n"
         mensaje_respuesta += "Puedo ayudarte a:\n"
