@@ -1070,7 +1070,7 @@ class TelegramBotNetCash:
                             
                             # Manejar respuesta de comprobante individual
                             comprobante = result.get("comprobante", {})
-                            elif comprobante.get("es_valido"):
+                            if comprobante.get("es_valido"):
                                 monto = comprobante.get("monto", 0)
                                 referencia = comprobante.get("referencia", "N/A")
                                 clave_rastreo = comprobante.get("clave_rastreo", "N/A")
@@ -1200,7 +1200,7 @@ class TelegramBotNetCash:
                             
                             # Manejar respuesta de comprobante individual
                             comprobante = result.get("comprobante", {})
-                            elif comprobante.get("es_valido"):
+                            if comprobante.get("es_valido"):
                                 monto = comprobante.get("monto", 0)
                                 referencia = comprobante.get("referencia", "N/A")
                                 clave_rastreo = comprobante.get("clave_rastreo", "N/A")
