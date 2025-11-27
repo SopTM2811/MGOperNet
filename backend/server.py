@@ -25,6 +25,7 @@ from ocr_service import ocr_service
 from calculos_service import calculos_service
 from layout_service import layout_service
 from plataformas_config import consejero_plataformas
+from zip_handler import zip_handler
 
 
 ROOT_DIR = Path(__file__).parent
