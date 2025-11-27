@@ -332,18 +332,31 @@ class TelegramBotNetCash:
             await update.message.reply_text(mensaje, parse_mode="Markdown")
         
         else:
-            # Usuario sin cliente registrado - ofrecer registro
+            # Usuario sin cliente registrado (desconocido o pendiente)
             mensaje = f"Hola {user.first_name} 😊\n\n"
-            mensaje += "¡Bienvenido a NetCash MBco! 🎉\n\n"
-            mensaje += "Para comenzar, necesito registrarte como cliente.\n"
             
-            keyboard = [
-                [InlineKeyboardButton("1️⃣ Registrarme como cliente NetCash", callback_data="registrar_cliente")],
-                [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+            # Verificar si ya compartió contacto
+            if usuario.get("telefono"):
+                # Ya compartió contacto, está esperando aprobación de Ana
+                mensaje += "📋 **Tu registro está en proceso.**\n\n"
+                mensaje += "Ana revisará tu información y te asignará una comisión.\n\n"
+                mensaje += "Te avisaremos por este mismo chat cuando ya puedas operar.\n\n"
+                mensaje += "Mientras tanto, puedes usar /ayuda si tienes dudas."
+            else:
+                # Aún no ha compartido contacto
+                mensaje += "¡Bienvenido a NetCash MBco! 🎉\n\n"
+                mensaje += "Para comenzar, necesito registrarte como cliente.\n"
+                
+                keyboard = [
+                    [InlineKeyboardButton("1️⃣ Registrarme como cliente NetCash", callback_data="registrar_cliente")],
+                    [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await update.message.reply_text(mensaje, reply_markup=reply_markup)
+                return
             
-            await update.message.reply_text(mensaje, reply_markup=reply_markup)
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
     
     async def iniciar_registro_cliente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Inicia el flujo de registro de cliente"""
