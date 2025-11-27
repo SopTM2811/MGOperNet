@@ -583,8 +583,11 @@ class TelegramBotNetCash:
         await query.edit_message_text(mensaje, parse_mode="Markdown")
         logger.info(f"Usuario {chat_id} consultó sus operaciones: {len(operaciones)} encontradas")
     
-    async def comando_mbcontrol(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Comando /mbcontrol para que Ana registre la clave MBControl de una operación"""
+    async def comando_mbco(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Comando /mbco para que Ana registre la clave MBControl de una operación
+        Formato: /mbco NC-000016 MBC-2025-00089
+        """
         chat_id = str(update.effective_chat.id)
         
         # Verificar que el usuario sea Ana (admin_mbco)
@@ -592,69 +595,71 @@ class TelegramBotNetCash:
         
         if not usuario or usuario.get("rol") != "admin_mbco":
             await update.message.reply_text(
-                "⚠️ Este comando es exclusivo para administradores.\n"
+                "⛔ Este comando solo puede usarlo Ana.\n"
                 "Si necesitas ayuda, contacta a Ana."
             )
             return
         
-        # Formato esperado: /mbcontrol FOLIO CLAVE
-        # Ejemplo: /mbcontrol NC-000123 18434-138-D-11
+        # Parsear parámetros: /mbco NC-000016 MBC-2025-00089
+        # maxsplit=2 permite que la clave MBControl tenga espacios si fuera necesario
         try:
-            partes = update.message.text.split()
+            partes = update.message.text.split(maxsplit=2)
             
             if len(partes) < 3:
-                mensaje = "**Uso del comando /mbcontrol**\n\n"
-                mensaje += "Formato: `/mbcontrol FOLIO CLAVE_MBCONTROL`\n\n"
-                mensaje += "Ejemplo: `/mbcontrol NC-000123 18434-138-D-11`\n\n"
-                mensaje += "Esto registrará la clave MBControl y generará el layout SPEI para Toño."
+                mensaje = "⚠️ **Formato incorrecto.**\n\n"
+                mensaje += "**Usa:** `/mbco CLAVE_NETCASH CLAVE_MBCO`\n\n"
+                mensaje += "**Ejemplo:** `/mbco NC-000016 MBC-2025-00089`\n\n"
+                mensaje += "Esto registrará la clave MBControl para esa operación."
                 await update.message.reply_text(mensaje, parse_mode="Markdown")
                 return
             
-            folio = partes[1]
-            clave_mbcontrol = partes[2]
+            _, clave_netcash, clave_mbco = partes
+            clave_netcash = clave_netcash.strip()
+            clave_mbco = clave_mbco.strip()
             
-            # Buscar operación por folio
-            operacion = await db.operaciones.find_one({"folio_mbco": folio}, {"_id": 0})
+            # Buscar operación por folio NetCash
+            operacion = await db.operaciones.find_one({"folio_mbco": clave_netcash}, {"_id": 0})
             
             if not operacion:
-                await update.message.reply_text(f"❌ No encontré ninguna operación con folio {folio}")
+                await update.message.reply_text(
+                    f"❌ No encontré ninguna operación con la clave NetCash `{clave_netcash}`.",
+                    parse_mode="Markdown"
+                )
                 return
             
             operacion_id = operacion.get("id")
             
-            # Llamar al endpoint del backend para registrar y generar layout
-            async with aiohttp.ClientSession() as session:
-                form = aiohttp.FormData()
-                form.add_field('clave_mbcontrol', clave_mbcontrol)
-                
-                async with session.post(
-                    f"{BACKEND_API}/operaciones/{operacion_id}/mbcontrol",
-                    data=form
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        
-                        mensaje = f"✅ **Clave MBControl registrada**\n\n"
-                        mensaje += f"**Folio:** {folio}\n"
-                        mensaje += f"**Clave MBControl:** {clave_mbcontrol}\n\n"
-                        
-                        if result.get("enviado"):
-                            mensaje += "📧 El layout SPEI fue generado y enviado a Toño por correo."
-                        else:
-                            mensaje += "⚠️ El layout SPEI fue generado pero no se pudo enviar por correo.\n"
-                            mensaje += f"**Ruta del archivo:** `{result.get('layout_path')}`\n"
-                            mensaje += "Configura SMTP en .env para habilitar envío automático."
-                        
-                        await update.message.reply_text(mensaje, parse_mode="Markdown")
-                    else:
-                        error_detail = await response.text()
-                        await update.message.reply_text(f"❌ Error al procesar: {error_detail}")
+            # Guardar clave MBControl directamente en la operación
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {
+                    "$set": {
+                        "clave_operacion_mbcontrol": clave_mbco,
+                        "estado": "CON_CLAVE_MBCO",
+                        "timestamp_mbcontrol": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            
+            # Confirmar a Ana
+            mensaje = "✅ **Clave MBco registrada correctamente.**\n\n"
+            mensaje += f"🔑 **NetCash:** `{clave_netcash}`\n"
+            mensaje += f"🔐 **MBControl:** `{clave_mbco}`\n\n"
+            mensaje += f"🆔 **ID interno:** {operacion_id}\n"
+            mensaje += f"👤 **Cliente:** {operacion.get('cliente_nombre', 'N/A')}\n"
+            mensaje += f"💵 **Monto:** ${operacion.get('monto_total_comprobantes', 0):,.2f}"
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+            logger.info(f"Clave MBco '{clave_mbco}' registrada para operación {operacion_id} ({clave_netcash}) por Ana")
             
         except Exception as e:
-            logger.error(f"Error en comando /mbcontrol: {str(e)}")
+            logger.error(f"Error en comando /mbco: {str(e)}")
             await update.message.reply_text(
-                "Error al procesar el comando. Verifica el formato:\n"
-                "`/mbcontrol FOLIO CLAVE_MBCONTROL`"
+                "❌ Ocurrió un error al guardar la clave MBco.\n"
+                "Verifica el formato:\n"
+                "`/mbco CLAVE_NETCASH CLAVE_MBCO`",
+                parse_mode="Markdown"
             )
     
     async def ayuda(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
