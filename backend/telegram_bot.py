@@ -892,7 +892,7 @@ class TelegramBotNetCash:
             operaciones_lista = context.user_data.get('operaciones_lista', [])
             
             # Verificar si es un número (índice)
-            if texto.isdigit():
+            if texto_lower.isdigit():
                 idx = int(texto) - 1
                 if 0 <= idx < len(operaciones_lista):
                     operacion = operaciones_lista[idx]
