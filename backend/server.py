@@ -174,6 +174,38 @@ async def procesar_zip_comprobantes(operacion_id: str, zip_path: Path, operacion
         raise HTTPException(status_code=500, detail=f"Error procesando ZIP: {str(e)}")
 
 
+def calcular_hash_archivo(file_path: Path) -> str:
+    """Calcula hash SHA-256 de un archivo para detectar duplicados"""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        # Leer archivo en chunks para no saturar memoria
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+async def verificar_duplicado_por_hash(file_hash: str) -> dict:
+    """
+    Verifica si un comprobante con el mismo hash ya existe.
+    Returns: dict con 'es_duplicado', 'operacion_id', 'folio_mbco'
+    """
+    # Buscar en todas las operaciones si existe un comprobante con este hash
+    operacion_existente = await db.operaciones.find_one(
+        {"comprobantes.file_hash": file_hash},
+        {"_id": 0, "id": 1, "folio_mbco": 1, "cliente_nombre": 1}
+    )
+    
+    if operacion_existente:
+        return {
+            "es_duplicado": True,
+            "operacion_id": operacion_existente.get("id"),
+            "folio_mbco": operacion_existente.get("folio_mbco", "N/A"),
+            "cliente_nombre": operacion_existente.get("cliente_nombre", "N/A")
+        }
+    
+    return {"es_duplicado": False}
+
+
 async def generar_folio_mbco() -> str:
     """Genera un folio secuencial para operaciones NetCash (ej: NC-000123)"""
     # Buscar el último folio usado
