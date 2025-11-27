@@ -177,6 +177,7 @@ async def procesar_comprobante(
 ):
     """
     Procesa un comprobante de depósito para una operación.
+    Soporta archivos individuales (PDF, JPG, PNG) y archivos ZIP con múltiples comprobantes.
     """
     try:
         # Verificar que la operación exista
@@ -196,11 +197,16 @@ async def procesar_comprobante(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        # Construir URL pública del archivo (relativa al backend)
-        file_url = f"/uploads/comprobantes/{safe_filename}"
-        
         # Determinar tipo MIME
         mime_type = file.content_type or "application/octet-stream"
+        
+        # ⚡ SOPORTE ZIP: Detectar si es un archivo ZIP
+        if mime_type == "application/zip" or file.filename.lower().endswith('.zip'):
+            logger.info(f"Archivo ZIP detectado: {file.filename}")
+            return await procesar_zip_comprobantes(operacion_id, file_path, operacion)
+        
+        # Construir URL pública del archivo (relativa al backend)
+        file_url = f"/uploads/comprobantes/{safe_filename}"
         
         # Procesar con OCR
         logger.info(f"Procesando comprobante para operación {operacion_id}")
