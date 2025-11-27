@@ -26,14 +26,23 @@ async def notificar_ana_telegram(operacion: Dict[str, Any]) -> bool:
         fecha = operacion.get("fecha_creacion", "N/A")
         operacion_id = operacion.get("id", "")
         
-        mensaje = f"📋 **Nueva operación lista para clave MBControl**\n\n"
-        mensaje += f"**Folio NetCash:** {folio}\n"
-        mensaje += f"**Cliente:** {cliente}\n"
-        mensaje += f"**Monto:** ${monto_total:,.2f}\n"
-        mensaje += f"**Fecha:** {fecha[:10] if len(fecha) > 10 else fecha}\n\n"
-        mensaje += f"**ID Operación:** `{operacion_id}`\n\n"
-        mensaje += "💡 **Responde este mensaje SOLO con la clave de operación MBControl.**\n"
-        mensaje += "Ejemplo: `18434-138-D-11`"
+        # Calcular montos para mostrar
+        comision = operacion.get("comision_cobrada", 0)
+        capital = operacion.get("capital_netcash", 0)
+        
+        mensaje = f"🔔 **Nueva operación NetCash pendiente de clave MBco**\n\n"
+        mensaje += f"🔑 **Clave NetCash:** `{folio}`\n"
+        mensaje += f"👤 **Cliente:** {cliente}\n"
+        mensaje += f"💵 **Total comprobantes:** ${monto_total:,.2f}\n"
+        mensaje += f"💸 **Comisión:** ${comision:,.2f}\n"
+        mensaje += f"🏦 **Capital NetCash:** ${capital:,.2f}\n"
+        mensaje += f"📅 **Fecha:** {fecha[:10] if len(fecha) > 10 else fecha}\n"
+        mensaje += f"🆔 **ID interno:** `{operacion_id}`\n\n"
+        mensaje += "✏️ **Para registrar la clave MBco de esta operación:**\n"
+        mensaje += "Usa el comando:\n"
+        mensaje += f"`/mbco {folio} CLAVE_MBCO`\n\n"
+        mensaje += "**Ejemplo:**\n"
+        mensaje += f"`/mbco {folio} MBC-2025-00089`"
         
         async with aiohttp.ClientSession() as session:
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
