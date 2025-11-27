@@ -61,7 +61,7 @@ const AltaClienteTelegram = () => {
 
       const data = await response.json();
       
-      toast.success('✅ Cliente vinculado y mensaje enviado por Telegram');
+      alert('✅ Cliente vinculado y mensaje enviado por Telegram');
       
       // Limpiar formulario
       setFormData({
@@ -73,7 +73,7 @@ const AltaClienteTelegram = () => {
 
     } catch (error) {
       console.error('Error:', error);
-      toast.error(error.message || 'Error al vincular cliente');
+      alert(error.message || 'Error al vincular cliente');
     } finally {
       setLoading(false);
     }
