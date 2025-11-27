@@ -54,6 +54,125 @@ logger = logging.getLogger(__name__)
 # FUNCIONES AUXILIARES
 # ============================================
 
+async def procesar_zip_comprobantes(operacion_id: str, zip_path: Path, operacion: dict) -> dict:
+    """
+    Procesa un archivo ZIP que contiene múltiples comprobantes.
+    """
+    try:
+        # Extraer archivos del ZIP
+        extract_dir = Path("/app/backend/uploads/comprobantes") / f"extracted_{operacion_id}"
+        resultado_extraccion = zip_handler.extraer_comprobantes_de_zip(zip_path, extract_dir)
+        
+        archivos_validos = resultado_extraccion["archivos_validos"]
+        archivos_ignorados = resultado_extraccion["archivos_ignorados"]
+        errores = resultado_extraccion["errores"]
+        
+        if not archivos_validos:
+            return {
+                "success": False,
+                "message": "El ZIP no contiene archivos de comprobantes válidos (PDF, JPG, PNG)",
+                "archivos_ignorados": archivos_ignorados,
+                "errores": errores
+            }
+        
+        # Procesar cada archivo válido
+        comprobantes_procesados = []
+        comprobantes_con_error = []
+        
+        for archivo_info in archivos_validos:
+            try:
+                # Procesar con OCR
+                datos_ocr = await ocr_service.leer_comprobante(
+                    archivo_info["path"],
+                    archivo_info["mime_type"]
+                )
+                
+                # Construir file_url relativa
+                file_url = f"/uploads/comprobantes/extracted_{operacion_id}/{archivo_info['nombre']}"
+                
+                # Validar
+                es_valido = False
+                mensaje_validacion = ""
+                
+                if "error" in datos_ocr:
+                    mensaje_validacion = datos_ocr["error"]
+                else:
+                    # Validar cuenta y beneficiario
+                    cuenta_valida = ocr_service.validar_cuenta_beneficiaria(
+                        datos_ocr.get("cuenta_beneficiaria", ""),
+                        CUENTA_DEPOSITO_CLIENTE["clabe"]
+                    )
+                    nombre_valido = ocr_service.validar_nombre_beneficiario(
+                        datos_ocr.get("nombre_beneficiario", ""),
+                        CUENTA_DEPOSITO_CLIENTE["razon_social"]
+                    )
+                    
+                    if cuenta_valida and nombre_valido:
+                        es_valido = True
+                        mensaje_validacion = "Comprobante válido"
+                    else:
+                        mensaje_validacion = "La cuenta o el beneficiario no coinciden"
+                
+                # Crear comprobante
+                comprobante_dict = {
+                    **datos_ocr,
+                    "archivo_original": archivo_info["nombre"],
+                    "nombre_archivo": archivo_info["nombre"],
+                    "file_url": file_url,
+                    "file_path": archivo_info["path"],
+                    "es_valido": es_valido,
+                    "es_duplicado": False,
+                    "mensaje_validacion": mensaje_validacion
+                }
+                
+                comprobantes_procesados.append(comprobante_dict)
+                
+            except Exception as e:
+                logger.error(f"Error procesando {archivo_info['nombre']}: {str(e)}")
+                comprobantes_con_error.append(archivo_info["nombre"])
+        
+        # Actualizar operación con todos los comprobantes
+        if comprobantes_procesados:
+            comprobantes_existentes = operacion.get("comprobantes", [])
+            comprobantes_existentes.extend(comprobantes_procesados)
+            
+            comprobantes_validos = [c for c in comprobantes_procesados if c.get("es_valido")]
+            nuevo_estado = EstadoOperacion.ESPERANDO_DATOS_TITULAR if comprobantes_validos else EstadoOperacion.ESPERANDO_COMPROBANTES
+            
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {
+                    "$set": {
+                        "comprobantes": comprobantes_existentes,
+                        "estado": nuevo_estado
+                    }
+                }
+            )
+        
+        # Construir mensaje de respuesta
+        mensaje = f"Procesé {len(comprobantes_procesados)} comprobantes del ZIP."
+        if archivos_ignorados:
+            mensaje += f" {len(archivos_ignorados)} archivo(s) ignorado(s) (formato no soportado)."
+        if comprobantes_con_error:
+            mensaje += f" {len(comprobantes_con_error)} archivo(s) con error de procesamiento."
+        
+        logger.info(f"ZIP procesado: {len(comprobantes_procesados)} comprobantes extraídos")
+        
+        return {
+            "success": True,
+            "message": mensaje,
+            "comprobantes_procesados": len(comprobantes_procesados),
+            "comprobantes_validos": len([c for c in comprobantes_procesados if c.get("es_valido")]),
+            "archivos_ignorados": archivos_ignorados,
+            "comprobantes_con_error": comprobantes_con_error,
+            "comprobantes": comprobantes_procesados
+        }
+        
+    except Exception as e:
+        logger.error(f"Error procesando ZIP: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error procesando ZIP: {str(e)}")
+
+
 async def generar_folio_mbco() -> str:
     """Genera un folio secuencial para operaciones NetCash (ej: NC-000123)"""
     # Buscar el último folio usado
