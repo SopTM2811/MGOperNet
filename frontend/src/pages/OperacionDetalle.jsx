@@ -513,42 +513,52 @@ const OperacionDetalle = () => {
                 {/* Mostrar cálculos si existen (formato calculos) o si tienen los datos básicos guardados */}
                 {(operacion.calculos || (operacion.monto_total_comprobantes && operacion.comision_cobrada)) ? (
                   <div className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
+                    {/* Datos básicos (siempre mostrar si existen) */}
+                    <div className="grid md:grid-cols-3 gap-4">
                       <div className="bg-blue-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">Monto Depositado (Cliente)</Label>
+                        <Label className="text-slate-600 text-sm">Total Comprobantes</Label>
                         <p className="text-2xl font-bold text-blue-700">
-                          ${operacion.calculos.monto_depositado_cliente.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                        </p>
-                      </div>
-
-                      <div className="bg-emerald-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">Capital NetCash (Ligas)</Label>
-                        <p className="text-2xl font-bold text-emerald-700">
-                          ${operacion.calculos.capital_netcash.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          ${(operacion.monto_total_comprobantes || operacion.calculos?.monto_depositado_cliente || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                       </div>
 
                       <div className="bg-amber-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">Comisión Cliente ({(operacion.calculos.comision_cliente_porcentaje * 100).toFixed(2)}%)</Label>
+                        <Label className="text-slate-600 text-sm">
+                          Comisión Cliente {operacion.porcentaje_comision_usado ? `(${operacion.porcentaje_comision_usado}%)` : ''}
+                        </Label>
                         <p className="text-2xl font-bold text-amber-700">
-                          ${operacion.calculos.comision_cliente_cobrada.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          ${(operacion.comision_cobrada || operacion.calculos?.comision_cliente_cobrada || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                       </div>
 
-                      <div className="bg-purple-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">Comisión Proveedor ({(operacion.calculos.comision_proveedor_porcentaje * 100).toFixed(3)}%)</Label>
-                        <p className="text-2xl font-bold text-purple-700">
-                          ${operacion.calculos.comision_proveedor.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                      <div className="bg-emerald-50 rounded-lg p-4">
+                        <Label className="text-slate-600 text-sm">Capital NetCash (a dispersar)</Label>
+                        <p className="text-2xl font-bold text-emerald-700">
+                          ${(operacion.capital_netcash || operacion.calculos?.capital_netcash || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                       </div>
                     </div>
 
-                    <div className="bg-slate-100 rounded-lg p-6 border-2 border-slate-300">
-                      <Label className="text-slate-600 text-sm">Total Egreso MBco (Capital + Comisión Proveedor)</Label>
-                      <p className="text-3xl font-bold text-slate-800">
-                        ${operacion.calculos.total_egreso.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                      </p>
-                    </div>
+                    {/* Datos avanzados (solo si existe calculos completo) */}
+                    {operacion.calculos && (
+                      <>
+                        <div className="grid md:grid-cols-2 gap-4 mt-4">
+                          <div className="bg-purple-50 rounded-lg p-4">
+                            <Label className="text-slate-600 text-sm">Comisión Proveedor ({(operacion.calculos.comision_proveedor_porcentaje * 100).toFixed(3)}%)</Label>
+                            <p className="text-2xl font-bold text-purple-700">
+                              ${operacion.calculos.comision_proveedor.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-100 rounded-lg p-4 border-2 border-slate-300">
+                            <Label className="text-slate-600 text-sm">Total Egreso MBco</Label>
+                            <p className="text-2xl font-bold text-slate-800">
+                              ${operacion.calculos.total_egreso.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {puedeConfirmar && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
