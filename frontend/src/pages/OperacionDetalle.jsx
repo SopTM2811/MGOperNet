@@ -382,12 +382,11 @@ const OperacionDetalle = () => {
                             </div>
                             {comp.file_url && (
                               <Button
-                                variant="outline"
                                 size="sm"
-                                className="mt-3"
+                                className="mt-3 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
                                 onClick={() => window.open(comp.file_url, '_blank')}
                               >
-                                <FileText className="h-3 w-3 mr-1" />
+                                <FileText className="h-4 w-4 mr-2" />
                                 Ver comprobante
                               </Button>
                             )}
