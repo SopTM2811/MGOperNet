@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Optional
 import shutil
 from datetime import datetime, timezone
+import hashlib
 
 from models import (
     OperacionNetCash,
