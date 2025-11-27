@@ -674,7 +674,9 @@ class TelegramBotNetCash:
             logger.info(f"[NetCash][MBCO] Confirmación enviada a Ana")
             
         except Exception as e:
-            logger.error(f"Error en comando /mbco: {str(e)}")
+            logger.error(f"[NetCash][MBCO][ERROR] {type(e).__name__}: {str(e)}")
+            import traceback
+            logger.error(f"[NetCash][MBCO][ERROR] Traceback:\n{traceback.format_exc()}")
             await update.message.reply_text(
                 "❌ Ocurrió un error al guardar la clave MBco.\n"
                 "Verifica el formato:\n"
