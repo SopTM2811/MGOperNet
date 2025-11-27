@@ -960,8 +960,12 @@ uploads_dir = Path("/app/backend/uploads")
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
-# Include the router in the main app
+# Include routers in the main app
 app.include_router(api_router)
+
+# Import and include telegram router
+from api_telegram import router as telegram_router
+app.include_router(telegram_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
