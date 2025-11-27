@@ -25,7 +25,9 @@ db = mongo_client[os.environ.get('DB_NAME', 'netcash_mbco')]
 ESTADOS_EN_CAPTURA = [
     "EN_CAPTURA",
     "ESPERANDO_COMPROBANTES",
-    "ESPERANDO_DATOS_TITULAR"
+    "ESPERANDO_DATOS_TITULAR",
+    "ESPERANDO_CONFIRMACION_CIERRE",
+    "COMPROBANTES_CERRADOS"  # Incluir este estado durante la captura de datos extendidos
 ]
 
 TIMEOUT_MINUTOS = 3
