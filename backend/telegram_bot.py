@@ -269,7 +269,7 @@ class TelegramBotNetCash:
             else:
                 # Sin teléfono -> pedir contacto nuevamente
                 logger.info(f"[NetCash][START] Usuario sin teléfono -> se pide contacto")
-                mensaje = f"Hola 👋, bienvenido a *NetCash MBco*.\n\n"
+                mensaje = "Hola 👋, bienvenido a NetCash MBco.\n\n"
                 mensaje += "Para darte de alta necesito que compartas tu teléfono.\n"
                 mensaje += "Toca el botón de abajo para continuar 👇"
                 
@@ -280,7 +280,7 @@ class TelegramBotNetCash:
                     resize_keyboard=True
                 )
                 
-                await update.message.reply_text(mensaje, reply_markup=reply_markup, parse_mode="Markdown")
+                await update.message.reply_text(mensaje, reply_markup=reply_markup)
         
         except Exception as e:
             logger.error(f"[NetCash][START][ERROR] {type(e).__name__}: {str(e)}")
