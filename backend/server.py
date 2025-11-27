@@ -182,14 +182,20 @@ async def procesar_comprobante(
         if not operacion:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
         
-        # Guardar archivo temporalmente
-        upload_dir = Path("/tmp/netcash_uploads")
-        upload_dir.mkdir(exist_ok=True)
+        # Guardar archivo de forma permanente
+        upload_dir = Path("/app/backend/uploads/comprobantes")
+        upload_dir.mkdir(parents=True, exist_ok=True)
         
-        file_path = upload_dir / f"{operacion_id}_{file.filename}"
+        # Generar nombre único para el archivo
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{operacion_id}_{timestamp}_{file.filename}"
+        file_path = upload_dir / safe_filename
         
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+        
+        # Construir URL pública del archivo (relativa al backend)
+        file_url = f"/uploads/comprobantes/{safe_filename}"
         
         # Determinar tipo MIME
         mime_type = file.content_type or "application/octet-stream"
