@@ -146,9 +146,13 @@ async def revisar_operaciones_inactivas():
                                 logger.info(f"[NetCash][Inactividad] Notificación de cancelación enviada al cliente {op.get('id_cliente')}")
                     except Exception as notif_error:
                         logger.error(f"Error enviando notificación de cancelación: {str(notif_error)}")
+        else:
+            logger.info(f"[NetCash][Inactividad] No se encontraron operaciones inactivas en este ciclo")
         
     except Exception as e:
-        logger.error(f"Error revisando operaciones inactivas: {str(e)}")
+        logger.error(f"[NetCash][Inactividad][ERROR] {type(e).__name__}: {str(e)}")
+        import traceback
+        logger.error(f"[NetCash][Inactividad][ERROR] Traceback:\n{traceback.format_exc()}")
 
 
 async def main():
