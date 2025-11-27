@@ -832,6 +832,28 @@ class TelegramBotNetCash:
                     async with session.post(f"{BACKEND_API}/operaciones/{operacion_id}/comprobante", data=form) as response:
                         if response.status == 200:
                             result = await response.json()
+                            
+                            # Manejar respuesta de ZIP (múltiples comprobantes)
+                            if result.get("comprobantes_procesados") is not None:
+                                mensaje = f"✅ **Recibí tu archivo ZIP.**\n\n"
+                                mensaje += f"Procesé **{result.get('comprobantes_procesados')}** comprobante(s).\n"
+                                if result.get("comprobantes_validos"):
+                                    mensaje += f"**{result.get('comprobantes_validos')}** comprobante(s) válido(s).\n"
+                                if result.get("archivos_ignorados"):
+                                    mensaje += f"\n⚠️ {len(result.get('archivos_ignorados'))} archivo(s) no reconocido(s) como comprobante.\n"
+                                
+                                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                                await asyncio.sleep(0.5)
+                                await update.message.reply_text(
+                                    "Puedes enviar más comprobantes o escribe **'listo'** cuando hayas terminado.",
+                                    parse_mode="Markdown"
+                                )
+                                
+                                # Limpiar archivo temporal
+                                file_path.unlink(missing_ok=True)
+                                return
+                            
+                            # Manejar respuesta de comprobante individual
                             comprobante = result.get("comprobante", {})
                             
                             if comprobante.get("es_duplicado"):
