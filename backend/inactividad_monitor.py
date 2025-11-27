@@ -30,14 +30,20 @@ ESTADOS_EN_CAPTURA = [
     "COMPROBANTES_CERRADOS"  # Incluir este estado durante la captura de datos extendidos
 ]
 
-TIMEOUT_MINUTOS = 3
+# TEMPORAL: 1 minuto para pruebas (cambiar a 3 después)
+TIMEOUT_MINUTOS = 1
 
 
 async def revisar_operaciones_inactivas():
-    """Revisa operaciones en captura y cancela las que tienen más de 3 minutos de inactividad"""
+    """Revisa operaciones en captura y cancela las que tienen más de N minutos de inactividad"""
     try:
-        # Calcular timestamp de hace 3 minutos
-        limite_inactividad = datetime.now(timezone.utc) - timedelta(minutes=TIMEOUT_MINUTOS)
+        ahora_utc = datetime.now(timezone.utc)
+        limite_inactividad = ahora_utc - timedelta(minutes=TIMEOUT_MINUTOS)
+        
+        logger.info(f"[NetCash][Inactividad] Buscando operaciones inactivas...")
+        logger.info(f"[NetCash][Inactividad] Ahora UTC: {ahora_utc}")
+        logger.info(f"[NetCash][Inactividad] Límite inactividad: {limite_inactividad}")
+        logger.info(f"[NetCash][Inactividad] Estados monitoreados: {ESTADOS_EN_CAPTURA}")
         
         # Buscar operaciones en captura con origen telegram y sin actividad reciente
         query = {
@@ -49,10 +55,14 @@ async def revisar_operaciones_inactivas():
             ]
         }
         
+        logger.info(f"[NetCash][Inactividad] Query: {query}")
+        
         operaciones_inactivas = await db.operaciones.find(query, {"_id": 0}).to_list(100)
         
+        logger.info(f"[NetCash][Inactividad] Operaciones encontradas: {len(operaciones_inactivas)}")
+        
         if operaciones_inactivas:
-            logger.info(f"Encontradas {len(operaciones_inactivas)} operaciones inactivas")
+            logger.info(f"[NetCash][Inactividad] Procesando {len(operaciones_inactivas)} operaciones inactivas...")
             
             for op in operaciones_inactivas:
                 folio = op.get("folio_mbco", "N/A")
