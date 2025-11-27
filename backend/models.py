@@ -104,6 +104,7 @@ class OperacionNetCash(BaseModel):
     
     # Timestamp para control de inactividad
     ultimo_mensaje_cliente: Optional[datetime] = None
+    timestamp_actualizacion: Optional[datetime] = None  # Para monitor de inactividad
     
     # Cálculos financieros básicos (guardados directamente en la operación)
     monto_total_comprobantes: Optional[float] = None  # Suma de comprobantes válidos
