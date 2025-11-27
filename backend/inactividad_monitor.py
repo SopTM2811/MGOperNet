@@ -122,11 +122,13 @@ async def revisar_operaciones_inactivas():
                             if telegram_token:
                                 mensaje = f"⏰ **Operación cancelada por inactividad**\n\n"
                                 mensaje += f"**Folio MBco:** {folio}\n\n"
-                                mensaje += "Tu operación fue cancelada automáticamente porque no recibimos actividad en los últimos 3 minutos.\n\n"
+                                mensaje += f"Tu operación fue cancelada automáticamente porque no recibimos actividad en los últimos {TIMEOUT_MINUTOS} minuto(s).\n\n"
                                 mensaje += "Si aún necesitas crear esta operación, por favor:\n"
                                 mensaje += "• Escribe /start\n"
                                 mensaje += "• Selecciona 'Crear nueva operación NetCash'\n"
                                 mensaje += "• Envía tus comprobantes de forma continua"
+                                
+                                logger.info(f"[NetCash][Inactividad] Enviando notificación Telegram a chat_id: {usuario_telegram['chat_id']}")
                                 
                                 async with aiohttp.ClientSession() as session:
                                     url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
@@ -135,9 +137,13 @@ async def revisar_operaciones_inactivas():
                                         "text": mensaje,
                                         "parse_mode": "Markdown"
                                     }
-                                    await session.post(url, json=payload)
+                                    resp = await session.post(url, json=payload)
+                                    if resp.status == 200:
+                                        logger.info(f"[NetCash][Inactividad] Notificación enviada exitosamente")
+                                    else:
+                                        logger.error(f"[NetCash][Inactividad] Error HTTP {resp.status} al enviar notificación")
                                 
-                                logger.info(f"Notificación de cancelación enviada al cliente {op.get('id_cliente')}")
+                                logger.info(f"[NetCash][Inactividad] Notificación de cancelación enviada al cliente {op.get('id_cliente')}")
                     except Exception as notif_error:
                         logger.error(f"Error enviando notificación de cancelación: {str(notif_error)}")
         
