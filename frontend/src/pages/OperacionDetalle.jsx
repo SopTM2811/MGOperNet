@@ -513,6 +513,7 @@ const OperacionDetalle = () => {
                       type="submit"
                       disabled={!puedeAgregarTitular}
                       data-testid="save-titular-btn"
+                      className={!puedeAgregarTitular ? 'bg-slate-300 text-slate-500' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'}
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Guardar Datos del Titular
