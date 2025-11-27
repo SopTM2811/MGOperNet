@@ -349,13 +349,30 @@ async def procesar_comprobante(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
+        # 🔐 CALCULAR HASH para detectar duplicados
+        file_hash = calcular_hash_archivo(file_path)
+        logger.info(f"Hash calculado para {file.filename}: {file_hash[:16]}...")
+        
+        # Verificar si es duplicado EXACTO (mismo archivo)
+        resultado_duplicado = await verificar_duplicado_por_hash(file_hash)
+        if resultado_duplicado["es_duplicado"]:
+            logger.warning(f"Comprobante duplicado detectado (hash). Ya usado en {resultado_duplicado['folio_mbco']}")
+            # Eliminar archivo duplicado
+            file_path.unlink(missing_ok=True)
+            return {
+                "success": False,
+                "es_duplicado": True,
+                "mensaje": f"Este comprobante ya fue usado en la operación {resultado_duplicado['folio_mbco']} del cliente {resultado_duplicado['cliente_nombre']}. Por favor envía un comprobante distinto.",
+                "operacion_duplicada": resultado_duplicado['folio_mbco']
+            }
+        
         # Determinar tipo MIME
         mime_type = file.content_type or "application/octet-stream"
         
         # ⚡ SOPORTE ZIP: Detectar si es un archivo ZIP
         if mime_type == "application/zip" or file.filename.lower().endswith('.zip'):
             logger.info(f"Archivo ZIP detectado: {file.filename}")
-            return await procesar_zip_comprobantes(operacion_id, file_path, operacion)
+            return await procesar_zip_comprobantes(operacion_id, file_path, operacion, file_hash)
         
         # Construir URL pública del archivo (relativa al backend)
         file_url = f"/uploads/comprobantes/{safe_filename}"
