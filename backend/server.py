@@ -328,6 +328,10 @@ async def crear_operacion(operacion_input: OperacionNetCashCreate):
     doc = operacion.model_dump()
     doc['fecha_creacion'] = doc['fecha_creacion'].isoformat()
     
+    # Inicializar timestamp de actividad para monitor de inactividad
+    doc['timestamp_actualizacion'] = datetime.now(timezone.utc)
+    doc['ultimo_mensaje_cliente'] = datetime.now(timezone.utc)
+    
     await db.operaciones.insert_one(doc)
     
     logger.info(f"Operación creada: {operacion.id} (Folio: {folio}) para cliente {cliente.get('nombre')}")
