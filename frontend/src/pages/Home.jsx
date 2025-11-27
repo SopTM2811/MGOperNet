@@ -65,6 +65,17 @@ const Home = () => {
               MBControl
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
+            
+            <Button
+              data-testid="alta-telegram-btn"
+              onClick={() => navigate('/alta-cliente-telegram')}
+              size="lg"
+              className="bg-green-600 hover:bg-green-700 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Alta Telegram
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
 
