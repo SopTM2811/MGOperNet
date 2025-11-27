@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 # FUNCIONES AUXILIARES
 # ============================================
 
-async def procesar_zip_comprobantes(operacion_id: str, zip_path: Path, operacion: dict) -> dict:
+async def procesar_zip_comprobantes(operacion_id: str, zip_path: Path, operacion: dict, zip_hash: str = None) -> dict:
     """
     Procesa un archivo ZIP que contiene múltiples comprobantes.
     """
