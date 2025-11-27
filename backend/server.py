@@ -380,7 +380,11 @@ async def procesar_comprobante(
                 "success": False,
                 "es_duplicado": True,
                 "mensaje": f"Este comprobante ya fue usado en la operación {resultado_duplicado['folio_mbco']} del cliente {resultado_duplicado['cliente_nombre']}. Por favor envía un comprobante distinto.",
-                "operacion_duplicada": resultado_duplicado['folio_mbco']
+                "operacion_duplicada": {
+                    "folio_mbco": resultado_duplicado['folio_mbco'],
+                    "estado": resultado_duplicado['estado'],
+                    "cliente_nombre": resultado_duplicado['cliente_nombre']
+                }
             }
         
         # Determinar tipo MIME
