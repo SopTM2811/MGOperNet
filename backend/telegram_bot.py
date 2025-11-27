@@ -852,7 +852,7 @@ class TelegramBotNetCash:
     
     async def handle_mensaje_no_reconocido(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Maneja mensajes de texto no reconocidos y flujo extendido de operación (BLOQUES 1, 2, 3)"""
-        texto = update.message.text.strip().lower()
+        texto = update.message.text.strip()
         user_name = update.effective_user.first_name
         
         # Actualizar timestamp de último mensaje si hay operación en curso
@@ -862,6 +862,30 @@ class TelegramBotNetCash:
                 {"id": operacion_id},
                 {"$set": {"ultimo_mensaje_cliente": datetime.now(timezone.utc).isoformat()}}
             )
+        
+        # ⚡ PRIORIDAD 1: Detectar sinónimos de "listo" ANTES de otros handlers
+        if context.user_data.get('recibiendo_comprobantes'):
+            import unicodedata
+            texto_lower = texto.lower().strip()
+            texto_normalizado = ''.join(
+                c for c in unicodedata.normalize('NFD', texto_lower)
+                if unicodedata.category(c) != 'Mn'
+            )
+            
+            palabras_cierre = [
+                'listo', 'lista', 'ya quedo', 'ya quede', 'ya esta', 'ya estas',
+                'ok', 'de acuerdo', 'terminado', 'termine', 'termino',
+                'eso es todo', 'ya', 'vale', 'perfecto', 'ya termine',
+                'ya termino', 'es todo'
+            ]
+            
+            if texto_normalizado in palabras_cierre:
+                logger.info(f"Sinónimo detectado: '{texto}' → cerrando comprobantes")
+                await self.cerrar_comprobantes_y_continuar(update, context)
+                return
+        
+        # Convertir a lowercase para comparaciones posteriores
+        texto_lower = texto.lower()
         
         # Manejo de selección de operación
         if context.user_data.get('esperando_seleccion_operacion'):
