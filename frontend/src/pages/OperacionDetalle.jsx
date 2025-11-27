@@ -314,6 +314,25 @@ const OperacionDetalle = () => {
                       <Label className="text-slate-600 text-sm">Código del Sistema</Label>
                       <p className="font-medium">{operacion.codigo_operacion_sistema || 'Pendiente'}</p>
                     </div>
+                    
+                    {/* Clave MBco / MBControl */}
+                    <div className="md:col-span-2">
+                      <Label className="text-slate-600 text-sm">Clave MBco / MBControl</Label>
+                      {operacion.clave_operacion_mbcontrol ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className="bg-green-600 text-white font-mono text-base px-4 py-1.5">
+                            {operacion.clave_operacion_mbcontrol}
+                          </Badge>
+                          {operacion.timestamp_mbcontrol && (
+                            <span className="text-xs text-slate-500">
+                              Registrada: {new Date(operacion.timestamp_mbcontrol).toLocaleString('es-MX')}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="font-medium text-slate-400 italic mt-1">Sin clave registrada</p>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
