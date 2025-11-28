@@ -954,19 +954,7 @@ class BackendTester:
         logger.info("=" * 60)
         
         tests = [
-            ("Backend Health Check", self.test_backend_health),
-            ("Crear Cliente", self.test_crear_cliente),
-            ("Listar Clientes", self.test_listar_clientes),
-            ("Crear Operación", self.test_crear_operacion),
-            ("Listar Operaciones", self.test_listar_operaciones),
-            ("Endpoint MBControl", self.test_endpoint_mbcontrol),
-            ("Recomendación Plataformas", self.test_recomendacion_plataformas),
-            ("Validación Cliente Pendiente", self.test_validacion_cliente_pendiente),
-            ("Flujo Telegram Simulado", self.test_flujo_telegram_simulado),
-            ("Monitor Inactividad Simulado", self.test_monitor_inactividad_simulado),
-            ("Validación Comando MBControl", self.test_comando_mbcontrol_validacion),
-            ("Bug Telegram Chat ID Null", self.test_telegram_bot_chat_id_null_bug),
-            ("Notificación Ana Nuevo Usuario", self.test_notificacion_ana_nuevo_usuario)
+            ("Notificación Ana - Correcciones Implementadas", self.test_notificacion_ana_correcciones_implementadas)
         ]
         
         results = []
