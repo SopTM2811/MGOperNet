@@ -589,3 +589,35 @@ agent_communication:
       🎉 RESULTADO FINAL: BUG COMPLETAMENTE RESUELTO
       El usuario 19440987 puede crear y ver operaciones sin problemas.
       Los handlers actualizan automáticamente el chat_id cuando es null.
+  - agent: "testing"
+    message: |
+      ❌ TESTING NOTIFICACIÓN ANA - PROBLEMA CRÍTICO IDENTIFICADO
+      
+      🎯 PRUEBA SOLICITADA:
+      • Flujo de notificación a Ana cuando nuevo usuario comparte contacto
+      • Usuario de prueba: telegram_id "999888777", teléfono "+5212345678901"
+      
+      ✅ COMPONENTES QUE FUNCIONAN:
+      • Usuario creado correctamente con rol "desconocido"
+      • ANA_TELEGRAM_CHAT_ID configurado: 1720830607
+      • Función obtener_o_crear_usuario() operativa
+      • Mensaje de notificación generado correctamente
+      • Comando de aprobación incluido: /aprobar_cliente 999888777 1.00
+      
+      ❌ PROBLEMA CRÍTICO ENCONTRADO:
+      • Error: 'NoneType' object has no attribute 'bot'
+      • Línea 209 telegram_bot.py: await self.app.bot.send_message()
+      • self.app es None durante obtener_o_crear_usuario()
+      • Notificación NO se envía a Ana
+      
+      🔧 CAUSA RAÍZ:
+      • Bot no completamente inicializado cuando se ejecuta la función
+      • self.app solo se inicializa cuando bot está corriendo completamente
+      • Función de notificación falla silenciosamente
+      
+      🚨 IMPACTO:
+      • Ana NO recibe notificaciones de nuevos usuarios
+      • Usuarios quedan en estado "desconocido" sin ser procesados
+      • Flujo de aprobación de clientes interrumpido
+      
+      🎯 REQUIERE FIX URGENTE en líneas 192-216 de telegram_bot.py
