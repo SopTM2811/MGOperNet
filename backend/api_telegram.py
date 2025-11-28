@@ -122,37 +122,30 @@ async def alta_cliente_telegram(data: AltaClienteTelegramRequest):
         
         # 4. Enviar mensaje de bienvenida por Telegram
         mensaje = (
-            "✅ *¡Ya estás dado de alta como cliente NetCash!*\n\n"
-            f"**Comisión asignada:** {data.comision_pct:.3f}%\n\n"
-            "Ya puedes operar desde este bot.\n"
-            "Escribe /start para ver el menú de operaciones."
+            f"Hola {data.nombre} 👋\n\n"
+            "Te acabo de vincular a NetCash MBco.\n"
+            "Ya puedes crear operaciones y mandarme tus comprobantes.\n\n"
+            "Escribe /start para ver el menú."
         )
         
+        mensaje_enviado = False
         try:
             async with aiohttp.ClientSession() as session:
                 url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
                 payload = {
                     "chat_id": data.telegram_id,
-                    "text": mensaje,
-                    "parse_mode": "Markdown"
+                    "text": mensaje
                 }
                 
                 async with session.post(url, json=payload) as response:
                     if response.status == 200:
                         logger.info(f"[NetCash][AltaWeb] Mensaje de bienvenida enviado a {data.telegram_id}")
+                        mensaje_enviado = True
                     else:
                         error_text = await response.text()
-                        logger.error(f"[NetCash][AltaWeb] Error enviando mensaje Telegram: {response.status} - {error_text}")
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"Cliente vinculado pero no se pudo enviar mensaje por Telegram: {error_text}"
-                        )
+                        logger.warning(f"[NetCash][AltaWeb] No se pudo enviar mensaje Telegram: {response.status} - {error_text}")
         except Exception as telegram_error:
-            logger.error(f"[NetCash][AltaWeb] Error enviando mensaje Telegram: {str(telegram_error)}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Cliente vinculado pero error al enviar mensaje: {str(telegram_error)}"
-            )
+            logger.warning(f"[NetCash][AltaWeb] Error enviando mensaje Telegram: {str(telegram_error)}")
         
         return {
             "ok": True,
