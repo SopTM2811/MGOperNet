@@ -691,6 +691,8 @@ class TelegramBotNetCash:
         user = update.effective_user
         telegram_id = str(user.id)
         
+        logger.info(f"[nueva_operacion] chat_id={chat_id}, telegram_id={telegram_id}, user.id type={type(user.id)}")
+        
         # Verificar que esté registrado como cliente activo
         es_activo, usuario, cliente = await self.es_cliente_activo(telegram_id, chat_id)
         
