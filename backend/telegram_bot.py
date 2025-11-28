@@ -715,22 +715,44 @@ class TelegramBotNetCash:
         user = update.effective_user
         telegram_id = str(user.id)
         
-        logger.info(f"[nueva_operacion] chat_id={chat_id}, telegram_id={telegram_id}, user.id type={type(user.id)}")
+        logger.info(f"[nueva_operacion] ===== INICIO =====")
+        logger.info(f"[nueva_operacion] chat_id={chat_id} (type: {type(chat_id)})")
+        logger.info(f"[nueva_operacion] telegram_id={telegram_id} (type: {type(telegram_id)})")
+        logger.info(f"[nueva_operacion] user.id={user.id} (type: {type(user.id)})")
         
         # CRÍTICO: Actualizar chat_id si el usuario existe pero tiene chat_id null
         # (esto pasa cuando el usuario fue dado de alta desde la web)
+        logger.info(f"[nueva_operacion] Buscando usuario en BD con telegram_id={telegram_id}")
         usuario_bd = await db.usuarios_telegram.find_one({"telegram_id": telegram_id}, {"_id": 0})
-        if usuario_bd and usuario_bd.get("chat_id") != chat_id:
-            await db.usuarios_telegram.update_one(
-                {"telegram_id": telegram_id},
-                {"$set": {"chat_id": chat_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
-            )
-            logger.info(f"[nueva_operacion] Chat ID actualizado para {telegram_id}: {chat_id}")
+        
+        if usuario_bd:
+            logger.info(f"[nueva_operacion] Usuario encontrado en BD:")
+            logger.info(f"[nueva_operacion]   - telegram_id: {usuario_bd.get('telegram_id')}")
+            logger.info(f"[nueva_operacion]   - chat_id: {usuario_bd.get('chat_id')}")
+            logger.info(f"[nueva_operacion]   - rol: {usuario_bd.get('rol')}")
+            logger.info(f"[nueva_operacion]   - id_cliente: {usuario_bd.get('id_cliente')}")
+            
+            if usuario_bd.get("chat_id") != chat_id:
+                logger.info(f"[nueva_operacion] Chat ID necesita actualización: '{usuario_bd.get('chat_id')}' -> '{chat_id}'")
+                await db.usuarios_telegram.update_one(
+                    {"telegram_id": telegram_id},
+                    {"$set": {"chat_id": chat_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logger.info(f"[nueva_operacion] ✅ Chat ID actualizado exitosamente")
+            else:
+                logger.info(f"[nueva_operacion] Chat ID ya es correcto: {chat_id}")
+        else:
+            logger.error(f"[nueva_operacion] ❌ Usuario NO encontrado en BD con telegram_id={telegram_id}")
         
         # Verificar que esté registrado como cliente activo
+        logger.info(f"[nueva_operacion] Llamando a es_cliente_activo(telegram_id={telegram_id}, chat_id={chat_id})")
         es_activo, usuario, cliente = await self.es_cliente_activo(telegram_id, chat_id)
+        logger.info(f"[nueva_operacion] Resultado de es_cliente_activo: es_activo={es_activo}")
         
         if not es_activo:
+            logger.warning(f"[nueva_operacion] ❌ Cliente NO activo - enviando mensaje de registro")
+            logger.warning(f"[nueva_operacion] usuario={usuario}")
+            logger.warning(f"[nueva_operacion] cliente={cliente}")
             mensaje = "⚠️ **Para crear una operación primero necesito darte de alta como cliente.**\n\n"
             mensaje += "Elige la opción **1️⃣ Registrarme como cliente NetCash**.\n\n"
             mensaje += "Usa /start para ver el menú."
