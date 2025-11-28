@@ -89,13 +89,23 @@ const Clientes = () => {
                 Clientes NetCash
               </h1>
             </div>
-            <Button
-              onClick={() => setShowNuevoCliente(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Nuevo Cliente
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => navigate('/alta-cliente-telegram')}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Alta Telegram
+              </Button>
+              <Button
+                onClick={() => setShowNuevoCliente(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Nuevo Cliente
+              </Button>
+            </div>
           </div>
         </div>
       </div>
