@@ -151,12 +151,12 @@ class Cliente(BaseModel):
     email: Optional[str] = None  # Opcional
     pais: str = "MX"  # País por defecto México
     prefijo_telefono: str = "+52"  # Prefijo por defecto México
-    telefono: str  # Número sin prefijo
+    telefono: Optional[str] = None  # Número sin prefijo (opcional para clientes Telegram)
     telefono_completo: Optional[str] = None  # Prefijo + número (auto-generado)
     telegram_id: Optional[str] = None
     porcentaje_comision_cliente: float = 0.65  # Porcentaje (ej: 0.65 = 0.65%)
     canal_preferido: Optional[str] = None  # "Telegram", "WhatsApp", "Correo"
-    propietario: Propietario
+    propietario: Optional[Propietario] = None  # Opcional para clientes Telegram
     rfc: Optional[str] = None  # RFC del cliente
     notas: Optional[str] = None  # Notas sobre el cliente
     estado: str = "activo"  # "pendiente_validacion" o "activo"
