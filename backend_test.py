@@ -783,7 +783,8 @@ class BackendTester:
             ("Flujo Telegram Simulado", self.test_flujo_telegram_simulado),
             ("Monitor Inactividad Simulado", self.test_monitor_inactividad_simulado),
             ("Validación Comando MBControl", self.test_comando_mbcontrol_validacion),
-            ("Bug Telegram Chat ID Null", self.test_telegram_bot_chat_id_null_bug)
+            ("Bug Telegram Chat ID Null", self.test_telegram_bot_chat_id_null_bug),
+            ("Notificación Ana Nuevo Usuario", self.test_notificacion_ana_nuevo_usuario)
         ]
         
         results = []
