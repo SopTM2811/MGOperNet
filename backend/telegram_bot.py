@@ -269,11 +269,20 @@ class TelegramBotNetCash:
                 logger.info(f"[NetCash][START] Usuario nuevo sin teléfono -> se pide contacto")
                 return
             
-            # Usuario ya registrado - verificar estado
+            # Usuario ya registrado - actualizar chat_id si es necesario
+            if usuario.get("chat_id") != chat_id:
+                await db.usuarios_telegram.update_one(
+                    {"telegram_id": telegram_id},
+                    {"$set": {"chat_id": chat_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logger.info(f"[NetCash][START] Chat ID actualizado para {telegram_id}")
+            
+            # Verificar estado
             rol = usuario.get("rol")
             telefono = usuario.get("telefono")
+            id_cliente = usuario.get("id_cliente")
             
-            if rol == "cliente_activo":
+            if rol == "cliente_activo" or (id_cliente and rol in ["cliente", "cliente_activo"]):
                 # Cliente aprobado -> menú completo
                 logger.info(f"[NetCash][START] Cliente activo -> menú")
                 await self.mostrar_menu_principal(update, usuario)
