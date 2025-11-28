@@ -340,6 +340,55 @@ backend:
           RESULTADO: 6/6 pruebas pasaron - BUG COMPLETAMENTE RESUELTO
           El usuario 19440987 puede crear y ver operaciones sin problemas.
 
+  - task: "Bot Telegram - Notificación a Ana cuando nuevo usuario comparte contacto"
+    implemented: true
+    working: false
+    file: "/app/backend/telegram_bot.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: |
+          Necesidad de probar el flujo de notificación a Ana cuando un nuevo usuario 
+          comparte su contacto por Telegram. Debe incluir: nombre, teléfono, telegram_id 
+          y comando para aprobar.
+      - working: false
+        agent: "testing"
+        comment: |
+          ❌ TESTING COMPLETADO - PROBLEMA CRÍTICO IDENTIFICADO: Notificación a Ana falla.
+          
+          ESCENARIO PROBADO:
+          • Usuario de prueba: telegram_id "999888777", nombre "Test Usuario Nuevo"
+          • Teléfono: "+5212345678901", chat_id: "999888777"
+          
+          PRUEBAS EJECUTADAS:
+          • ✅ Usuario creado correctamente con rol "desconocido"
+          • ✅ ANA_TELEGRAM_CHAT_ID configurado: 1720830607
+          • ✅ Función obtener_o_crear_usuario() funciona correctamente
+          • ✅ Usuario guardado en BD con datos correctos
+          • ✅ Mensaje de notificación generado correctamente
+          • ✅ Comando de aprobación incluido: /aprobar_cliente 999888777 1.00
+          
+          PROBLEMA CRÍTICO IDENTIFICADO:
+          • ❌ Error: 'NoneType' object has no attribute 'bot'
+          • ❌ Línea 209 en telegram_bot.py: await self.app.bot.send_message()
+          • ❌ self.app es None cuando se llama obtener_o_crear_usuario()
+          • ❌ La notificación NO se envía a Ana debido a este error
+          
+          CAUSA RAÍZ:
+          • El bot no está completamente inicializado cuando se ejecuta obtener_o_crear_usuario()
+          • self.app se inicializa solo cuando el bot está corriendo completamente
+          • La función de notificación falla silenciosamente
+          
+          LOGS ESPERADOS QUE NO SE GENERAN:
+          • [NetCash][CONTACTO] ✅ Notificación enviada exitosamente a Ana
+          • En su lugar se genera: Error notificando a Ana sobre usuario nuevo
+          
+          IMPACTO: Ana NO recibe notificaciones de nuevos usuarios que comparten contacto.
+          REQUIERE FIX URGENTE en líneas 192-216 de telegram_bot.py
+
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
     implemented: true
