@@ -770,6 +770,16 @@ class TelegramBotNetCash:
         
         logger.info(f"[ver_operaciones] chat_id={chat_id}, telegram_id={telegram_id}, user.id type={type(user.id)}")
         
+        # CRÍTICO: Actualizar chat_id si el usuario existe pero tiene chat_id null
+        # (esto pasa cuando el usuario fue dado de alta desde la web)
+        usuario_bd = await db.usuarios_telegram.find_one({"telegram_id": telegram_id}, {"_id": 0})
+        if usuario_bd and usuario_bd.get("chat_id") != chat_id:
+            await db.usuarios_telegram.update_one(
+                {"telegram_id": telegram_id},
+                {"$set": {"chat_id": chat_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            logger.info(f"[ver_operaciones] Chat ID actualizado para {telegram_id}: {chat_id}")
+        
         # Verificar que esté registrado como cliente activo
         es_activo, usuario, cliente = await self.es_cliente_activo(telegram_id, chat_id)
         
