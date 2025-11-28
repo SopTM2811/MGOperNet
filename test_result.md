@@ -527,14 +527,26 @@ agent_communication:
       🎯 CONCLUSIÓN:
       ✅ EL CÓDIGO FUNCIONA CORRECTAMENTE - No hay bug en la lógica
       ✅ El usuario DEBERÍA ver el menú de cliente activo
-      ✅ Si reporta lo contrario, posibles causas:
-         1. Cache de Telegram no actualizado
-         2. Múltiples instancias del bot (conflicto 409)
-         3. Problema temporal de conectividad
-         4. Usuario no está usando /start sino botones directos
-         5. Problema de sincronización de datos
       
-      ⚠️ RECOMENDACIÓN: Verificar logs en tiempo real cuando el usuario reporte el problema
+      🚨 PROBLEMA CRÍTICO IDENTIFICADO:
+      ❌ MÚLTIPLES INSTANCIAS DEL BOT CORRIENDO (Conflicto 409)
+      ❌ Logs muestran: "Conflict: terminated by other getUpdates request"
+      ❌ Esto causa comportamiento inconsistente e impredecible
+      
+      📋 LOGS DE ERROR ENCONTRADOS:
+      • 2025-11-28 17:24:38 - Conflict: terminated by other getUpdates request
+      • 2025-11-28 17:25:13 - HTTP/1.1 409 Conflict
+      • Error: make sure that only one bot instance is running
+      
+      🔧 SOLUCIÓN REQUERIDA:
+      1. Detener todas las instancias del bot
+      2. Reiniciar solo una instancia limpia
+      3. Verificar que no hay procesos duplicados
+      4. Monitorear logs para confirmar resolución
+      
+      ⚠️ CAUSA RAÍZ DEL PROBLEMA REPORTADO:
+      Los conflictos 409 causan que algunos comandos /start no se procesen correctamente,
+      resultando en comportamiento inconsistente para el usuario 1570668456.
   - agent: "testing"
     message: |
       ✅ TESTING BACKEND COMPLETADO EXITOSAMENTE
