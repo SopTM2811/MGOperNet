@@ -149,9 +149,10 @@ async def alta_cliente_telegram(data: AltaClienteTelegramRequest):
         
         return {
             "ok": True,
-            "mensaje": "Cliente vinculado y mensaje enviado por Telegram",
+            "mensaje": "Cliente vinculado correctamente" + (" y mensaje enviado por Telegram" if mensaje_enviado else " (mensaje no enviado - el usuario debe escribir al bot primero)"),
             "cliente_id": cliente_id,
-            "telegram_id": data.telegram_id
+            "telegram_id": data.telegram_id,
+            "mensaje_enviado": mensaje_enviado
         }
     
     except HTTPException:
