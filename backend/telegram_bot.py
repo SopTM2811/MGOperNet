@@ -325,6 +325,8 @@ class TelegramBotNetCash:
         """Maneja cuando el usuario comparte su contacto"""
         contact = update.message.contact
         chat_id = str(update.effective_chat.id)
+        user = update.effective_user
+        telegram_id = str(user.id)
         
         telefono = contact.phone_number
         if not telefono.startswith("+"):
@@ -332,7 +334,8 @@ class TelegramBotNetCash:
         
         nombre = f"{contact.first_name or ''} {contact.last_name or ''}".strip()
         
-        logger.info(f"Contacto recibido: {telefono} de {nombre} (chat_id: {chat_id})")
+        logger.info(f"[handle_contact] Contacto recibido: {telefono} de {nombre} (chat_id: {chat_id}, telegram_id: {telegram_id})")
+        logger.info(f"[handle_contact] ANA_TELEGRAM_CHAT_ID configurado: {self.ana_telegram_id}")
         
         # Crear o actualizar usuario
         usuario = await self.obtener_o_crear_usuario(chat_id, telefono, nombre)
