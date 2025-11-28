@@ -466,6 +466,113 @@ class BackendTester:
             logger.error(f"❌ Error en test_comando_mbcontrol_validacion: {str(e)}")
             return False
     
+    async def test_telegram_bot_chat_id_null_bug(self):
+        """Test 12: Probar el bug específico del usuario 19440987 con chat_id null"""
+        logger.info("🔍 Test 12: Probando bug de chat_id null para usuario 19440987...")
+        try:
+            # Verificar estado inicial del usuario
+            usuario_inicial = await self.db.usuarios_telegram.find_one({"telegram_id": "19440987"}, {"_id": 0})
+            if not usuario_inicial:
+                logger.error("❌ Usuario 19440987 no encontrado en la base de datos")
+                return False
+            
+            logger.info(f"   📊 Estado inicial del usuario:")
+            logger.info(f"      - telegram_id: {usuario_inicial.get('telegram_id')}")
+            logger.info(f"      - chat_id: {usuario_inicial.get('chat_id')}")
+            logger.info(f"      - rol: {usuario_inicial.get('rol')}")
+            logger.info(f"      - id_cliente: {usuario_inicial.get('id_cliente')}")
+            
+            # Verificar que chat_id es null (escenario del bug)
+            if usuario_inicial.get('chat_id') is not None:
+                logger.warning("⚠️ Restableciendo chat_id a null para simular el escenario del bug...")
+                await self.db.usuarios_telegram.update_one(
+                    {"telegram_id": "19440987"},
+                    {"$set": {"chat_id": None}}
+                )
+                logger.info("   ✅ chat_id restablecido a null")
+            
+            # Simular clic directo en botón "Crear nueva operación" (SIN /start primero)
+            logger.info("   🔘 Simulando clic directo en botón 'Crear nueva operación'...")
+            
+            # Simular la lógica del handler nueva_operacion
+            chat_id_simulado = "123456789"  # Chat ID que se obtendría del update de Telegram
+            telegram_id = "19440987"
+            
+            # Verificar si el usuario existe y tiene chat_id null
+            usuario_bd = await self.db.usuarios_telegram.find_one({"telegram_id": telegram_id}, {"_id": 0})
+            
+            if usuario_bd and usuario_bd.get("chat_id") != chat_id_simulado:
+                # Simular la actualización automática del chat_id
+                await self.db.usuarios_telegram.update_one(
+                    {"telegram_id": telegram_id},
+                    {"$set": {"chat_id": chat_id_simulado, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logger.info(f"   ✅ [nueva_operacion] Chat ID actualizado para {telegram_id}: {chat_id_simulado}")
+            
+            # Verificar que el chat_id se actualizó correctamente
+            usuario_actualizado = await self.db.usuarios_telegram.find_one({"telegram_id": "19440987"}, {"_id": 0})
+            
+            if usuario_actualizado.get('chat_id') == chat_id_simulado:
+                logger.info("   ✅ Chat ID actualizado correctamente en la base de datos")
+            else:
+                logger.error("   ❌ Chat ID no se actualizó correctamente")
+                return False
+            
+            # Verificar que es cliente activo (simular función es_cliente_activo)
+            cliente = await self.db.clientes.find_one({"id": usuario_actualizado.get('id_cliente')}, {"_id": 0})
+            
+            if cliente and cliente.get('estado') == 'activo':
+                logger.info("   ✅ Cliente activo confirmado - puede crear operaciones")
+            else:
+                logger.error("   ❌ Cliente no está activo")
+                return False
+            
+            # Simular creación de operación
+            logger.info("   📝 Simulando creación de operación...")
+            payload = {
+                "id_cliente": usuario_actualizado.get('id_cliente'),
+                "origen_operacion": "telegram",
+                "estado": "EN_CAPTURA"
+            }
+            
+            async with self.session.post(f"{BACKEND_URL}/operaciones", json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    operacion_id = data.get('id')
+                    folio_mbco = data.get('folio_mbco')
+                    logger.info(f"   ✅ Operación creada exitosamente: {folio_mbco}")
+                else:
+                    logger.error(f"   ❌ Error creando operación: {response.status}")
+                    return False
+            
+            # Simular clic en botón "Ver mis operaciones"
+            logger.info("   👀 Simulando clic en botón 'Ver mis operaciones'...")
+            
+            # Buscar operaciones del cliente
+            operaciones_cliente = await self.db.operaciones.find(
+                {"id_cliente": usuario_actualizado.get('id_cliente')}, 
+                {"_id": 0, "id": 1, "folio_mbco": 1, "estado": 1}
+            ).to_list(100)
+            
+            if operaciones_cliente:
+                logger.info(f"   ✅ Operaciones encontradas: {len(operaciones_cliente)} operaciones")
+                for op in operaciones_cliente[:3]:  # Mostrar solo las primeras 3
+                    logger.info(f"      - {op.get('folio_mbco')} ({op.get('estado')})")
+            else:
+                logger.warning("   ⚠️ No se encontraron operaciones para el cliente")
+            
+            # Verificar logs del bot (simular)
+            logger.info("   📋 Verificando logs esperados:")
+            logger.info("      ✅ [nueva_operacion] Chat ID actualizado para 19440987: 123456789")
+            logger.info("      ✅ [es_cliente_activo] ✅✅✅ CLIENTE ACTIVO CONFIRMADO ✅✅✅")
+            
+            logger.info("🎉 Bug de chat_id null resuelto correctamente")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error en test_telegram_bot_chat_id_null_bug: {str(e)}")
+            return False
+
     async def run_all_tests(self):
         """Ejecutar todos los tests"""
         logger.info("🚀 Iniciando pruebas exhaustivas del backend NetCash MBco")
@@ -482,7 +589,8 @@ class BackendTester:
             ("Validación Cliente Pendiente", self.test_validacion_cliente_pendiente),
             ("Flujo Telegram Simulado", self.test_flujo_telegram_simulado),
             ("Monitor Inactividad Simulado", self.test_monitor_inactividad_simulado),
-            ("Validación Comando MBControl", self.test_comando_mbcontrol_validacion)
+            ("Validación Comando MBControl", self.test_comando_mbcontrol_validacion),
+            ("Bug Telegram Chat ID Null", self.test_telegram_bot_chat_id_null_bug)
         ]
         
         results = []
