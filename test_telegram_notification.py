@@ -110,7 +110,7 @@ class TelegramNotificationTester:
             
             # Importar el bot para verificar el código
             try:
-                from telegram_bot import NetCashTelegramBot
+                from telegram_bot import TelegramBotNetCash
                 logger.info("   ✅ Módulo telegram_bot importado correctamente")
                 
                 # Verificar que existe la verificación de self.app
