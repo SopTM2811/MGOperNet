@@ -709,14 +709,16 @@ class TelegramBotNetCash:
         await query.answer()
         
         chat_id = str(update.effective_chat.id)
+        user = update.effective_user
+        telegram_id = str(user.id)
         
-        # Verificar si está vinculado a un cliente
-        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+        # Verificar que esté registrado como cliente activo
+        es_activo, usuario, cliente = await self.es_cliente_activo(telegram_id, chat_id)
         
-        if not usuario or not usuario.get("id_cliente"):
-            mensaje = "⚠️ **Aún no encuentro un cliente vinculado a tu número.**\n\n"
-            mensaje += "Primero necesito darte de alta como cliente NetCash.\n"
-            mensaje += "Elige la opción **'Registrarme como cliente NetCash'** en el menú."
+        if not es_activo:
+            mensaje = "⚠️ **Para ver tus operaciones primero necesito darte de alta como cliente.**\n\n"
+            mensaje += "Elige la opción **1️⃣ Registrarme como cliente NetCash**.\n\n"
+            mensaje += "Usa /start para ver el menú."
             await query.edit_message_text(mensaje, parse_mode="Markdown")
             return
         
