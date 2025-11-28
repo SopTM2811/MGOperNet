@@ -511,3 +511,31 @@ agent_communication:
       EL PROBLEMA REPORTADO NO SE REPRODUCE EN LAS PRUEBAS ACTUALES
       El bot identifica correctamente al usuario 19440987 como cliente activo
       y permite crear operaciones y ver operaciones sin pedir registro.
+  - agent: "testing"
+    message: |
+      ✅ BUG TELEGRAM CHAT_ID NULL - TESTING COMPLETADO CON ESCENARIO EXACTO
+      
+      🎯 ESCENARIO ESPECÍFICO PROBADO:
+      • Usuario 19440987 dado de alta desde web → chat_id: null (BUG SCENARIO)
+      • telegram_id: "19440987", rol: "cliente_activo"
+      • id_cliente: "d9115936-733e-4598-a23c-2ae7633216f9"
+      
+      🔧 CAMBIOS IMPLEMENTADOS VERIFICADOS:
+      • nueva_operacion handler (líneas 699-707): ✅ Actualiza chat_id automáticamente
+      • ver_operaciones handler (líneas 773-781): ✅ Actualiza chat_id automáticamente
+      
+      🧪 PRUEBAS EJECUTADAS (6/6 PASARON):
+      1. ✅ Verificar estado inicial: chat_id null confirmado
+      2. ✅ Clic directo "Crear nueva operación" (SIN /start)
+      3. ✅ Handler detecta y actualiza chat_id automáticamente
+      4. ✅ Operación creada exitosamente (NC-000034)
+      5. ✅ Verificación BD: chat_id actualizado correctamente
+      6. ✅ "Ver mis operaciones": Funciona correctamente (4 operaciones)
+      
+      📋 LOGS GENERADOS CORRECTAMENTE:
+      • "[nueva_operacion] Chat ID actualizado para 19440987: 987654321"
+      • "[es_cliente_activo] ✅✅✅ CLIENTE ACTIVO CONFIRMADO ✅✅✅"
+      
+      🎉 RESULTADO FINAL: BUG COMPLETAMENTE RESUELTO
+      El usuario 19440987 puede crear y ver operaciones sin problemas.
+      Los handlers actualizan automáticamente el chat_id cuando es null.
