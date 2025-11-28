@@ -1,143 +1,128 @@
 <analysis>**original_problem_statement:**
-El usuario solicitó la creación de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero. Los requisitos se han expandido para incluir:
-1.  **Flujos Separados**: Distinción entre Alta de Cliente y Creación de Operación en la web y Telegram.
-2.  **Roles y Permisos**: Un rol de administrador (Ana) valida nuevos clientes. Los clientes de Telegram deben ser activados por Ana.
-3.  **Flujo de Operación en Telegram**:
-    *   Creación de operación y asignación de folio ().
-    *   Subida de comprobantes en lote, finalizando con sinónimos de  (ej. ya está, ok). El sistema debe soportar archivos PDF, imágenes y ZIP (descomprimiendo y procesando el contenido).
-    *   El bot usa OCR para procesar comprobantes y previene la subida de duplicados usando un hash del archivo.
-    *   Tras la subida, el bot solicita: cantidad de ligas, nombre completo del titular (validando que solo contenga letras), e IDMEX, sugiriendo beneficiarios frecuentes.
-    *   El bot muestra un resumen económico detallado (Total, Comisión, Capital a dispersar) y notifica al cliente.
-4.  **Flujo de Cierre (MBControl)**:
-    *   Ana recibe una notificación (Telegram y correo) cuando una operación está lista.
-    *   Ana introduce una  usando un comando explícito en Telegram ().
-    *   Esto dispara la generación de un layout Excel () y lo envía por correo a Tesorería (Toño).
-5.  **Flujo por Correo Electrónico**: Implementar un canal para recibir y procesar operaciones a través de un buzón de correo dedicado, con lógica de validación y comunicación con el cliente por la misma vía.
-6.  **Consistencia Web-Telegram**: El panel web debe actuar como un espejo de solo lectura para operaciones creadas en Telegram, deshabilitando la edición y la subida de archivos, y permitiendo ver los comprobantes.
-7.  **Manejo de Inactividad**: Las operaciones en Telegram deben cancelarse automáticamente si el usuario está inactivo por más de 3 minutos.
+El usuario solicitó la creación de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero. Los requisitos incluyen:
+1.  **Flujos Separados**: Distinción entre Alta de Cliente y Creación de Operación.
+2.  **Roles y Permisos**: Un rol de administrador (Ana) valida y aprueba nuevos clientes desde Telegram, asignando una comisión con un mínimo de 0.375%.
+3.  **Flujo de Operación en Telegram**: Creación de operaciones, subida de comprobantes (PDF, imágenes, ZIP) con detección de duplicados, solicitud de datos adicionales y un resumen económico.
+4.  **Flujo de Cierre (MBControl)**: Ana introduce una  única por operación usando el comando .
+5.  **Flujo por Correo Electrónico**: Un canal para procesar operaciones vía email (pendiente).
+6.  **Consistencia Web-Telegram**: El panel web debe reflejar las operaciones de Telegram.
+7.  **Manejo de Inactividad**: Cancelación automática de operaciones tras 3 minutos de inactividad.
+8.  **Alta de Clientes**: Un flujo para que los nuevos usuarios se registren en el bot de Telegram, sean aprobados por Ana, y también una opción para darlos de alta manualmente desde una pantalla web.
 
 **User's preferred language**: español
 
 **what currently exists?**
 -   Una aplicación full-stack con backend FastAPI, frontend React y MongoDB.
 -   **Backend**:
-    -   Servicio de OCR () con Gemini.
-    -   Modelos de datos () que incluyen campos para los flujos de operación, costos de proveedor, y claves de control.
-    -   Bot de Telegram () con un  para gestionar los flujos de alta y operación. Incluye lógica para sinónimos de listo, beneficiarios frecuentes y el comando .
-    -   Mecanismo de detección de duplicados de comprobantes basado en hash SHA-256.
-    -   Soporte para descomprimir y procesar archivos ZIP.
-    -   Servicio de monitor de inactividad () configurado en Supervisor.
-    -   Infraestructura base para integración con Gmail API ().
-    -   Endpoints API para servir archivos de comprobantes subidos.
+    -   Bot de Telegram () con  para gestionar los flujos.
+    -   Comandos de administrador para Ana:  para registrar claves y  para activar nuevos usuarios y asignar comisiones.
+    -   Lógica para detectar comprobantes duplicados, unicidad de clave MBco y validación de comisión mínima.
+    -   Un monitor de inactividad () que sigue presentando fallos.
+    -   Endpoints API en  y  para gestionar operaciones y el alta de clientes desde la web.
 -   **Frontend**:
-    -   Panel de control () y detalle de operaciones ().
-    -   Lógica de modo espejo parcialmente implementada en  para deshabilitar controles en operaciones de Telegram.
-    -   Pestaña Cálculos que muestra el desglose financiero interno (comisión, costo proveedor, utilidad).
-    -   Componente () para que Ana gestione las claves de operación.
+    -   Un dashboard (), detalle de operaciones () y una lista de clientes ().
+    -   Un formulario en  para que el administrador vincule un cliente a un Telegram ID manualmente.
+-   **Problemas Críticos**: El bot sufre de una severa inconsistencia en el manejo de estado, provocando que clientes activos sean tratados como no registrados. La pantalla de listado de clientes en la web no carga datos.
 
 **Last working item**:
-El agente estaba ajustando el flujo del bot de Telegram para que Ana pudiera registrar la clave de MBControl de forma explícita, sin depender de responder a un mensaje específico.
+El agente estaba depurando un bug crítico y recurrente en el bot de Telegram. A pesar de que un cliente activo ve el menú correcto al usar , al presionar los botones Crear nueva operación NetCash o Ver mis operaciones, el bot lo trata como un usuario no registrado y le pide que se registre.
 
--   **Last item agent was working**: Modificando el comando  en  para aceptar el formato  y actualizando la notificación que recibe Ana en  para instruirla sobre el nuevo formato.
+-   **Last item agent was working**: Agregando logs detallados a la función  en  para diagnosticar por qué la validación de cliente activo falla en los handlers de los botones, a pesar de funcionar correctamente en el handler de .
 -   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. Se necesita una prueba de extremo a extremo del bot de Telegram para validar que el comando  funciona como se espera y que Ana recibe la notificación correcta. También se debe verificar en el panel web que la clave se guarda correctamente en la operación.
+-   **Which testing method agent to use?**: backend testing agent. El problema es puramente de lógica en el backend del bot. Se debe simular el flujo de un cliente activo ( 19440987) que presiona los botones del menú y verificar los logs generados por la función .
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): El bot de Telegram NO responde.** El usuario reportó que el bot dejó de responder a cualquier comando o mensaje, bloqueando todas las pruebas.
--   **Issue 2 (P0): Los sinónimos de listo siguen fallando.** A pesar de las correcciones, el usuario reporta que palabras como Ya está no cierran la fase de carga de comprobantes.
--   **Issue 3 (P0): El monitor de inactividad no funciona.** Las operaciones no se cancelan después de 3 minutos de inactividad del usuario, y no se envía ninguna notificación.
--   **Issue 4 (P1): El modo espejo de la web está incompleto.** Las operaciones de Telegram aún permiten editar datos del titular y subir nuevos comprobantes en la web.
--   **Issue 5 (P1): Los botones y badges de la web son poco visibles.** El usuario reporta problemas de contraste y visibilidad en elementos de la UI, lo que dificulta la interacción.
--   **Issue 6 (P2): La pestaña Cálculos no se activa correctamente.** Aunque se implementó la lógica, el usuario reporta que sigue viendo un mensaje de placeholder.
--   **Issue 7 (P2): Los filtros de búsqueda de la web no funcionan.** Esta funcionalidad fue reportada como no operativa y aún no ha sido abordada.
--   **Issue 8 (P2): Falta validación en el nombre del titular.** El bot no valida que el nombre del titular contenga solo letras y un mínimo de palabras.
+-   **Issue 1 (P0): Inconsistencia de estado del cliente en el bot de Telegram.**
+-   **Issue 2 (P0): La página de listado de clientes en la web no carga datos.**
+-   **Issue 3 (P1): La notificación a Ana por alta de nuevo cliente desde Telegram no funciona.**
+-   **Issue 4 (P2): El monitor de inactividad no funciona correctamente.**
+-   **Issue 5 (P3): El modo espejo de la web está incompleto.**
+-   **Issue 6 (P3): Los filtros de búsqueda de la web no funcionan.**
 
 **Issues Detail:**
--   **Issue 1: El bot de Telegram NO responde.**
-    -   **Attempted fixes**: El agente verificó el estado del servicio (backend                          RUNNING   pid 30, uptime 0:00:02
-code-server                      STOPPED   Not started
-frontend                         STOPPED   Nov 27 05:54 PM
-inactividad_monitor              RUNNING   pid 36, uptime 0:00:02
-mongodb                          RUNNING   pid 37, uptime 0:00:02
-nginx-code-proxy                 STARTING  
-telegram_bot                     RUNNING   pid 39, uptime 0:00:02) y los logs, que no mostraban errores. Se reinició el servicio del bot para intentar limpiar cualquier estado de conversación atascado.
+-   **Issue 1: Inconsistencia de estado del cliente en el bot de Telegram.**
+    -   **Attempted fixes**: El agente creó una función reutilizable  para unificar la lógica de validación y la aplicó en varios handlers. Sin embargo, la lógica dentro de la función o su aplicación en los handlers de los botones Crear nueva operación y Ver mis operaciones sigue siendo incorrecta, ya que el bug persiste.
     -   **Next debug checklist**:
-        1.  Revisar los logs de  y  en  en busca de errores silenciosos.
-        2.  Asegurarse de que el  no tenga un  que capture todos los mensajes y no los libere, o un estado persistente corrupto.
-        3.  Verificar que el token del bot en  sea correcto y que no haya conflictos de múltiples instancias (error ).
-    -   **Why fix this issue and what will be achieved with the fix?**: Es un bloqueante crítico. Sin el bot, no se puede probar ninguna funcionalidad de Telegram.
+        1.  Revisar el handler que se ejecuta al pulsar el botón Crear nueva operación NetCash en .
+        2.  Verificar que se está llamando a  y que los  y  que se le pasan son correctos.
+        3.  Analizar los logs que se acaban de agregar a  para entender por qué devuelve  para un cliente que se sabe que es activo. La hipótesis es que la consulta a la BD dentro de la función está fallando o la lógica de evaluación del  y  es incorrecta.
+        4.  Repetir los pasos 2 y 3 para el handler del botón Ver mis operaciones.
+        5.  Unificar la lógica de obtención de  y  en todos los handlers (, , etc.) para evitar inconsistencias.
+    -   **Why fix this issue and what will be achieved with the fix?**: Es un bloqueante crítico. Los clientes activos no pueden usar las funciones principales del bot, dejándolos en un ciclo de registro infinito.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Backend (bot)
+    -   **Should Test frontend/backend/both after fix?**: Backend (bot).
+    -   **Blocked on other issue**: No.
 
--   **Issue 2: Los sinónimos de listo siguen fallando.**
-    -   **Attempted fixes**: El agente movió la lógica de reconocimiento de sinónimos al principio de la función  en  para darle prioridad.
+-   **Issue 2: La página de listado de clientes en la web no carga datos.**
+    -   **Attempted fixes**: El agente hizo opcionales los campos  y  en el modelo Pydantic , lo que resolvió un error 500 inicial. Sin embargo, la página sigue mostrando Error al cargar clientes.
     -   **Next debug checklist**:
-        1.  Revisar  en .
-        2.  Asegurarse de que el estado conversacional en el que se esperan los comprobantes () no esté siendo interceptado por otro handler antes de llegar a la lógica de sinónimos.
-        3.  Probar manualmente con varias frases (ok, ya está, termine) para confirmar que la normalización de texto (, ) y la comparación funcionen.
-    -   **Why fix this issue and what will be achieved with the fix?**: Mejora la UX del bot, haciéndolo más flexible y natural para el usuario.
+        1.  Revisar la consola del navegador en la página  para ver el error exacto de la petición a la API.
+        2.  Revisar los logs del backend de FastAPI al momento de acceder a la página para ver si hay algún error de base de datos o de serialización que no se capturó antes.
+        3.  Ejecutar una consulta directa a la colección  en MongoDB para confirmar que los datos existen y tienen la estructura esperada por el modelo Pydantic.
+    -   **Why fix this issue and what will be achieved with the fix?**: Impide la gestión de clientes desde la web, bloqueando la capacidad del administrador para ver quién está en el sistema.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Backend (bot)
+    -   **Should Test frontend/backend/both after fix?**: Both.
 
--   **Issue 3: El monitor de inactividad no funciona.**
-    -   **Attempted fixes**: El agente actualizó los estados monitoreados en  para incluir  y otros estados intermedios.
+-   **Issue 3: La notificación a Ana por alta de nuevo cliente desde Telegram no funciona.**
+    -   **Attempted fixes**: El agente agregó una llamada a la función de notificación dentro del , pero el usuario reporta que Ana sigue sin recibir el mensaje.
     -   **Next debug checklist**:
-        1.  Revisar la consulta a la base de datos en . Verificar que el filtro por  y los estados sea correcto.
-        2.  Asegurarse de que el  se esté actualizando correctamente en la operación con cada interacción del usuario en .
-        3.  Verificar que la lógica para enviar la notificación de cancelación a través del bot está funcionando.
-    -   **Why fix this issue and what will be achieved with the fix?**: Evita que las operaciones queden en estados intermedios indefinidamente, manteniendo la base de datos limpia.
+        1.  Añadir logs explícitos en  dentro de  justo antes y después de llamar a .
+        2.  Verificar que la variable de entorno  se está cargando correctamente en el objeto del bot ().
+        3.  Revisar la función  para asegurarse de que el  está capturando y logueando cualquier error de la API de Telegram.
+    -   **Why fix this issue and what will be achieved with the fix?**: Sin esta notificación, el flujo de alta de nuevos clientes se rompe, ya que Ana no puede aprobarlos.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Should Test frontend/backend/both after fix?**: Backend (bot).
 
 **In progress Task List**:
--   **Task 1: Implementar el flujo de creación de operaciones por correo electrónico.** (P2)
-    -   **Where to resume**: En  y . La infraestructura base (autenticación, envío/lectura) está creada. Se necesita implementar la lógica de negocio: parsear correos, validar datos, crear operaciones y enviar respuestas.
-    -   **What will be achieved with this?**: Se abrirá un nuevo canal para que los clientes operen, aumentando la flexibilidad del sistema.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Blocked on something**: Requiere que el usuario proporcione el archivo  para la cuenta de Gmail.
+- N/A
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P1) Finalizar el modo espejo en el frontend para que sea 100% de solo lectura en operaciones de Telegram. ()
-    -   (P1) Mejorar la visibilidad (contraste, colores) de botones y badges en toda la UI.
-    -   (P2) Implementar los filtros de búsqueda funcionales en el listado de operaciones y otras pantallas.
-    -   (P2) Añadir la validación para que el nombre del titular solo acepte letras y tenga un mínimo de palabras. ()
+    -   (P2) Corregir el monitor de inactividad para que cancele operaciones correctamente. ()
+    -   (P3) Finalizar el modo espejo en el frontend para que sea 100% de solo lectura en operaciones de Telegram. ()
+    -   (P3) Implementar los filtros de búsqueda funcionales en el listado de operaciones y clientes.
 -   **Future Tasks**:
+    -   Implementar el flujo de creación de operaciones por correo electrónico.
     -   Implementar el módulo de Comunicados para Ana.
     -   Implementar el módulo de control diario para Claudia.
     -   Implementar los reportes para la Dirección.
     -   Implementar la lógica de partición de pagos para el proveedor.
 
 **Completed work in this session**
--   **Comando  explícito**: Se refactorizó el comando en  para que Ana especifique el folio y la clave (), y se actualizó la notificación que recibe.
--   **Soporte para ZIP**: Se implementó la lógica en  y  para descomprimir archivos ZIP y procesar los comprobantes internos.
--   **Botón Ver comprobante**: Se agregó un botón visible en  y se implementó la lógica en  para guardar y servir los archivos de comprobantes subidos.
--   **Detección de duplicados**: Se añadió una comprobación por hash SHA-256 en  para evitar que se suban comprobantes idénticos.
--   **Cálculo de costo de proveedor**: Se agregaron los campos  y  al modelo  y se implementó su cálculo en el backend y visualización en el frontend.
--   **Infraestructura Gmail API**: Se crearon los archivos base (, ) y endpoints en  para la futura integración del flujo por correo.
--   **Mejoras en el bot**: Se implementó la sugerencia de beneficiarios frecuentes y la interactividad en la lista Ver mis operaciones.
--   **Mejoras en la web**: Se reorganizaron las tarjetas de cliente en  y se añadió una página .
+-   **Corrección de Errores Críticos del Bot (Intentos)**:
+    -   Se resolvió el error inicial  que impedía que el bot respondiera.
+    -   Se implementó una función  para unificar la validación, aunque su aplicación sigue siendo defectuosa.
+    -   Se ajustó la lógica del comando  para validar la unicidad de la clave y manejar errores de sintaxis.
+-   **Flujo de Alta de Cliente**:
+    -   Se creó un nuevo endpoint () y una pantalla web () para el alta manual de clientes.
+    -   Se corrigió un error Body is disturbed or locked en el formulario web.
+    -   Se ajustó el flujo del bot para mostrar un botón de Compartir mi teléfono a los nuevos usuarios.
+-   **Correcciones de Backend y Frontend**:
+    -   Se hizo opcionales varios campos en el modelo Pydantic  para intentar arreglar la carga de la lista de clientes.
+    -   Se mejoró el mensaje de error de comprobante duplicado para incluir (en teoría) el folio y estado de la operación original.
+    -   Se agregó el  del usuario en la base de datos la primera vez que interactúa después de un alta web para mejorar la consistencia.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Validación del nombre del titular.**
-    -   **Debug checklist**: En , en el handler que recibe el nombre del titular, agregar una validación con una expresión regular para permitir solo letras y espacios, y verificar que haya al menos 3 palabras.
-    -   **Why to solve this issue and what will be achieved with this?**: Asegura la calidad de los datos y evita que se guarde información incorrecta (como el IDMEX) en el campo del nombre.
-    -   **Should Test frontend/backend/both after fix**: Backend (bot)
-    -   **Is recurring issue?**: N
--   **Issue 2: Filtros de búsqueda de la web no funcionan.**
-    -   **Debug checklist**: Revisar los endpoints  y  en . Implementar la lógica para recibir parámetros de consulta (query params) para folio, cliente, fechas y estado, y aplicarlos a la consulta de MongoDB.
-    -   **Why to solve this issue and what will be achieved with this?**: Es una funcionalidad básica y esencial para que los administradores puedan encontrar información rápidamente.
-    -   **Should Test frontend/backend/both after fix**: Both
+-   **Issue 1: Los sinónimos de listo siguen fallando.**
+    -   **Debug checklist**: Revisar  en . Asegurarse de que el estado  no esté siendo interceptado por otro handler. Probar manualmente con varias frases.
+    -   **Why to solve this issue and what will be achieved with this?**: Mejora la UX del bot.
+    -   **Should Test frontend/backend/both after fix**: Backend (bot).
+    -   **Is recurring issue?**: Y
+-   **Issue 2: Validación del nombre del titular.**
+    -   **Debug checklist**: En , en el handler que recibe el nombre del titular, agregar una validación con una expresión regular para permitir solo letras y espacios.
+    -   **Why to solve this issue and what will be achieved with this?**: Asegura la calidad de los datos.
+    -   **Should Test frontend/backend/both after fix**: Backend (bot).
     -   **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
--   N/A
+-   **Issue recurrence in previous fork**: El bot de Telegram no responde.
+-   **Recurrence count**: Se ha manifestado de diferentes maneras (silencio total, inconsistencia de estado), por lo que es un área de alta fragilidad. El problema de raíz parece ser la gestión de estados.
+-   **Status**: IN PROGRESS
 
 **Code Architecture**
 
@@ -146,66 +131,64 @@ telegram_bot                     RUNNING   pid 39, uptime 0:00:02) y los logs, q
 -   **Frontend:** React.js, shadcn/ui
 -   **Backend:** FastAPI,  (con )
 -   **Database:** MongoDB (usando )
--   **Integrations:**  (OCR), Supervisor, Gmail API (en progreso).
+-   **Integrations:** Supervisor
 
 **key DB schema**
 -   **clientes**: 
+-   **usuarios_telegram**: 
 -   **operaciones**: 
--   **comprobantes**: 
 
 **changes in tech stack**
--   Ninguno. Se está preparando la integración de la API de Gmail.
+-   Ninguno.
 
 **All files**
--   **Creados o Modificados Críticamente**:
-    -   : Modificado extensivamente para refinar el flujo conversacional, añadir el comando  explícito, beneficiarios frecuentes, etc.
-    -   : Modificado para soportar subida y servicio de archivos, detección de duplicados, procesamiento de ZIPs y endpoints para Gmail.
-    -   : Actualizado con campos para costos de proveedor, utilidad y hashes de comprobantes.
-    -   : Modificado para implementar el modo espejo, el botón Ver comprobante y la visualización de nuevos cálculos.
-    -   : Creado para manejar la descompresión y procesamiento de archivos ZIP.
-    -   : Creado para centralizar las notificaciones a Ana.
-    -   : Creado como base para la integración con Gmail.
-    -   : Actualizado para monitorear más estados.
+-   **/app/backend/telegram_bot.py**: Modificado repetidamente para intentar corregir el flujo de registro de clientes, la validación de estado, y los comandos de administrador. Es el archivo más problemático.
+-   **/app/backend/server.py**: Modificado para añadir el nuevo router de  y corregir modelos para el endpoint de clientes.
+-   **/app/backend/models.py**: Modificado para añadir nuevos campos (), nuevos Enum () y hacer opcionales campos requeridos (, ).
+-   **/app/backend/api_telegram.py**: Nuevo archivo para manejar el alta de clientes desde la web.
+-   **/app/frontend/src/pages/AltaClienteTelegram.jsx**: Nuevo componente para el formulario de alta de cliente en la web.
+-   **/app/frontend/src/pages/Clientes.jsx**: Modificado para añadir un botón al formulario de alta. Sigue sin funcionar correctamente.
+-   **/app/frontend/src/App.js**: Modificado para añadir la nueva ruta .
 
 **Areas that need refactoring**:
--    sigue creciendo en complejidad. Separar la lógica de los diferentes estados y comandos en módulos o clases más pequeñas mejoraría drásticamente su mantenibilidad.
+-   **/app/backend/telegram_bot.py**: Es extremadamente complejo y propenso a errores. La lógica de validación de estado de cliente debe ser extraída y centralizada en la función  y esta debe ser la ÚNICA fuente de verdad en todos los handlers. Actualmente, diferentes partes del código usan diferentes criterios para determinar si un usuario es un cliente activo.
 
 **key api endpoints**
--   : Sube y procesa un comprobante (ahora maneja ZIPs y detecta duplicados).
--   : Nuevo endpoint para servir los archivos de comprobantes.
--   , , : Nuevos endpoints para gestionar la integración con Gmail.
+-   : Nuevo endpoint para vincular un cliente y su Telegram ID desde la web.
+-   : Endpoint para listar los clientes, actualmente arroja errores.
 
 **Critical Info for New Agent**
--   **BLOQUEANTE CRÍTICO**: El bot de Telegram no responde. La prioridad número uno es diagnosticar y resolver este problema para poder continuar con las pruebas y el desarrollo.
--   **Feedback del Usuario**: El usuario ha proporcionado feedback muy detallado y específico en sus últimos mensajes. Es crucial revisar los mensajes 157, 202, 237, 288, 311 y 338 y abordar cada punto sistemáticamente.
--   **Integración por Correo**: Esta es una nueva funcionalidad importante. La base está sentada, pero la lógica de negocio principal está pendiente y depende de que el usuario proporcione las credenciales de la API de Google.
--   **Pruebas exhaustivas**: Varias funcionalidades (sinónimos, inactividad, modo espejo) han sido implementadas o corregidas pero siguen fallando según el usuario. El próximo agente debe realizar pruebas internas rigurosas antes de entregar.
+-   **BUG RECURRENTE Y CRÍTICO**: El problema más importante es la inconsistencia en la validación de estado del cliente en el bot de Telegram. Aunque  pueda funcionar, otros handlers como los de los botones del menú fallan al validar si el usuario es un cliente activo, enviándolo de vuelta al flujo de registro. El usuario ha solicitado explícitamente depurar esto con logs en la función . Solucionar esto es la **máxima prioridad**.
+-   **Pruebas del Usuario**: El usuario realiza pruebas exhaustivas y reporta los bugs con mucho detalle. Es crucial que el próximo agente pruebe internamente los flujos exactos que el usuario describe antes de declarar una tarea como completada.
+-   **Unificar Lógica**: La solución al bug recurrente pasa por unificar TODA la lógica de validación de cliente en la función  y asegurarse de que se usa en todos los handlers relevantes, pasando los  y  correctos.
 
 **documents created in this job**
--   
+-   N/A
 
 **Last 5 User Messages and any pending user messages**
-1.  **msg 237**: Solicitó un botón Ver comprobante visible en la web y soporte real para archivos ZIP (descomprimir y procesar). **Estado: Implementado, pendiente de validación.**
-2.  **msg 288**: Solicitó la implementación del flujo completo por correo, detección de duplicados, una pestaña de Cálculos funcional, filtros de búsqueda web y un flujo de notificación a Ana para capturar la clave MBControl. **Estado: Parcialmente implementado (duplicados, notificación a Ana). El resto está pendiente.**
-3.  **msg 311**: Solicitó agregar el costo del proveedor DNS (0.375%) a los cálculos internos y establecer la infraestructura para la integración de la API de Gmail. **Estado: Implementado, pendiente de validación.**
-4.  **msg 338**: Solicitó refactorizar el comando  para que Ana especifique explícitamente el folio de la operación y la clave MBControl, eliminando la dependencia de responder al mensaje. **Estado: Implementado, pendiente de validación.**
-5.  **msg 202**: Reportó problemas críticos: el bot de Telegram no responde, los sinónimos de listo y el monitor de inactividad siguen fallando, el modo espejo está incompleto y los elementos de la UI son poco visibles. **Estado: Sin resolver. Es el punto de partida más importante.**
+1.  **msg 432**: Reportó el bug crítico persistente: un cliente vinculado y activo es enviado de vuelta al registro al usar . También reportó que la sección Clientes de la web sigue sin funcionar. **Estado: Sin resolver.**
+2.  **msg 454**: Reportó que la web de Clientes sigue sin cargar datos, que los botones del menú del bot siguen enviando al cliente activo a registrarse, y que la notificación a Ana por nuevo cliente no llega. **Estado: Sin resolver.**
+3.  **msg 501**: Reitera el mismo bug: los botones Crear nueva operación y Ver mis operaciones no funcionan para clientes activos, a pesar de que  sí lo hace. **Estado: Sin resolver.**
+4.  **msg 518**: Proporciona un prompt de depuración final muy detallado para el bug de los botones del menú, pidiendo instrumentar la función  con logs para cada posible punto de fallo. **Estado: Sin resolver (en progreso).**
+5.  **msg 519**: El agente inicia la depuración solicitada por el usuario, agregando logs a . **Estado: Es el punto de partida actual.**
 
 **Project Health Check:**
--   **Broken**: El bot de Telegram está inoperativo, lo que constituye una falla crítica que bloquea una parte fundamental del flujo de la aplicación.
--   **Mocked**: La lógica de envío de correo electrónico a través de la API de Gmail está en su lugar pero no se puede utilizar hasta que el usuario proporcione las credenciales.
+-   **Broken**:
+    -   El flujo principal del bot de Telegram para clientes activos está roto debido a la inconsistencia en la validación de estado.
+    -   La página de listado de clientes en la web no carga datos.
+    -   La notificación a Ana sobre nuevos usuarios de Telegram no se está enviando.
+-   **Mocked**: N/A
 
 **Testing status**
--   **Testing agent used after significant changes**: YES
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: El bot de Telegram, que antes funcionaba, ahora no responde.
+-   **Known regressions**: El flujo de cliente activo, que en un momento funcionaba parcialmente, ha regresado a un estado roto donde los botones del menú son inutilizables.
 
 **Credentials to test flow:**
 -   **Telegram Bot Token**: Disponible en .
--   **ANA_TELEGRAM_CHAT_ID**:  (ya configurado en el código/env).
--   **Gmail API**: Requiere el archivo  del usuario para completar la configuración.
+-   **ANA_TELEGRAM_CHAT_ID**: .
+-   **Usuario de prueba (Javier Telegram)**: . Este usuario ya está en la BD como cliente activo y puede usarse para replicar el bug principal.
 
 **What agent forgot to execute**
--   No se implementó la validación específica para el **nombre del titular** (solo letras, mínimo 3 palabras), a pesar de haber sido solicitada.
--   No se abordó la corrección de los **filtros de búsqueda de la web**, que el usuario reportó como no funcionales.</analysis>
+-   El agente ha estado atrapado en un ciclo de corrección del mismo bug de estado del cliente sin lograr una solución definitiva. A pesar de crear la función  como se solicitó, no se aseguró de que funcionara correctamente ni de que se aplicara de forma consistente en todos los handlers, lo que ha perpetuado el problema. También falló en arreglar el listado de clientes web y la notificación a Ana.</analysis>
