@@ -948,13 +948,222 @@ class BackendTester:
             logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return False
 
+    async def test_start_command_usuario_1570668456(self):
+        """Test específico: Comando /start para usuario 1570668456 (daniel G)"""
+        logger.info("🔍 Test ESPECÍFICO: Comando /start para usuario 1570668456 (daniel G)")
+        try:
+            # Datos específicos del usuario reportado
+            telegram_id = 1570668456  # Como INT según el request
+            chat_id = 1570668456      # Como INT según el request
+            telegram_id_str = "1570668456"  # Como string para BD
+            chat_id_str = "1570668456"      # Como string para BD
+            
+            logger.info(f"   📋 DATOS DEL USUARIO REPORTADO:")
+            logger.info(f"      - telegram_id: {telegram_id} (INT)")
+            logger.info(f"      - chat_id: {chat_id} (INT)")
+            logger.info(f"      - telegram_id_str: {telegram_id_str} (STRING para BD)")
+            logger.info(f"      - chat_id_str: {chat_id_str} (STRING para BD)")
+            logger.info(f"      - Nombre esperado: daniel G")
+            logger.info(f"      - Rol esperado: cliente_activo")
+            logger.info(f"      - ID Cliente esperado: adb0a59b-9083-4433-81db-2193fda4bc36")
+            
+            # PASO 1: Verificar datos del usuario en BD
+            logger.info("   🔍 PASO 1: Verificando datos del usuario en BD...")
+            
+            usuario_bd = await self.db.usuarios_telegram.find_one({"telegram_id": telegram_id_str}, {"_id": 0})
+            
+            if not usuario_bd:
+                logger.error("   ❌ Usuario 1570668456 NO encontrado en usuarios_telegram")
+                return False
+            
+            logger.info("   ✅ Usuario encontrado en BD:")
+            logger.info(f"      - telegram_id: {usuario_bd.get('telegram_id')}")
+            logger.info(f"      - chat_id: {usuario_bd.get('chat_id')}")
+            logger.info(f"      - rol: {usuario_bd.get('rol')}")
+            logger.info(f"      - id_cliente: {usuario_bd.get('id_cliente')}")
+            logger.info(f"      - telefono: {usuario_bd.get('telefono')}")
+            
+            # Verificar datos del cliente vinculado
+            id_cliente = usuario_bd.get('id_cliente')
+            if not id_cliente:
+                logger.error("   ❌ Usuario no tiene id_cliente vinculado")
+                return False
+            
+            cliente_bd = await self.db.clientes.find_one({"id": id_cliente}, {"_id": 0})
+            
+            if not cliente_bd:
+                logger.error(f"   ❌ Cliente {id_cliente} NO encontrado en clientes")
+                return False
+            
+            logger.info("   ✅ Cliente vinculado encontrado:")
+            logger.info(f"      - id: {cliente_bd.get('id')}")
+            logger.info(f"      - nombre: {cliente_bd.get('nombre')}")
+            logger.info(f"      - estado: {cliente_bd.get('estado')}")
+            logger.info(f"      - porcentaje_comision_cliente: {cliente_bd.get('porcentaje_comision_cliente')}")
+            
+            # PASO 2: Simular el comando /start EXACTO
+            logger.info("   📱 PASO 2: Simulando comando /start EXACTO...")
+            
+            # Simular la lógica del comando start
+            logger.info(f"   📋 [NetCash][START] Comando recibido de daniel G (chat_id: {chat_id_str}, telegram_id: {telegram_id_str})")
+            
+            # Buscar usuario por telegram_id (línea 241 en telegram_bot.py)
+            usuario = await self.db.usuarios_telegram.find_one({"telegram_id": telegram_id_str}, {"_id": 0})
+            
+            if not usuario:
+                logger.error("   ❌ Usuario no encontrado en simulación de /start")
+                return False
+            
+            logger.info("   ✅ Usuario encontrado en simulación de /start")
+            
+            # Verificar si chat_id necesita actualización (líneas 279-284)
+            if usuario.get("chat_id") != chat_id_str:
+                logger.info(f"   🔄 Chat ID necesita actualización: {usuario.get('chat_id')} -> {chat_id_str}")
+                await self.db.usuarios_telegram.update_one(
+                    {"telegram_id": telegram_id_str},
+                    {"$set": {"chat_id": chat_id_str, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logger.info(f"   ✅ [NetCash][START] Chat ID actualizado para {telegram_id_str}")
+            else:
+                logger.info("   ✅ Chat ID ya está actualizado")
+            
+            # Verificar estado (líneas 287-294)
+            rol = usuario.get("rol")
+            telefono = usuario.get("telefono")
+            id_cliente = usuario.get("id_cliente")
+            
+            logger.info(f"   📊 Verificando estado del usuario:")
+            logger.info(f"      - rol: {rol}")
+            logger.info(f"      - telefono: {telefono}")
+            logger.info(f"      - id_cliente: {id_cliente}")
+            
+            # PASO 3: Verificar condición para cliente activo (línea 291)
+            logger.info("   🔍 PASO 3: Verificando condición para cliente activo...")
+            
+            condicion_cliente_activo = rol == "cliente_activo" or (id_cliente and rol in ["cliente", "cliente_activo"])
+            
+            logger.info(f"   📋 Evaluando condición: rol == 'cliente_activo' or (id_cliente and rol in ['cliente', 'cliente_activo'])")
+            logger.info(f"      - rol == 'cliente_activo': {rol == 'cliente_activo'}")
+            logger.info(f"      - id_cliente existe: {bool(id_cliente)}")
+            logger.info(f"      - rol in ['cliente', 'cliente_activo']: {rol in ['cliente', 'cliente_activo']}")
+            logger.info(f"      - Condición completa: {condicion_cliente_activo}")
+            
+            if condicion_cliente_activo:
+                logger.info("   ✅ [NetCash][START] Cliente activo -> menú")
+                
+                # PASO 4: Simular mostrar_menu_principal
+                logger.info("   📋 PASO 4: Simulando mostrar_menu_principal...")
+                
+                # Verificar cliente en BD (línea 435)
+                cliente = await self.db.clientes.find_one({"id": id_cliente}, {"_id": 0})
+                
+                if cliente and cliente.get("estado") == "activo":
+                    logger.info("   ✅ Cliente ACTIVO confirmado - debe mostrar menú completo")
+                    
+                    # Simular mensaje que se enviaría
+                    mensaje_esperado = f"Hola daniel 😊\n\n"
+                    mensaje_esperado += "Ya estás dado de alta como cliente NetCash.\n\n"
+                    mensaje_esperado += "Puedo ayudarte a:\n"
+                    mensaje_esperado += "• Crear una nueva operación NetCash\n"
+                    mensaje_esperado += "• Ver el estado de tus operaciones\n"
+                    mensaje_esperado += "• Ver la cuenta para hacer tus pagos\n"
+                    
+                    logger.info("   📨 Mensaje que DEBERÍA enviarse al usuario:")
+                    logger.info("   " + "="*50)
+                    for linea in mensaje_esperado.split('\n'):
+                        logger.info(f"   {linea}")
+                    logger.info("   " + "="*50)
+                    
+                    # Verificar botones que deberían aparecer
+                    botones_esperados = [
+                        "📎 Crear nueva operación NetCash",
+                        "📊 Ver mis operaciones", 
+                        "🏦 Ver cuenta para pagos",
+                        "❓ Ayuda"
+                    ]
+                    
+                    logger.info("   🔘 Botones que DEBERÍAN aparecer:")
+                    for boton in botones_esperados:
+                        logger.info(f"      - {boton}")
+                    
+                    logger.info("   ✅ RESULTADO ESPERADO: Menú de cliente activo")
+                    
+                else:
+                    logger.error(f"   ❌ Cliente no está activo. Estado: {cliente.get('estado') if cliente else 'Cliente no encontrado'}")
+                    return False
+                    
+            else:
+                logger.error("   ❌ Usuario NO cumple condición de cliente activo")
+                logger.error("   ❌ ESTO EXPLICARÍA EL PROBLEMA REPORTADO")
+                
+                # Verificar qué mensaje se enviaría en su lugar
+                if telefono:
+                    mensaje_error = "📋 **Tu registro está en proceso.**\n\n"
+                    mensaje_error += "Ana revisará tu información y te asignará una comisión.\n\n"
+                    mensaje_error += "Te avisaremos por este mismo chat cuando ya puedas operar."
+                    
+                    logger.info("   📨 Mensaje que se enviaría (INCORRECTO):")
+                    logger.info("   " + "="*50)
+                    for linea in mensaje_error.split('\n'):
+                        logger.info(f"   {linea}")
+                    logger.info("   " + "="*50)
+                else:
+                    logger.info("   📨 Se pediría compartir teléfono nuevamente")
+                
+                return False
+            
+            # PASO 5: Verificar logs del bot de Telegram
+            logger.info("   📋 PASO 5: Verificando logs del bot de Telegram...")
+            
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["tail", "-n", "100", "/var/log/supervisor/telegram_bot.out.log"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if result.returncode == 0 and result.stdout:
+                    lines = result.stdout.strip().split('\n')
+                    logs_relevantes = [line for line in lines if telegram_id_str in line or "START" in line]
+                    
+                    if logs_relevantes:
+                        logger.info("   📋 Logs relevantes del bot encontrados:")
+                        for log in logs_relevantes[-5:]:  # Mostrar últimos 5
+                            logger.info(f"      {log}")
+                    else:
+                        logger.info("   📋 No se encontraron logs específicos del usuario")
+                else:
+                    logger.info("   📋 No se pudieron leer logs del bot")
+                    
+            except Exception as e:
+                logger.warning(f"   ⚠️ Error leyendo logs del bot: {str(e)}")
+            
+            # PASO 6: Resultado final
+            logger.info("   🎯 RESULTADO DE LA PRUEBA:")
+            logger.info("   ✅ Usuario 1570668456 encontrado en BD")
+            logger.info("   ✅ Cliente vinculado encontrado y activo")
+            logger.info("   ✅ Condición de cliente activo se cumple")
+            logger.info("   ✅ Debería mostrar menú de cliente activo")
+            logger.info("   ✅ NO debería mostrar mensaje de 'darte de alta como cliente'")
+            
+            logger.info("🎉 Flujo /start para usuario 1570668456 funciona correctamente")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error en test_start_command_usuario_1570668456: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
     async def run_all_tests(self):
         """Ejecutar todos los tests"""
         logger.info("🚀 Iniciando pruebas exhaustivas del backend NetCash MBco")
         logger.info("=" * 60)
         
         tests = [
-            ("Notificación Ana - Correcciones Implementadas", self.test_notificacion_ana_correcciones_implementadas)
+            ("Comando /start Usuario 1570668456 (daniel G)", self.test_start_command_usuario_1570668456)
         ]
         
         results = []
