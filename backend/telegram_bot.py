@@ -343,8 +343,22 @@ class TelegramBotNetCash:
                 )
                 logger.info(f"[NetCash][CONTACTO] Usuario {chat_id} compartió contacto, rol=desconocido, esperando aprobación de Ana")
                 return
+            elif usuario.get("rol") == "cliente_activo":
+                # Cliente activo vinculado exitosamente
+                nombre_cliente = usuario.get("rol_info", {}).get("nombre", "")
+                mensaje = f"✅ **Te encontré como cliente ya registrado: {nombre_cliente}**\n\n"
+                mensaje += "Te acabo de vincular a tu cuenta NetCash MBco.\n"
+                mensaje += "Ya puedes crear operaciones y mandarme tus comprobantes.\n\n"
+                mensaje += "Usa /start para ver el menú de opciones."
+                
+                await update.message.reply_text(
+                    mensaje,
+                    reply_markup=ReplyKeyboardRemove(),
+                    parse_mode="Markdown"
+                )
+                logger.info(f"[NetCash][CONTACTO] Cliente activo vinculado: {chat_id}")
             else:
-                # Usuario ya conocido
+                # Usuario conocido pero pendiente de aprobación
                 await update.message.reply_text(
                     "✅ ¡Gracias por compartir tu teléfono!",
                     reply_markup=ReplyKeyboardRemove()
