@@ -615,6 +615,32 @@ class TelegramBotNetCash:
         )
         return ConversationHandler.END
     
+    async def es_cliente_activo(self, telegram_id: str, chat_id: str):
+        """Verifica si un usuario es cliente NetCash activo"""
+        # Buscar usuario por telegram_id o chat_id
+        usuario = await db.usuarios_telegram.find_one(
+            {"$or": [{"telegram_id": telegram_id}, {"chat_id": chat_id}]},
+            {"_id": 0}
+        )
+        
+        if not usuario:
+            return False, None, None
+        
+        # Verificar que tenga id_cliente y rol adecuado
+        id_cliente = usuario.get("id_cliente")
+        rol = usuario.get("rol")
+        
+        if not id_cliente and rol not in ["cliente", "cliente_activo"]:
+            return False, usuario, None
+        
+        # Si tiene id_cliente, buscar el cliente
+        if id_cliente:
+            cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
+            if cliente and cliente.get("estado") == "activo":
+                return True, usuario, cliente
+        
+        return False, usuario, None
+    
     async def nueva_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Crea una nueva operación"""
         query = update.callback_query
