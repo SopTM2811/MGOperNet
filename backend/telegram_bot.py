@@ -661,13 +661,6 @@ class TelegramBotNetCash:
             return
         
         # VALIDAR ESTADO DEL CLIENTE (BLOQUE 1) - Ya validado en es_cliente_activo
-        # if cliente.get("estado") != "activo":
-            mensaje = "⚠️ **Tu alta como cliente NetCash está en revisión.**\n\n"
-            mensaje += "Ana debe validar tus datos antes de que puedas crear operaciones.\n\n"
-            mensaje += "En cuanto estés **ACTIVO** te avisaremos y ya podrás mandar tus comprobantes."
-            await query.edit_message_text(mensaje, parse_mode="Markdown")
-            logger.info(f"Cliente {cliente['id']} intentó crear operación con estado: {cliente.get('estado')}")
-            return
         
         # Crear nueva operación llamando al backend API
         try:
