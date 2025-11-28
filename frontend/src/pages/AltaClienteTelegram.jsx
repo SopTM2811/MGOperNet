@@ -54,12 +54,11 @@ const AltaClienteTelegram = () => {
         })
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Error al vincular cliente');
-      }
-
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al vincular cliente');
+      }
       
       alert('✅ Cliente vinculado y mensaje enviado por Telegram');
       
