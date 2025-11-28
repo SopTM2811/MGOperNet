@@ -149,12 +149,21 @@ class TelegramBotNetCash:
             )
             
             if cliente:
-                rol = "cliente"
+                # Si el cliente está activo, marcar como cliente_activo
+                estado_cliente = cliente.get("estado", "")
+                if estado_cliente == "activo":
+                    rol = "cliente_activo"
+                else:
+                    rol = "cliente"
+                    
                 id_cliente = cliente.get("id")
                 rol_info = {
                     "nombre": cliente.get("nombre"),
                     "descripcion": "Cliente NetCash"
                 }
+                
+                # Enviar mensaje de vinculación exitosa
+                logger.info(f"Cliente encontrado en BD: {cliente.get('nombre')} - Estado: {estado_cliente}")
         
         # Crear usuario de telegram
         nuevo_usuario = {
