@@ -639,6 +639,8 @@ class TelegramBotNetCash:
     
     async def es_cliente_activo(self, telegram_id: str, chat_id: str):
         """Verifica si un usuario es cliente NetCash activo"""
+        logger.info(f"[es_cliente_activo] ===== INICIO ===== TG={telegram_id} CHAT={chat_id}")
+        
         # Buscar usuario por telegram_id o chat_id
         usuario = await db.usuarios_telegram.find_one(
             {"$or": [{"telegram_id": telegram_id}, {"chat_id": chat_id}]},
@@ -646,33 +648,39 @@ class TelegramBotNetCash:
         )
         
         if not usuario:
-            logger.warning(f"[es_cliente_activo] Usuario no encontrado: TG ID {telegram_id}, Chat ID {chat_id}")
+            logger.warning(f"[es_cliente_activo] ❌ Usuario NO encontrado en BD")
             return False, None, None
         
         # Verificar que tenga id_cliente o rol adecuado
         id_cliente = usuario.get("id_cliente")
         rol = usuario.get("rol")
+        nombre = usuario.get("nombre", "N/A")
         
-        logger.info(f"[es_cliente_activo] Usuario encontrado - TG ID: {telegram_id}, Rol: {rol}, Cliente ID: {id_cliente}")
+        logger.info(f"[es_cliente_activo] ✓ Usuario encontrado: '{nombre}' | Rol: {rol} | id_cliente: {id_cliente}")
         
-        # Caso 1: Tiene id_cliente -> verificar que el cliente esté activo
-        if id_cliente:
-            cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
-            if cliente:
-                estado = cliente.get("estado")
-                logger.info(f"[es_cliente_activo] Cliente encontrado - ID: {id_cliente}, Estado: {estado}")
-                if estado == "activo":
-                    return True, usuario, cliente
-                else:
-                    logger.warning(f"[es_cliente_activo] Cliente NO activo: {estado}")
-                    return False, usuario, cliente
-            else:
-                logger.warning(f"[es_cliente_activo] Cliente no encontrado en BD: {id_cliente}")
-                return False, usuario, None
+        # Verificar si tiene id_cliente
+        if not id_cliente:
+            logger.warning(f"[es_cliente_activo] ❌ Usuario SIN id_cliente asignado")
+            return False, usuario, None
         
-        # Caso 2: No tiene id_cliente pero tiene rol cliente_activo -> no es válido
-        logger.warning(f"[es_cliente_activo] Usuario sin id_cliente: Rol {rol}")
-        return False, usuario, None
+        # Buscar el cliente en BD
+        cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
+        
+        if not cliente:
+            logger.warning(f"[es_cliente_activo] ❌ Cliente NO encontrado en BD con id={id_cliente}")
+            return False, usuario, None
+        
+        estado = cliente.get("estado")
+        nombre_cliente = cliente.get("nombre", "N/A")
+        
+        logger.info(f"[es_cliente_activo] ✓ Cliente encontrado: '{nombre_cliente}' | Estado: {estado}")
+        
+        if estado != "activo":
+            logger.warning(f"[es_cliente_activo] ❌ Cliente NO activo (estado={estado})")
+            return False, usuario, cliente
+        
+        logger.info(f"[es_cliente_activo] ✅✅✅ CLIENTE ACTIVO CONFIRMADO ✅✅✅")
+        return True, usuario, cliente
     
     async def nueva_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Crea una nueva operación"""
