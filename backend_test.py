@@ -589,11 +589,11 @@ class BackendTester:
             logger.info(f"      - nombre: {nombre_prueba}")
             logger.info(f"      - telefono: {telefono_prueba}")
             
-            # PASO 1: Limpiar cualquier usuario de prueba anterior
-            logger.info("   🧹 Limpiando usuario de prueba anterior...")
-            await self.db.usuarios_telegram.delete_many({"telegram_id": telegram_id_prueba})
-            await self.db.usuarios_telegram.delete_many({"chat_id": chat_id_prueba})
-            logger.info("   ✅ Usuario de prueba anterior eliminado")
+            # PASO 1: Limpiar usuarios de prueba anteriores (ambos IDs mencionados en el request)
+            logger.info("   🧹 Limpiando usuarios de prueba anteriores...")
+            await self.db.usuarios_telegram.delete_many({"telegram_id": {"$in": ["111222333", "999888777"]}})
+            await self.db.usuarios_telegram.delete_many({"chat_id": {"$in": ["111222333", "999888777"]}})
+            logger.info("   ✅ Usuarios de prueba anteriores eliminados")
             
             # PASO 2: Verificar configuración de Ana
             ana_telegram_id = os.getenv("ANA_TELEGRAM_CHAT_ID")
