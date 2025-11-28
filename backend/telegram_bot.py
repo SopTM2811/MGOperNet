@@ -345,7 +345,8 @@ class TelegramBotNetCash:
         rol = usuario.get("rol", "desconocido")
         id_cliente = usuario.get("id_cliente")
         
-        if id_cliente and rol == "cliente":
+        # Cliente activo o con id_cliente vinculado
+        if id_cliente or rol in ["cliente", "cliente_activo"]:
             # Cliente registrado - verificar estado
             cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
             
