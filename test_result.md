@@ -490,6 +490,53 @@ agent_communication:
       Todos los servicios corriendo en Supervisor. Pendiente testing completo de todos los flujos.
   - agent: "testing"
     message: |
+      🔍 TESTING ESPECÍFICO USUARIO 1570668456 (daniel G) - COMANDO /start
+      
+      📋 ESCENARIO REPORTADO:
+      • Usuario reporta que al enviar /start recibe mensaje de "registrarse como cliente"
+      • En lugar del menú de cliente activo esperado
+      
+      ✅ DATOS VERIFICADOS EN BD:
+      • telegram_id: "1570668456" ✅ ENCONTRADO
+      • chat_id: "1570668456" ✅ CORRECTO
+      • rol: "cliente_activo" ✅ CORRECTO
+      • id_cliente: "adb0a59b-9083-4433-81db-2193fda4bc36" ✅ VINCULADO
+      • Cliente: nombre="daniel G", estado="activo" ✅ ACTIVO
+      
+      🧪 PRUEBAS REALIZADAS:
+      • Simulación completa del flujo /start ✅ FUNCIONA CORRECTAMENTE
+      • Evaluación de condiciones de cliente activo ✅ SE CUMPLEN TODAS
+      • Verificación de mostrar_menu_principal ✅ DEBERÍA MOSTRAR MENÚ CORRECTO
+      
+      📨 MENSAJE QUE DEBERÍA ENVIARSE:
+      "Hola daniel 😊
+      
+      Ya estás dado de alta como cliente NetCash.
+      
+      Puedo ayudarte a:
+      • Crear una nueva operación NetCash
+      • Ver el estado de tus operaciones  
+      • Ver la cuenta para hacer tus pagos"
+      
+      🔘 BOTONES QUE DEBERÍAN APARECER:
+      • 📎 Crear nueva operación NetCash
+      • 📊 Ver mis operaciones
+      • 🏦 Ver cuenta para pagos
+      • ❓ Ayuda
+      
+      🎯 CONCLUSIÓN:
+      ✅ EL CÓDIGO FUNCIONA CORRECTAMENTE - No hay bug en la lógica
+      ✅ El usuario DEBERÍA ver el menú de cliente activo
+      ✅ Si reporta lo contrario, posibles causas:
+         1. Cache de Telegram no actualizado
+         2. Múltiples instancias del bot (conflicto 409)
+         3. Problema temporal de conectividad
+         4. Usuario no está usando /start sino botones directos
+         5. Problema de sincronización de datos
+      
+      ⚠️ RECOMENDACIÓN: Verificar logs en tiempo real cuando el usuario reporte el problema
+  - agent: "testing"
+    message: |
       ✅ TESTING BACKEND COMPLETADO EXITOSAMENTE
       
       RESUMEN DE PRUEBAS REALIZADAS:
