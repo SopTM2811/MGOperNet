@@ -639,16 +639,19 @@ class TelegramBotNetCash:
     
     async def es_cliente_activo(self, telegram_id: str, chat_id: str):
         """Verifica si un usuario es cliente NetCash activo"""
-        logger.info(f"[es_cliente_activo] ===== INICIO ===== TG={telegram_id} CHAT={chat_id}")
+        logger.info(f"[es_cliente_activo] ===== INICIO ===== TG={telegram_id} (type:{type(telegram_id)}) CHAT={chat_id} (type:{type(chat_id)})")
         
         # Buscar usuario por telegram_id o chat_id
-        usuario = await db.usuarios_telegram.find_one(
-            {"$or": [{"telegram_id": telegram_id}, {"chat_id": chat_id}]},
-            {"_id": 0}
-        )
+        query = {"$or": [{"telegram_id": telegram_id}, {"chat_id": chat_id}]}
+        logger.info(f"[es_cliente_activo] Query MongoDB: {query}")
+        
+        usuario = await db.usuarios_telegram.find_one(query, {"_id": 0})
         
         if not usuario:
-            logger.warning(f"[es_cliente_activo] ❌ Usuario NO encontrado en BD")
+            logger.warning(f"[es_cliente_activo] ❌ Usuario NO encontrado en BD con query: {query}")
+            # Intentar buscar también todos los usuarios para debuggear
+            todos = await db.usuarios_telegram.find({}, {"_id": 0, "telegram_id": 1, "chat_id": 1, "nombre": 1}).to_list(10)
+            logger.warning(f"[es_cliente_activo] DEBUG - Usuarios en BD: {todos}")
             return False, None, None
         
         # Verificar que tenga id_cliente o rol adecuado
