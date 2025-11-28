@@ -362,11 +362,17 @@ class TelegramBotNetCash:
                 logger.info(f"[NetCash][CONTACTO] Usuario {chat_id} compartió contacto, rol=desconocido, esperando aprobación de Ana")
                 
                 # Notificar a Ana sobre este nuevo cliente
-                logger.info(f"[NetCash][CONTACTO] Verificando notificación a Ana - ana_telegram_id: {self.ana_telegram_id}")
-                if self.ana_telegram_id:
+                logger.info(f"[handle_contact] Verificando notificación a Ana - ana_telegram_id: {self.ana_telegram_id}")
+                
+                if not self.ana_telegram_id:
+                    logger.warning(f"[handle_contact] ⚠️ NO SE ENVIÓ NOTIFICACIÓN - ana_telegram_id no configurado")
+                elif not self.app or not self.app.bot:
+                    logger.warning(f"[handle_contact] ⚠️ NO SE PUEDE NOTIFICAR - bot no inicializado")
+                else:
                     try:
-                        telegram_id_notif = usuario.get("telegram_id") or chat_id
-                        logger.info(f"[NetCash][CONTACTO] Preparando mensaje para Ana - telegram_id: {telegram_id_notif}")
+                        # Usar el telegram_id del update, no del usuario en BD
+                        telegram_id_notif = telegram_id
+                        logger.info(f"[handle_contact] Preparando mensaje para Ana - telegram_id: {telegram_id_notif}")
                         
                         mensaje_ana = f"🆕 **Nuevo usuario compartió contacto y está esperando aprobación.**\n\n"
                         mensaje_ana += f"📲 **Telegram ID:** `{telegram_id_notif}`\n"
@@ -376,19 +382,17 @@ class TelegramBotNetCash:
                         mensaje_ana += "**Para aprobar:**\n"
                         mensaje_ana += f"`/aprobar_cliente {telegram_id_notif} 1.00`"
                         
-                        logger.info(f"[NetCash][CONTACTO] Enviando mensaje a Ana (chat_id: {self.ana_telegram_id})...")
+                        logger.info(f"[handle_contact] Enviando mensaje a Ana (chat_id: {self.ana_telegram_id})...")
                         await self.app.bot.send_message(
                             chat_id=self.ana_telegram_id,
                             text=mensaje_ana,
                             parse_mode="Markdown"
                         )
-                        logger.info(f"[NetCash][CONTACTO] ✅ Notificación enviada exitosamente a Ana (ID: {self.ana_telegram_id}) sobre usuario {telegram_id_notif}")
+                        logger.info(f"[handle_contact] ✅ Notificación enviada exitosamente a Ana (ID: {self.ana_telegram_id}) sobre usuario {telegram_id_notif}")
                     except Exception as e:
-                        logger.error(f"[NetCash][CONTACTO] ❌ Error notificando a Ana: {str(e)}")
+                        logger.error(f"[handle_contact] ❌ Error notificando a Ana: {str(e)}")
                         import traceback
-                        logger.error(f"[NetCash][CONTACTO] Traceback: {traceback.format_exc()}")
-                else:
-                    logger.warning(f"[NetCash][CONTACTO] ⚠️ NO SE ENVIÓ NOTIFICACIÓN - ana_telegram_id no configurado")
+                        logger.error(f"[handle_contact] Traceback: {traceback.format_exc()}")
                 
                 return
             elif usuario.get("rol") == "cliente_activo":
