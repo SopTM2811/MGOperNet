@@ -190,9 +190,12 @@ class TelegramBotNetCash:
         
         # Si es usuario desconocido (no cliente ni rol interno), notificar a Ana
         if rol == "desconocido" and self.ana_telegram_id:
+            # Verificar que el bot esté inicializado antes de enviar mensaje
+            if not self.app or not self.app.bot:
+                logger.warning(f"[obtener_o_crear_usuario] No se puede notificar a Ana - bot no inicializado aún. Usuario: {chat_id}")
+                return nuevo_usuario
+            
             try:
-                # Obtener telegram_id del usuario
-                from telegram import Update
                 telegram_id = chat_id  # El chat_id ES el telegram_id
                 username = nuevo_usuario.get("nombre_telegram", "N/A")
                 
@@ -206,14 +209,17 @@ class TelegramBotNetCash:
                 mensaje_ana += "2) Asignarle comisión con `/aprobar_cliente`.\n\n"
                 mensaje_ana += f"Para aprobar: `/aprobar_cliente {telegram_id} 1.00`"
                 
+                logger.info(f"[obtener_o_crear_usuario] Enviando notificación a Ana sobre usuario {telegram_id}...")
                 await self.app.bot.send_message(
                     chat_id=self.ana_telegram_id,
                     text=mensaje_ana,
                     parse_mode="Markdown"
                 )
-                logger.info(f"Notificación enviada a Ana sobre nuevo usuario desconocido: {chat_id}")
+                logger.info(f"[obtener_o_crear_usuario] ✅ Notificación enviada a Ana sobre nuevo usuario desconocido: {chat_id}")
             except Exception as e:
-                logger.error(f"Error notificando a Ana sobre usuario nuevo: {str(e)}")
+                logger.error(f"[obtener_o_crear_usuario] ❌ Error notificando a Ana sobre usuario nuevo: {str(e)}")
+                import traceback
+                logger.error(f"[obtener_o_crear_usuario] Traceback: {traceback.format_exc()}")
         
         return nuevo_usuario
     
