@@ -167,6 +167,7 @@ class TelegramBotNetCash:
         
         # Crear usuario de telegram
         nuevo_usuario = {
+            "telegram_id": str(chat_id),  # Guardar telegram_id
             "chat_id": chat_id,
             "telefono": telefono_normalizado,
             "nombre_telegram": nombre or "Usuario",
@@ -178,6 +179,14 @@ class TelegramBotNetCash:
         
         await db.usuarios_telegram.insert_one(nuevo_usuario)
         logger.info(f"Usuario creado: {chat_id} - Rol: {rol}")
+        
+        # Si se vinculó un cliente activo, actualizar el cliente en BD con telegram_id
+        if id_cliente and rol == "cliente_activo":
+            await db.clientes.update_one(
+                {"id": id_cliente},
+                {"$set": {"telegram_id": str(chat_id)}}
+            )
+            logger.info(f"Cliente {id_cliente} vinculado con telegram_id {chat_id}")
         
         # Si es usuario desconocido (no cliente ni rol interno), notificar a Ana
         if rol == "desconocido" and self.ana_telegram_id:
