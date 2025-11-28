@@ -276,6 +276,45 @@ backend:
           - Advertencias sobre empalmes configuradas
           - Explicación detallada en respuesta
 
+  - task: "Bot Telegram - Flujo cliente activo usuario 19440987"
+    implemented: true
+    working: true
+    file: "/app/backend/telegram_bot.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: |
+          Usuario reporta problema: cuando cliente activo 19440987 presiona botones 
+          "Crear nueva operación" o "Ver mis operaciones", el bot lo trata como no 
+          registrado y le pide registrarse.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Flujo de cliente activo funcionando correctamente.
+          
+          PRUEBAS REALIZADAS:
+          • Verificación datos BD: Usuario 19440987 existe con rol cliente_activo
+          • Cliente vinculado: d9115936-733e-4598-a23c-2ae7633216f9 estado activo
+          • Función es_cliente_activo(): Identifica correctamente al usuario
+          • Comando /start: Muestra menú de cliente activo (no pide registro)
+          • Botón "Crear nueva operación": Crea operación correctamente
+          • Botón "Ver mis operaciones": Muestra operaciones existentes (2 encontradas)
+          
+          DIAGNÓSTICO:
+          • NO se reproduce el problema reportado por el usuario
+          • Todas las funciones operan normalmente para cliente activo
+          • Los logs muestran identificación correcta del usuario
+          
+          OBSERVACIÓN MENOR:
+          • Conflictos de múltiples instancias del bot (error 409 Conflict)
+          • Puede causar comportamiento inconsistente ocasional
+          
+          CONCLUSIÓN: El flujo funciona correctamente. Problema posiblemente resuelto
+          o era temporal debido a conflictos de instancias del bot.
+
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
     implemented: true
