@@ -314,6 +314,31 @@ backend:
           
           CONCLUSIÓN: El flujo funciona correctamente. Problema posiblemente resuelto
           o era temporal debido a conflictos de instancias del bot.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ BUG ESPECÍFICO RESUELTO: Testing del escenario EXACTO del bug reportado.
+          
+          ESCENARIO PROBADO:
+          • Usuario 19440987 dado de alta desde web con chat_id: null
+          • telegram_id: "19440987", rol: "cliente_activo"
+          • id_cliente: "d9115936-733e-4598-a23c-2ae7633216f9"
+          
+          PRUEBAS EJECUTADAS:
+          • ✅ Clic directo en "Crear nueva operación" (SIN /start primero)
+          • ✅ Handler nueva_operacion detecta chat_id null y lo actualiza automáticamente
+          • ✅ Log generado: "[nueva_operacion] Chat ID actualizado para 19440987: 987654321"
+          • ✅ Cliente activo confirmado: "[es_cliente_activo] ✅✅✅ CLIENTE ACTIVO CONFIRMADO ✅✅✅"
+          • ✅ Operación creada exitosamente: NC-000034
+          • ✅ Verificación BD: chat_id actualizado correctamente
+          • ✅ Clic en "Ver mis operaciones": Funciona correctamente (4 operaciones encontradas)
+          
+          CAMBIOS IMPLEMENTADOS VERIFICADOS:
+          • Líneas 699-707 en nueva_operacion: Actualización automática de chat_id ✅
+          • Líneas 773-781 en ver_operaciones: Actualización automática de chat_id ✅
+          
+          RESULTADO: 6/6 pruebas pasaron - BUG COMPLETAMENTE RESUELTO
+          El usuario 19440987 puede crear y ver operaciones sin problemas.
 
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
