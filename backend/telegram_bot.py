@@ -650,27 +650,18 @@ class TelegramBotNetCash:
         user = update.effective_user
         telegram_id = str(user.id)
         
-        # Verificar que esté registrado como cliente
-        usuario = await db.usuarios_telegram.find_one({"chat_id": chat_id}, {"_id": 0})
+        # Verificar que esté registrado como cliente activo
+        es_activo, usuario, cliente = await self.es_cliente_activo(telegram_id, chat_id)
         
-        if not usuario or not usuario.get("id_cliente"):
+        if not es_activo:
             mensaje = "⚠️ **Para crear una operación primero necesito darte de alta como cliente.**\n\n"
             mensaje += "Elige la opción **1️⃣ Registrarme como cliente NetCash**.\n\n"
             mensaje += "Usa /start para ver el menú."
             await query.edit_message_text(mensaje, parse_mode="Markdown")
             return
         
-        # Buscar cliente
-        cliente = await db.clientes.find_one({"id": usuario["id_cliente"]}, {"_id": 0})
-        
-        if not cliente:
-            mensaje = "Error: No se encontró tu registro de cliente. Contacta a Ana:\n\n"
-            mensaje += "📧 gestion.ngdl@gmail.com\n📱 +52 33 1218 6685"
-            await query.edit_message_text(mensaje)
-            return
-        
-        # VALIDAR ESTADO DEL CLIENTE (BLOQUE 1)
-        if cliente.get("estado") != "activo":
+        # VALIDAR ESTADO DEL CLIENTE (BLOQUE 1) - Ya validado en es_cliente_activo
+        # if cliente.get("estado") != "activo":
             mensaje = "⚠️ **Tu alta como cliente NetCash está en revisión.**\n\n"
             mensaje += "Ana debe validar tus datos antes de que puedas crear operaciones.\n\n"
             mensaje += "En cuanto estés **ACTIVO** te avisaremos y ya podrás mandar tus comprobantes."
