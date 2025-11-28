@@ -1026,14 +1026,22 @@ class TelegramBotNetCash:
             
             await update.message.reply_text(mensaje, parse_mode="Markdown")
             
-            # Notificar al cliente (opcional - si quieren que el cliente sepa que fue aprobado)
+            # Notificar al cliente
             try:
+                # Buscar por telegram_id primero, luego por id_cliente
                 usuario_telegram = await db.usuarios_telegram.find_one(
-                    {"id_cliente": cliente_id},
+                    {"telegram_id": str(telegram_id_cliente)},
                     {"_id": 0, "chat_id": 1}
                 )
                 
+                if not usuario_telegram:
+                    usuario_telegram = await db.usuarios_telegram.find_one(
+                        {"id_cliente": cliente_id},
+                        {"_id": 0, "chat_id": 1}
+                    )
+                
                 if usuario_telegram and usuario_telegram.get("chat_id"):
+                    logger.info(f"[NetCash][AprobarCliente] Enviando notificación a chat_id: {usuario_telegram['chat_id']}")
                     mensaje_cliente = "✅ **¡Ya estás dado de alta como cliente NetCash!**\n\n"
                     mensaje_cliente += f"**Comisión asignada:** {comision_pct:.3f}%\n\n"
                     mensaje_cliente += "Ya puedes operar desde este bot.\n"
