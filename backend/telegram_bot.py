@@ -646,21 +646,32 @@ class TelegramBotNetCash:
         )
         
         if not usuario:
+            logger.warning(f"[es_cliente_activo] Usuario no encontrado: TG ID {telegram_id}, Chat ID {chat_id}")
             return False, None, None
         
-        # Verificar que tenga id_cliente y rol adecuado
+        # Verificar que tenga id_cliente o rol adecuado
         id_cliente = usuario.get("id_cliente")
         rol = usuario.get("rol")
         
-        if not id_cliente and rol not in ["cliente", "cliente_activo"]:
-            return False, usuario, None
+        logger.info(f"[es_cliente_activo] Usuario encontrado - TG ID: {telegram_id}, Rol: {rol}, Cliente ID: {id_cliente}")
         
-        # Si tiene id_cliente, buscar el cliente
+        # Caso 1: Tiene id_cliente -> verificar que el cliente esté activo
         if id_cliente:
             cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
-            if cliente and cliente.get("estado") == "activo":
-                return True, usuario, cliente
+            if cliente:
+                estado = cliente.get("estado")
+                logger.info(f"[es_cliente_activo] Cliente encontrado - ID: {id_cliente}, Estado: {estado}")
+                if estado == "activo":
+                    return True, usuario, cliente
+                else:
+                    logger.warning(f"[es_cliente_activo] Cliente NO activo: {estado}")
+                    return False, usuario, cliente
+            else:
+                logger.warning(f"[es_cliente_activo] Cliente no encontrado en BD: {id_cliente}")
+                return False, usuario, None
         
+        # Caso 2: No tiene id_cliente pero tiene rol cliente_activo -> no es válido
+        logger.warning(f"[es_cliente_activo] Usuario sin id_cliente: Rol {rol}")
         return False, usuario, None
     
     async def nueva_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
