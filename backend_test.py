@@ -574,14 +574,14 @@ class BackendTester:
             return False
 
     async def test_notificacion_ana_nuevo_usuario(self):
-        """Test 13: Probar notificación a Ana cuando nuevo usuario comparte contacto"""
+        """Test 13: Probar notificación a Ana cuando nuevo usuario comparte contacto - ESCENARIO ESPECÍFICO"""
         logger.info("🔍 Test 13: Probando notificación a Ana cuando nuevo usuario comparte contacto...")
         try:
-            # Datos del usuario de prueba
-            telegram_id_prueba = "999888777"
-            chat_id_prueba = "999888777"
-            nombre_prueba = "Test Usuario Nuevo"
-            telefono_prueba = "+5212345678901"
+            # Datos del usuario de prueba según el request
+            telegram_id_prueba = "111222333"
+            chat_id_prueba = "111222333"
+            nombre_prueba = "Test Ana Notificacion"
+            telefono_prueba = "+5219876543210"
             
             logger.info(f"   📋 Datos del usuario de prueba:")
             logger.info(f"      - telegram_id: {telegram_id_prueba}")
