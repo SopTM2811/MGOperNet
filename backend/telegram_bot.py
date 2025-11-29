@@ -791,9 +791,9 @@ class TelegramBotNetCash:
                         mensaje += "• Archivos ZIP con varios comprobantes adentro\n\n"
                         mensaje += "Envíalos todos seguidos y al final escribe **'listo'** cuando hayas terminado.\n\n"
                         
-                        # Obtener cuenta activa
-                        from cuenta_deposito_service import cuenta_deposito_service
-                        cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+                        # Obtener cuenta activa (NetCash V1)
+                        from config_cuentas_service import config_cuentas_service, TipoCuenta
+                        cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
                         if cuenta_activa:
                             mensaje += f"**Recuerda:** El depósito debe ser a la cuenta:\n"
                             mensaje += f"{cuenta_activa.get('beneficiario')}\n"
