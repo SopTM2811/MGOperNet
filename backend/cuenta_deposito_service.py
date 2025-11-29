@@ -117,7 +117,8 @@ class CuentaDepositoService:
             logger.info(f"[CuentaDeposito] Nueva cuenta creada: {banco} - {clabe}")
             
             # Retornar sin _id
-            del nueva_cuenta['_id'] if '_id' in nueva_cuenta else None
+            if '_id' in nueva_cuenta:
+                del nueva_cuenta['_id']
             return nueva_cuenta
             
         except Exception as e:
