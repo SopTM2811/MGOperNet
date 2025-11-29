@@ -28,6 +28,7 @@ from layout_service import layout_service
 from plataformas_config import consejero_plataformas
 from zip_handler import zip_handler
 from gmail_service import gmail_service, verificar_configuracion_gmail
+from cuenta_deposito_service import cuenta_deposito_service
 
 
 ROOT_DIR = Path(__file__).parent
