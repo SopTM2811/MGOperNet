@@ -289,17 +289,18 @@ Equipo NetCash"""
     
     async def _send_incomplete_response(self, to: str, thread_id: str):
         """Envía respuesta de información incompleta al cliente"""
-        subject = "NetCash – Información incompleta"
+        subject = "NetCash – Hace falta información para tu operación"
         body = """Hola,
 
-Recibimos tu correo, pero hace falta información para poder registrar correctamente tu operación NetCash.
+Recibimos tu correo para operar con NetCash, pero todavía nos falta información para poder registrar correctamente la operación.
 
-Por favor asegúrate de incluir en tu próximo correo:
-• Monto aproximado de la operación
-• Concepto o referencia
-• Comprobantes claros y legibles (PDF, JPG o PNG)
+En tu próximo correo por favor incluye:
+• Comprobantes claros y legibles en PDF, JPG o PNG (si son varios, adjunta todos los relacionados con la operación).
+• La cantidad de ligas NetCash que necesitas para esta operación.
 
-Una vez que tengamos esta información, podremos continuar con el proceso.
+Si necesitas apoyo para completar la información, simplemente responde a este mismo correo escribiendo la palabra "AYUDA" y nuestro equipo se pondrá en contacto contigo.
+
+En cuanto tengamos la información completa, registramos la operación y te confirmamos por este mismo medio.
 
 Quedamos al pendiente.
 
