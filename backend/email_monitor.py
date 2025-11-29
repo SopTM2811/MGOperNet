@@ -16,6 +16,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
 from gmail_service import gmail_service
+from cuenta_deposito_service import cuenta_deposito_service
 
 load_dotenv()
 
