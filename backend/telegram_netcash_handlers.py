@@ -458,6 +458,62 @@ class TelegramNetCashHandlers:
             
             await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
             
+    
+    async def agregar_otro_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para el botón 'Agregar otro comprobante'"""
+        query = update.callback_query
+        await query.answer()
+        
+        mensaje = "Perfecto.\n\n"
+        mensaje += "Tómate tu tiempo para buscar el siguiente comprobante y envíamelo cuando lo tengas listo.\n"
+        mensaje += "No pasa nada si tardas unos minutos."
+        
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
+        
+        # Mantener en el estado NC_ESPERANDO_COMPROBANTE
+        return NC_ESPERANDO_COMPROBANTE
+    
+    async def continuar_con_comprobantes(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para el botón 'Continuar' después de subir comprobantes"""
+        query = update.callback_query
+        await query.answer()
+        
+        # Extraer solicitud_id del callback_data
+        solicitud_id = query.data.replace("nc_continuar_comprobantes_", "")
+        
+        try:
+            # Verificar cuántos comprobantes tiene la solicitud
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            comprobantes = solicitud.get("comprobantes", [])
+            num_comprobantes = len(comprobantes)
+            
+            if num_comprobantes == 0:
+                # No hay comprobantes - mostrar error y mantener en el mismo estado
+                mensaje = "⚠️ Necesitamos al menos un comprobante para continuar con la operación NetCash.\n\n"
+                mensaje += "Por favor sube al menos uno."
+                
+                await query.edit_message_text(mensaje, parse_mode="Markdown")
+                return NC_ESPERANDO_COMPROBANTE
+            
+            # Hay al menos 1 comprobante - validar y generar resumen
+            await query.edit_message_text("⏳ Validando información...", parse_mode="Markdown")
+            
+            # Generar resumen completo y mostrar confirmación
+            await self._mostrar_resumen_y_confirmar(update, context, solicitud_id)
+            
+            return NC_ESPERANDO_CONFIRMACION
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error en continuar_con_comprobantes: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            await query.edit_message_text(
+                "❌ Error al procesar tu solicitud. Por favor contacta a soporte.",
+                parse_mode="Markdown"
+            )
+            return NC_ESPERANDO_COMPROBANTE
+
             # Mantener el estado en NC_ESPERANDO_COMPROBANTE
             return NC_ESPERANDO_COMPROBANTE
             
