@@ -438,18 +438,15 @@ class TelegramBotNetCash:
             cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
             
             if cliente and cliente.get("estado") == "activo":
-                # Cliente ACTIVO - mensaje personalizado
+                # Cliente ACTIVO - mensaje personalizado (NetCash V1)
                 mensaje = f"Hola {user.first_name} 😊\n\n"
                 mensaje += "Ya estás dado de alta como cliente NetCash.\n\n"
-                mensaje += "Puedo ayudarte a:\n"
-                mensaje += "• Crear una nueva operación NetCash\n"
-                mensaje += "• Ver el estado de tus operaciones\n"
-                mensaje += "• Ver la cuenta para hacer tus pagos\n"
+                mensaje += "¿Qué necesitas hacer hoy?\n"
                 
                 keyboard = [
-                    [InlineKeyboardButton("📎 Crear nueva operación NetCash", callback_data="nueva_operacion")],
-                    [InlineKeyboardButton("📊 Ver mis operaciones", callback_data="ver_operaciones")],
-                    [InlineKeyboardButton("🏦 Ver cuenta para pagos", callback_data="ver_cuenta_pagos")],
+                    [InlineKeyboardButton("🧾 Crear nueva operación NetCash", callback_data="nc_crear_operacion")],
+                    [InlineKeyboardButton("💳 Ver cuenta para depósitos", callback_data="nc_ver_cuenta")],
+                    [InlineKeyboardButton("📂 Ver mis solicitudes", callback_data="nc_ver_solicitudes")],
                     [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
                 ]
             else:
