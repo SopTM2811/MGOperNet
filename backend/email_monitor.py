@@ -274,7 +274,8 @@ class EmailMonitor:
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, body.lower()):
+            match = re.search(pattern, body.lower())
+            if match:
                 try:
                     info['cantidad_ligas'] = int(match.group(1))
                     logger.info(f"[Parser] Ligas detectadas: {info['cantidad_ligas']}")
