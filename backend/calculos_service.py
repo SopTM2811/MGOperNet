@@ -12,41 +12,45 @@ class CalculosService:
     @staticmethod
     def calcular_operacion(
         monto_depositado_cliente: float,
-        comision_cliente_porcentaje: float,
-        comision_proveedor_porcentaje: float = 0.00375
+        comision_cliente_porcentaje: float = 1.0,
+        costo_proveedor_dns_porcentaje: float = 0.375
     ) -> Dict[str, float]:
         """
         Calcula todos los montos de una operación NetCash.
         
+        FÓRMULAS CORRECTAS (según especificación del usuario):
+        - importe_comision_cliente = monto_total_comprobantes * porcentaje_comision_cliente / 100
+        - importe_costo_proveedor_dns = monto_total_comprobantes * 0.375 / 100
+        - utilidad_neta = importe_comision_cliente - importe_costo_proveedor_dns
+        
         Args:
-            monto_depositado_cliente: Monto total depositado por el cliente
-            comision_cliente_porcentaje: Porcentaje de comisión del cliente (ej: 0.0065 = 0.65%)
-            comision_proveedor_porcentaje: Porcentaje de comisión del proveedor (default: 0.00375 = 0.375%)
+            monto_depositado_cliente: Monto total de comprobantes
+            comision_cliente_porcentaje: Porcentaje de comisión del cliente (default: 1.0%)
+            costo_proveedor_dns_porcentaje: Porcentaje de costo proveedor DNS (default: 0.375%)
             
         Returns:
             Diccionario con todos los cálculos
         """
         try:
-            # Fórmula principal: capital_netcash = monto_depositado / (1 + comision_cliente_porcentaje)
-            capital_netcash = monto_depositado_cliente / (1 + comision_cliente_porcentaje)
+            # PASO 1: Calcular importe de comisión al cliente
+            # importe_comision_cliente = monto_total_comprobantes * porcentaje_comision_cliente / 100
+            importe_comision_cliente = monto_depositado_cliente * comision_cliente_porcentaje / 100
             
-            # Comisión cobrada al cliente
-            comision_cliente_cobrada = monto_depositado_cliente - capital_netcash
+            # PASO 2: Calcular importe de costo proveedor DNS
+            # importe_costo_proveedor_dns = monto_total_comprobantes * 0.375 / 100
+            importe_costo_proveedor_dns = monto_depositado_cliente * costo_proveedor_dns_porcentaje / 100
             
-            # Comisión a pagar al proveedor
-            comision_proveedor = capital_netcash * comision_proveedor_porcentaje
-            
-            # Total de egreso (lo que MBco paga al proveedor)
-            total_egreso = capital_netcash + comision_proveedor
+            # PASO 3: Calcular utilidad neta
+            # utilidad_neta = importe_comision_cliente - importe_costo_proveedor_dns
+            utilidad_neta = importe_comision_cliente - importe_costo_proveedor_dns
             
             resultado = {
-                "monto_depositado_cliente": round(monto_depositado_cliente, 2),
-                "comision_cliente_porcentaje": comision_cliente_porcentaje,
-                "capital_netcash": round(capital_netcash, 2),
-                "comision_cliente_cobrada": round(comision_cliente_cobrada, 2),
-                "comision_proveedor_porcentaje": comision_proveedor_porcentaje,
-                "comision_proveedor": round(comision_proveedor, 2),
-                "total_egreso": round(total_egreso, 2)
+                "monto_total_comprobantes": round(monto_depositado_cliente, 2),
+                "porcentaje_comision_cliente": comision_cliente_porcentaje,
+                "importe_comision_cliente": round(importe_comision_cliente, 2),
+                "porcentaje_costo_proveedor_dns": costo_proveedor_dns_porcentaje,
+                "importe_costo_proveedor_dns": round(importe_costo_proveedor_dns, 2),
+                "utilidad_neta": round(utilidad_neta, 2)
             }
             
             logger.info(f"Cálculo completado: {resultado}")
