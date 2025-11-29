@@ -96,45 +96,57 @@ class ValidadorComprobantes:
         texto = texto.replace('.', '').replace(',', '').replace('-', '').replace('/', '')
         return texto.strip()
     
+    def extraer_clabes_del_texto(self, texto: str) -> list:
+        """Extrae todas las CLABEs (18 dígitos) encontradas en el texto"""
+        # Buscar secuencias de exactamente 18 dígitos
+        clabes_encontradas = []
+        
+        # Patrón 1: 18 dígitos juntos
+        matches = re.findall(r'\b(\d{18})\b', texto)
+        clabes_encontradas.extend(matches)
+        
+        # Patrón 2: 18 dígitos con espacios cada 4 (ej: 1234 5678 9012 3456 78)
+        texto_sin_espacios = texto.replace(' ', '').replace('\n', '')
+        matches2 = re.findall(r'\b(\d{18})\b', texto_sin_espacios)
+        clabes_encontradas.extend(matches2)
+        
+        return list(set(clabes_encontradas))  # Eliminar duplicados
+    
     def buscar_clabe_en_texto(self, texto: str, clabe_objetivo: str) -> bool:
-        """Busca la CLABE objetivo en el texto del comprobante (tolerante a formatos)"""
+        """Busca la CLABE objetivo en el texto del comprobante - ESTRICTO"""
         if not clabe_objetivo or len(clabe_objetivo) != 18:
+            logger.warning(f"[ValidadorComprobantes] CLABE objetivo inválida: {clabe_objetivo}")
             return False
         
-        # Normalizar
-        texto_normalizado = self.normalizar_texto(texto)
-        clabe_normalizado = self.normalizar_texto(clabe_objetivo)
+        logger.info(f"[ValidadorComprobantes] Buscando CLABE objetivo: {clabe_objetivo}")
         
-        # Buscar CLABE completa
-        if clabe_normalizado in texto_normalizado:
-            logger.info(f"[ValidadorComprobantes] ✅ CLABE completa encontrada")
-            return True
+        # Extraer todas las CLABEs del texto
+        clabes_en_texto = self.extraer_clabes_del_texto(texto)
         
-        # Buscar CLABE con espacios entre bloques
-        clabe_con_espacios = ' '.join([clabe_objetivo[i:i+4] for i in range(0, len(clabe_objetivo), 4)])
-        if clabe_con_espacios in texto:
-            logger.info(f"[ValidadorComprobantes] ✅ CLABE encontrada (con espacios)")
-            return True
+        if clabes_en_texto:
+            logger.info(f"[ValidadorComprobantes] CLABEs encontradas en el comprobante: {clabes_en_texto}")
+        else:
+            logger.warning(f"[ValidadorComprobantes] No se encontró ninguna CLABE (18 dígitos) en el comprobante")
         
-        # Buscar últimos 4 dígitos (1462) junto con palabra CLABE
-        ultimos_4 = clabe_objetivo[-4:]
-        if 'CLABE' in texto_normalizado and ultimos_4 in texto_normalizado:
-            logger.info(f"[ValidadorComprobantes] ✅ CLABE + últimos 4 dígitos ({ultimos_4}) encontrados")
-            return True
+        # Verificar si alguna coincide con la objetivo
+        for clabe_encontrada in clabes_en_texto:
+            if clabe_encontrada == clabe_objetivo:
+                logger.info(f"[ValidadorComprobantes] ✅ CLABE objetivo ENCONTRADA: {clabe_encontrada}")
+                return True
+            else:
+                logger.info(f"[ValidadorComprobantes] CLABE encontrada {clabe_encontrada} NO coincide con objetivo {clabe_objetivo}")
         
-        # Buscar últimos 3 dígitos (462) si aparece CLABE
-        ultimos_3 = clabe_objetivo[-3:]
-        if 'CLABE' in texto_normalizado and ultimos_3 in texto_normalizado:
-            logger.info(f"[ValidadorComprobantes] ✅ CLABE + últimos 3 dígitos ({ultimos_3}) encontrados")
-            return True
+        # Si no encontramos CLABEs completas, buscar últimos 4 dígitos como fallback
+        ultimos_4_objetivo = clabe_objetivo[-4:]
+        if 'CLABE' in texto.upper() and ultimos_4_objetivo in texto:
+            logger.warning(f"[ValidadorComprobantes] ⚠️ Solo se encontraron últimos 4 dígitos ({ultimos_4_objetivo}) cerca de 'CLABE', pero NO la CLABE completa")
+            # Buscar si hay OTRA CLABE con esos últimos 4 dígitos
+            for clabe in clabes_en_texto:
+                if clabe.endswith(ultimos_4_objetivo):
+                    logger.warning(f"[ValidadorComprobantes] Encontrada CLABE {clabe} que termina en {ultimos_4_objetivo}, pero NO es la objetivo")
+                    return False
         
-        # Buscar últimos 10 dígitos
-        ultimos_10 = clabe_objetivo[-10:]
-        if ultimos_10 in texto_normalizado:
-            logger.info(f"[ValidadorComprobantes] ✅ Últimos 10 dígitos encontrados")
-            return True
-        
-        logger.warning(f"[ValidadorComprobantes] ❌ CLABE NO encontrada")
+        logger.warning(f"[ValidadorComprobantes] ❌ CLABE objetivo {clabe_objetivo} NO encontrada en el comprobante")
         return False
     
     def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str) -> bool:
