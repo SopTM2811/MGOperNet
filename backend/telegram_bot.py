@@ -954,7 +954,18 @@ class TelegramBotNetCash:
         query = update.callback_query
         data = query.data
         
-        if data == "nueva_operacion":
+        # NetCash V1 callbacks
+        if data == "nc_menu_principal":
+            await self.nc_handlers.mostrar_menu_netcash(update, context)
+        elif data == "nc_ver_cuenta":
+            await self.nc_handlers.ver_cuenta_depositos(update, context)
+        elif data == "nc_ver_solicitudes":
+            await self.nc_handlers.ver_solicitudes(update, context)
+        # Los callbacks nc_crear_operacion, nc_confirmar_, nc_corregir_, nc_cancelar
+        # son manejados por el ConversationHandler de NetCash
+        
+        # Legacy callbacks
+        elif data == "nueva_operacion":
             await self.nueva_operacion(update, context)
         elif data == "ver_operaciones":
             await self.ver_operaciones(update, context)
