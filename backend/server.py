@@ -1042,9 +1042,10 @@ async def crear_cuenta_deposito(
 
 
 @api_router.put("/config/cuenta-deposito/{cuenta_id}/activar")
-async def activar_cuenta_deposito(cuenta_id: str):
+async def activar_cuenta_deposito(cuenta_id: str, notificar_clientes: bool = True):
     """
     Activa una cuenta específica y desactiva las demás.
+    Opcionalmente envía notificación a todos los clientes activos.
     """
     try:
         exito = await cuenta_deposito_service.activar_cuenta(cuenta_id)
@@ -1054,6 +1055,19 @@ async def activar_cuenta_deposito(cuenta_id: str):
                 status_code=404,
                 detail="Cuenta no encontrada"
             )
+        
+        # Enviar notificaciones si está habilitado
+        if notificar_clientes:
+            try:
+                from notificacion_cuenta_service import enviar_notificacion_cambio_cuenta
+                cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
+                
+                if cuenta:
+                    await enviar_notificacion_cambio_cuenta(cuenta)
+                    logger.info(f"[ConfigCuenta] Notificaciones enviadas para cuenta {cuenta_id}")
+            except Exception as e:
+                logger.error(f"[ConfigCuenta] Error enviando notificaciones: {str(e)}")
+                # No fallar la activación si falla la notificación
         
         return {
             "success": True,
