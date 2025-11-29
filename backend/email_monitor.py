@@ -412,54 +412,115 @@ Equipo NetCash"""
         self.gmail.send_reply(to, asunto, body, thread_id)
         logger.info(f"[EmailMonitor] 📧 Correo de éxito enviado")
     
-    async def _send_falta_o_invalido(self, to: str, subject: str, thread_id: str, validacion: Dict, cuenta: Optional[Dict]):
-        """Envía correo explicando qué falta o es inválido - NO crea operación"""
+    async def _send_falta_o_invalido(self, to: str, subject: str, thread_id: str, validacion: Dict, cuenta: Optional[Dict], info_detectada: Dict, archivos: List):
+        """Envía correo con formato: 'Esto es lo que entendí' + 'Qué corregir'"""
         
         cuenta_texto = self._format_cuenta(cuenta)
-        
         asunto = f"Re: {subject}"
         
         body = f"""Hola,
 
 Estamos dando seguimiento a tu correo con asunto: "{subject}".
 
-Para poder crear una operación NetCash necesitamos corregir lo siguiente:
+Esto es lo que entendí de tu correo:
 
 """
         
-        # Listar campos FALTANTES (sin OK)
-        if validacion['campos_faltantes']:
-            for campo in validacion['campos_faltantes']:
-                if campo == 'comprobante':
-                    body += "• Comprobantes claros y legibles en PDF, JPG o PNG (adjunta todos los relacionados con la operación).\n"
-                elif campo == 'beneficiario':
-                    body += "• El nombre completo del beneficiario: Debe tener al menos nombre y dos apellidos (mínimo 3 palabras, sin números).\n"
-                elif campo == 'idmex':
-                    body += "• El IDMEX de 10 dígitos (identificador de la operación que usas con MBco).\n"
-                elif campo == 'cantidad_ligas':
-                    body += "• La cantidad de ligas NetCash: No pude identificarla, indica algo como '2 ligas'.\n"
+        # BLOQUE 1: Resumen de lo detectado
+        # Nombre
+        if info_detectada.get('beneficiario'):
+            nombre_valido = 'beneficiario' in validacion['campos_validos']
+            if nombre_valido:
+                body += f"• Nombre del beneficiario detectado: {info_detectada['beneficiario']}  ✅ válido\n"
+            else:
+                # Buscar razón específica
+                razon = "inválido"
+                for item in validacion['campos_invalidos']:
+                    if item['campo'] == 'beneficiario':
+                        razon = item['razon']
+                        break
+                body += f"• Nombre del beneficiario detectado: {info_detectada['beneficiario']}  ❌ {razon}\n"
+        else:
+            body += f"• Nombre del beneficiario: ❌ No detectado\n"
         
-        # Listar campos INVÁLIDOS con detalle específico
-        if validacion['campos_invalidos']:
-            if not validacion['campos_faltantes']:
-                body += "\n"
-            for item in validacion['campos_invalidos']:
-                campo = item['campo']
-                razon = item['razon']
-                
-                if campo == 'comprobante':
-                    body += f"• Comprobante: No corresponde a la cuenta NetCash autorizada.\n"
-                elif campo == 'beneficiario':
-                    # Específico: cuántas palabras tiene vs cuántas necesita
-                    body += f"• Nombre del beneficiario: {razon}.\n"
-                elif campo == 'idmex':
-                    # Específico: cuántos dígitos tiene vs los 10 requeridos
-                    body += f"• IDMEX: {razon}.\n"
-                elif campo == 'cantidad_ligas':
-                    body += f"• Cantidad de ligas: {razon}.\n"
+        # IDMEX
+        if info_detectada.get('idmex'):
+            idmex_valido = 'idmex' in validacion['campos_validos']
+            if idmex_valido:
+                body += f"• IDMEX detectado: {info_detectada['idmex']}  ✅ válido\n"
+            else:
+                razon = "inválido"
+                for item in validacion['campos_invalidos']:
+                    if item['campo'] == 'idmex':
+                        razon = item['razon']
+                        break
+                body += f"• IDMEX detectado: {info_detectada['idmex']}  ❌ {razon}\n"
+        else:
+            body += f"• IDMEX: ❌ No detectado\n"
         
-        body += f"""\nSi necesitas apoyo, responde con la palabra "AYUDA".
+        # Ligas
+        if info_detectada.get('cantidad_ligas'):
+            ligas_validas = 'cantidad_ligas' in validacion['campos_validos']
+            if ligas_validas:
+                body += f"• Cantidad de ligas NetCash detectada: {info_detectada['cantidad_ligas']}  ✅ válido\n"
+            else:
+                body += f"• Cantidad de ligas detectada: {info_detectada['cantidad_ligas']}  ❌ inválido\n"
+        else:
+            body += f"• Cantidad de ligas NetCash: ❌ No detectada\n"
+        
+        # Comprobantes
+        num_adjuntos = len(archivos)
+        comprobantes_validos = 'comprobante_valido' in validacion['campos_validos']
+        if num_adjuntos > 0:
+            if comprobantes_validos:
+                body += f"• Comprobantes adjuntos: {num_adjuntos}  ✅ válido\n"
+            else:
+                # Buscar detalle
+                detalle_comp = ""
+                for item in validacion['campos_invalidos']:
+                    if item['campo'] == 'comprobante':
+                        detalle_comp = item.get('razon', '')
+                        break
+                body += f"• Comprobantes adjuntos: {num_adjuntos}  ❌ {detalle_comp}\n"
+        else:
+            body += f"• Comprobantes: ❌ No hay adjuntos\n"
+        
+        # BLOQUE 2: Qué corregir
+        body += f"""\nPara poder crear la operación NetCash necesitamos corregir lo siguiente:
 
+"""
+        
+        # Listar SOLO lo que está mal o falta
+        errores_listados = []
+        
+        for campo in validacion['campos_faltantes']:
+            if campo == 'comprobante':
+                errores_listados.append("• Comprobante: Adjunta comprobantes claros y legibles en PDF, JPG o PNG.")
+            elif campo == 'beneficiario':
+                errores_listados.append("• Nombre del beneficiario: Debe tener al menos nombre y dos apellidos (mínimo 3 palabras, sin números).")
+            elif campo == 'idmex':
+                errores_listados.append("• IDMEX: Debe ser exactamente de 10 dígitos.")
+            elif campo == 'cantidad_ligas':
+                errores_listados.append("• Cantidad de ligas NetCash: Indica un número, por ejemplo '2 ligas' o '3 líneas de captura'.")
+        
+        for item in validacion['campos_invalidos']:
+            campo = item['campo']
+            if campo == 'comprobante':
+                if cuenta:
+                    errores_listados.append(f"• Comprobante: Envía un comprobante donde la cuenta destino coincida con la cuenta NetCash autorizada (Banco {cuenta.get('banco')}, CLABE {cuenta.get('clabe')}, Beneficiario {cuenta.get('beneficiario')}).")
+                else:
+                    errores_listados.append("• Comprobante: No corresponde a la cuenta NetCash autorizada.")
+            elif campo == 'beneficiario':
+                errores_listados.append(f"• Nombre del beneficiario: {item['razon']}.")
+            elif campo == 'idmex':
+                errores_listados.append(f"• IDMEX: {item['razon']}.")
+            elif campo == 'cantidad_ligas':
+                errores_listados.append(f"• Cantidad de ligas: {item['razon']}.")
+        
+        for error in errores_listados:
+            body += error + "\n"
+        
+        body += f"""
 ────────────────────────────────
 Para ayudarte mejor, puedes responder usando esta plantilla:
 
@@ -476,7 +537,7 @@ En cuanto tengamos la información completa y válida, registramos la operación
 Equipo NetCash"""
         
         self.gmail.send_reply(to, asunto, body, thread_id)
-        logger.info("[EmailMonitor] 📧 Correo de falta/inválido enviado")
+        logger.info("[EmailMonitor] 📧 Correo con resumen enviado")
     
     async def _send_subject_missing_response(self, to: str, subject: str, thread_id: str):
         asunto = f"Re: {subject}"
