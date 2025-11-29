@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 const AltaClienteTelegram = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     nombre: '',
