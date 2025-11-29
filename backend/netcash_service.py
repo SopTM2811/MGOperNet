@@ -48,7 +48,7 @@ class NetCashService:
     """Servicio central para gestión de solicitudes NetCash"""
     
     def __init__(self):
-        self.validador_comprobantes = ValidadorComprobantesService()
+        self.validador_comprobantes = ValidadorComprobantes()
     
     # ==================== CREACIÓN Y ACTUALIZACIÓN ====================
     
