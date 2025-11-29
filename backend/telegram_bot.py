@@ -787,9 +787,17 @@ class TelegramBotNetCash:
                         mensaje += "• Imágenes (JPG, PNG)\n"
                         mensaje += "• Archivos ZIP con varios comprobantes adentro\n\n"
                         mensaje += "Envíalos todos seguidos y al final escribe **'listo'** cuando hayas terminado.\n\n"
-                        mensaje += f"**Recuerda:** El depósito debe ser a la cuenta:\n"
-                        mensaje += f"JARDINERIA Y COMERCIO THABYETHA SA DE CV\n"
-                        mensaje += f"CLABE: 646180139409481462"
+                        
+                        # Obtener cuenta activa
+                        from cuenta_deposito_service import cuenta_deposito_service
+                        cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+                        if cuenta_activa:
+                            mensaje += f"**Recuerda:** El depósito debe ser a la cuenta:\n"
+                            mensaje += f"{cuenta_activa.get('beneficiario')}\n"
+                            mensaje += f"Banco: {cuenta_activa.get('banco')}\n"
+                            mensaje += f"CLABE: {cuenta_activa.get('clabe')}"
+                        else:
+                            mensaje += "**Recuerda:** El depósito debe ser a la cuenta NetCash autorizada."
                         
                         # Marcar que está recibiendo comprobantes
                         context.user_data['recibiendo_comprobantes'] = True
