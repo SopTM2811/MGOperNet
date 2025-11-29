@@ -102,6 +102,7 @@ class TelegramNetCashHandlers:
             
             # Obtener cuenta concertadora activa del motor
             cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            logger.info(f"[NC Telegram] cuenta_activa usada en ver_cuenta_depositos: {cuenta}")
             
             if not cuenta:
                 logger.warning(f"[NC Telegram] No hay cuenta concertadora activa configurada")
