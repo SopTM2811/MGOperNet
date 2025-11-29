@@ -1154,14 +1154,18 @@ class TelegramBotNetCash:
         """Inicia el bot"""
         self.app = Application.builder().token(self.token).build()
         
+        # Importar handlers de NetCash V1
+        from telegram_netcash_handlers import TelegramNetCashHandlers
+        self.nc_handlers = TelegramNetCashHandlers(self)
+        
         # Handlers
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("ayuda", self.ayuda))
         self.app.add_handler(CommandHandler("mbco", self.comando_mbco))
         self.app.add_handler(CommandHandler("aprobar_cliente", self.aprobar_cliente))
         
-        # Conversation handler for registration
-        conv_handler = ConversationHandler(
+        # Conversation handler for registration (legacy)
+        conv_handler_registro = ConversationHandler(
             entry_points=[CallbackQueryHandler(self.iniciar_registro_cliente, pattern="^registrar_cliente$")],
             states={
                 ESPERANDO_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.recibir_email)]
@@ -1169,7 +1173,30 @@ class TelegramBotNetCash:
             fallbacks=[CommandHandler("cancelar", self.cancelar_registro)]
         )
         
-        self.app.add_handler(conv_handler)
+        # Conversation handler for NetCash V1 (nuevo)
+        conv_handler_netcash = ConversationHandler(
+            entry_points=[CallbackQueryHandler(self.nc_handlers.iniciar_crear_operacion, pattern="^nc_crear_operacion$")],
+            states={
+                NC_ESPERANDO_BENEFICIARIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_beneficiario)],
+                NC_ESPERANDO_IDMEX: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_idmex)],
+                NC_ESPERANDO_LIGAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_ligas)],
+                NC_ESPERANDO_COMPROBANTE: [
+                    MessageHandler(filters.Document.ALL, self.nc_handlers.recibir_comprobante),
+                    MessageHandler(filters.PHOTO, self.nc_handlers.recibir_comprobante)
+                ],
+                NC_ESPERANDO_CONFIRMACION: [
+                    CallbackQueryHandler(self.nc_handlers.confirmar_operacion, pattern="^nc_confirmar_"),
+                    CallbackQueryHandler(self.nc_handlers.corregir_datos, pattern="^nc_corregir_")
+                ]
+            },
+            fallbacks=[
+                CallbackQueryHandler(self.nc_handlers.cancelar_operacion, pattern="^nc_cancelar$"),
+                CommandHandler("start", self.start)
+            ]
+        )
+        
+        self.app.add_handler(conv_handler_registro)
+        self.app.add_handler(conv_handler_netcash)
         self.app.add_handler(CallbackQueryHandler(self.handle_callback))
         self.app.add_handler(MessageHandler(filters.CONTACT, self.handle_contact))
         self.app.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
