@@ -287,6 +287,18 @@ class EmailMonitor:
         
         return archivos
     
+    async def _buscar_operacion_por_thread(self, thread_id: str) -> Optional[Dict]:
+        """Busca si ya existe una operación NetCash asociada a este thread"""
+        try:
+            operacion = await db.operaciones.find_one(
+                {"gmail_thread_id": thread_id, "medio_origen": "email"},
+                {"_id": 0}
+            )
+            return operacion
+        except Exception as e:
+            logger.error(f"[EmailMonitor] Error buscando operación por thread: {str(e)}")
+            return None
+    
     async def _validate_info_detailed(self, 
                                       email_cliente: str, 
                                       archivos: List, 
@@ -313,6 +325,84 @@ class EmailMonitor:
         info_completa = len(campos_faltantes) == 0
         
         return info_completa, campos_faltantes
+    
+    async def _validate_info_consolidada(self,
+                                         operacion_existente: Dict,
+                                         nuevos_archivos: List,
+                                         nueva_info: Dict) -> Tuple[bool, List[str]]:
+        """
+        Valida información consolidando datos existentes con nuevos.
+        Esto permite la conversación guiada donde solo pedimos lo que falta.
+        """
+        campos_faltantes = []
+        
+        # 1. Adjuntos: Verificar si ya tiene o trae nuevos
+        archivos_existentes = operacion_existente.get('archivos_adjuntos', [])
+        tiene_adjuntos = len(archivos_existentes) > 0 or len(nuevos_archivos) > 0
+        if not tiene_adjuntos:
+            campos_faltantes.append('adjuntos')
+        
+        # 2. Beneficiario: Verificar existente o nuevo
+        beneficiario = operacion_existente.get('beneficiario_reportado') or nueva_info.get('beneficiario')
+        if not beneficiario:
+            campos_faltantes.append('beneficiario')
+        
+        # 3. IDMEX: Verificar existente o nuevo
+        idmex = operacion_existente.get('idmex_reportado') or nueva_info.get('idmex')
+        if not idmex:
+            campos_faltantes.append('idmex')
+        
+        # 4. Cantidad de ligas: Verificar existente o nuevo
+        cantidad_ligas = operacion_existente.get('cantidad_ligas_reportada') or nueva_info.get('cantidad_ligas')
+        if not cantidad_ligas:
+            campos_faltantes.append('cantidad_ligas')
+        
+        info_completa = len(campos_faltantes) == 0
+        
+        logger.info(f"[EmailMonitor] Validación consolidada - Completo: {info_completa}, Faltan: {campos_faltantes}")
+        
+        return info_completa, campos_faltantes
+    
+    async def _actualizar_operacion(self,
+                                    operacion_id: str,
+                                    nuevos_archivos: List[Dict],
+                                    nueva_info: Dict):
+        """Actualiza una operación existente con nueva información"""
+        try:
+            update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+            
+            # Consolidar archivos adjuntos
+            if len(nuevos_archivos) > 0:
+                operacion = await db.operaciones.find_one({"id": operacion_id})
+                archivos_existentes = operacion.get('archivos_adjuntos', [])
+                archivos_existentes.extend(nuevos_archivos)
+                update_data['archivos_adjuntos'] = archivos_existentes
+            
+            # Actualizar campos solo si la nueva info los trae
+            if nueva_info.get('beneficiario'):
+                update_data['beneficiario_reportado'] = nueva_info['beneficiario']
+            
+            if nueva_info.get('idmex'):
+                update_data['idmex_reportado'] = nueva_info['idmex']
+            
+            if nueva_info.get('cantidad_ligas'):
+                update_data['cantidad_ligas_reportada'] = nueva_info['cantidad_ligas']
+            
+            if nueva_info.get('monto'):
+                update_data['monto_reportado_por_mail'] = nueva_info['monto']
+            
+            # Marcar como completada
+            update_data['estado_operacion'] = 'en_revision_por_mail'
+            
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {"$set": update_data}
+            )
+            
+            logger.info(f"[EmailMonitor] Operación {operacion_id} actualizada con nueva información")
+            
+        except Exception as e:
+            logger.error(f"[EmailMonitor] Error actualizando operación: {str(e)}")
     
     async def _create_netcash_operation(self,
                                         email_cliente: str,
