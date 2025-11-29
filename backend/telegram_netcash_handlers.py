@@ -180,16 +180,42 @@ class TelegramNetCashHandlers:
             
             logger.info(f"[NC Telegram] Solicitud creada: {solicitud.get('id')} para cliente {cliente.get('id')}")
             
+            # Verificar que solo haya UNA cuenta concertadora activa
+            from motor.motor_asyncio import AsyncIOMotorClient
+            import os
+            mongo_url = os.getenv('MONGO_URL')
+            db_name = os.getenv('DB_NAME', 'netcash_mbco')
+            client = AsyncIOMotorClient(mongo_url)
+            db = client[db_name]
+            
+            cuentas_activas = await db.config_cuentas_netcash.count_documents({
+                "tipo": "concertadora",
+                "activa": True
+            })
+            
+            if cuentas_activas > 1:
+                logger.error(f"[NC Telegram] Error: {cuentas_activas} cuentas concertadora activas al crear operación")
+                await query.edit_message_text(
+                    "⚠️ **Error de configuración**\n\n"
+                    "No puedo iniciar la operación porque hay más de una cuenta activa configurada.\n\n"
+                    "Por favor avísale a Ana para que lo revisen.",
+                    parse_mode="Markdown"
+                )
+                return ConversationHandler.END
+            
             # Obtener y mostrar cuenta concertadora
             cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
             
             mensaje = "✅ **Iniciemos tu operación NetCash**\n\n"
             
             if cuenta:
+                logger.info(f"[NC Telegram] Mostrando cuenta al inicio: {cuenta.get('banco')} / {cuenta.get('clabe')}")
                 mensaje += "🏦 **Cuenta para tu depósito:**\n"
                 mensaje += f"• Banco: {cuenta.get('banco')}\n"
                 mensaje += f"• CLABE: {cuenta.get('clabe')}\n"
                 mensaje += f"• Beneficiario: {cuenta.get('beneficiario')}\n\n"
+            else:
+                logger.warning(f"[NC Telegram] No hay cuenta concertadora activa al crear operación")
             
             mensaje += "📝 **Paso 1 de 4: Nombre del beneficiario**\n\n"
             mensaje += "Por favor envíame el **nombre completo del beneficiario** "
