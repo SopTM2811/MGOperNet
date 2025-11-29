@@ -8,7 +8,7 @@ import time
 import logging
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Tuple, Optional
 from uuid import uuid4
 from pathlib import Path
 
@@ -95,6 +95,17 @@ class EmailMonitor:
         logger.info(f"[EmailMonitor] Asunto: {msg_data['subject']}")
         logger.info(f"[EmailMonitor] Adjuntos: {len(msg_data['attachments'])}")
         
+        # NUEVA VALIDACIÓN 1: Verificar que el asunto contenga "NetCash"
+        if not self._has_netcash_in_subject(msg_data['subject']):
+            logger.warning(f"[EmailMonitor] Asunto sin 'NetCash' - enviando correo de ajuste")
+            await self._send_subject_missing_response(
+                email_cliente,
+                msg_data['thread_id']
+            )
+            self.gmail.mark_as_read(message_id)
+            self.gmail.add_label(message_id, "NETCASH/ASUNTO_INCORRECTO")
+            return
+        
         # Extraer información del cuerpo
         info_extraida = self._extract_info_from_body(msg_data['body'])
         
@@ -104,43 +115,54 @@ class EmailMonitor:
             msg_data['attachments']
         )
         
-        # Validar si la información es suficiente
-        info_completa = self._validate_info(
+        # NUEVA VALIDACIÓN 2: Validar campos y obtener lista de faltantes
+        info_completa, campos_faltantes = await self._validate_info_detailed(
             email_cliente,
             archivos_adjuntos,
             info_extraida
         )
         
-        # Crear operación NetCash
-        operacion = await self._create_netcash_operation(
-            email_cliente=email_cliente,
-            asunto=msg_data['subject'],
-            cuerpo=msg_data['body'],
-            archivos_adjuntos=archivos_adjuntos,
-            info_extraida=info_extraida,
-            mensaje_id=message_id,
-            thread_id=msg_data['thread_id']
-        )
+        logger.info(f"[EmailMonitor] Info completa: {info_completa}")
+        if not info_completa:
+            logger.info(f"[EmailMonitor] Campos faltantes: {campos_faltantes}")
         
-        # Enviar respuesta automática
+        # Si la información está completa, crear operación
         if info_completa:
+            # Crear operación NetCash
+            operacion = await self._create_netcash_operation(
+                email_cliente=email_cliente,
+                asunto=msg_data['subject'],
+                cuerpo=msg_data['body'],
+                archivos_adjuntos=archivos_adjuntos,
+                info_extraida=info_extraida,
+                mensaje_id=message_id,
+                thread_id=msg_data['thread_id']
+            )
+            
+            # Enviar respuesta de éxito
             await self._send_success_response(
                 email_cliente,
                 msg_data['thread_id'],
                 operacion['clave_operacion']
             )
             self.gmail.add_label(message_id, "NETCASH/PROCESADO")
+            
+            logger.info(f"[EmailMonitor] Operación {operacion['clave_operacion']} creada desde email")
         else:
-            await self._send_incomplete_response(
+            # Enviar respuesta dinámica de información incompleta
+            await self._send_incomplete_response_dynamic(
                 email_cliente,
-                msg_data['thread_id']
+                msg_data['thread_id'],
+                campos_faltantes
             )
             self.gmail.add_label(message_id, "NETCASH/FALTA_INFO")
         
         # Marcar como leído
         self.gmail.mark_as_read(message_id)
-        
-        logger.info(f"[EmailMonitor] Operación {operacion['clave_operacion']} creada desde email")
+    
+    def _has_netcash_in_subject(self, subject: str) -> bool:
+        """Verifica si el asunto contiene la palabra 'NetCash' (case-insensitive)"""
+        return 'netcash' in subject.lower()
     
     def _extract_email(self, from_header: str) -> str:
         """Extrae el email del header From"""
@@ -154,7 +176,9 @@ class EmailMonitor:
         info = {
             'monto': None,
             'idmex': None,
-            'referencia': None
+            'referencia': None,
+            'beneficiario': None,
+            'cantidad_ligas': None
         }
         
         # Buscar monto
@@ -167,14 +191,27 @@ class EmailMonitor:
                 pass
         
         # Buscar IDMEX
-        idmex_match = re.search(r'IDMEX[:\s]+([0-9]+)', body, re.IGNORECASE)
+        idmex_match = re.search(r'IDMEX[:\s]+([0-9A-Za-z-]+)', body, re.IGNORECASE)
         if idmex_match:
             info['idmex'] = idmex_match.group(1)
         
         # Buscar referencia
-        ref_match = re.search(r'(?:referencia|operaci[oó]n)[:\s]+([A-Za-z0-9-]+)', body, re.IGNORECASE)
+        ref_match = re.search(r'(?:referencia|operación)[:\s]+([A-Za-z0-9-]+)', body, re.IGNORECASE)
         if ref_match:
             info['referencia'] = ref_match.group(1)
+        
+        # Buscar beneficiario
+        beneficiario_match = re.search(r'(?:beneficiario|titular|nombre)[:\s]+([A-Za-zÁÉÍÓÚáéíóúÑñ\s]+(?:[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+)?)', body, re.IGNORECASE)
+        if beneficiario_match:
+            info['beneficiario'] = beneficiario_match.group(1).strip()
+        
+        # Buscar cantidad de ligas
+        ligas_match = re.search(r'(?:liga|ligas|cantidad de ligas|número de ligas)[:\s]+([0-9]+)', body, re.IGNORECASE)
+        if ligas_match:
+            try:
+                info['cantidad_ligas'] = int(ligas_match.group(1))
+            except:
+                pass
         
         return info
     
@@ -213,19 +250,32 @@ class EmailMonitor:
         
         return archivos
     
-    def _validate_info(self, email_cliente: str, archivos: List, info_extraida: Dict) -> bool:
-        """Valida si la información es suficiente para procesar la operación"""
-        # Criterios básicos para Fase 1:
-        # 1. Debe tener email
-        # 2. Debe tener al menos un adjunto
+    async def _validate_info_detailed(self, 
+                                      email_cliente: str, 
+                                      archivos: List, 
+                                      info_extraida: Dict) -> Tuple[bool, List[str]]:
+        """Valida información y devuelve lista de campos faltantes"""
+        campos_faltantes = []
         
-        if not email_cliente:
-            return False
-        
+        # 1. Validar adjuntos (comprobantes)
         if len(archivos) == 0:
-            return False
+            campos_faltantes.append('adjuntos')
         
-        return True
+        # 2. Validar nombre beneficiario
+        if not info_extraida.get('beneficiario'):
+            campos_faltantes.append('beneficiario')
+        
+        # 3. Validar IDMEX
+        if not info_extraida.get('idmex'):
+            campos_faltantes.append('idmex')
+        
+        # 4. Validar cantidad de ligas
+        if not info_extraida.get('cantidad_ligas'):
+            campos_faltantes.append('cantidad_ligas')
+        
+        info_completa = len(campos_faltantes) == 0
+        
+        return info_completa, campos_faltantes
     
     async def _create_netcash_operation(self,
                                         email_cliente: str,
@@ -255,6 +305,8 @@ class EmailMonitor:
             "monto_reportado_por_mail": info_extraida.get('monto'),
             "idmex_reportado": info_extraida.get('idmex'),
             "referencia_reportada": info_extraida.get('referencia'),
+            "beneficiario_reportado": info_extraida.get('beneficiario'),
+            "cantidad_ligas_reportada": info_extraida.get('cantidad_ligas'),
             "archivos_adjuntos": archivos_adjuntos,
             "comprobantes": [],  # Se procesarán después
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -267,6 +319,31 @@ class EmailMonitor:
         logger.info(f"[EmailMonitor] Operación {clave_operacion} creada en BD")
         
         return operacion
+    
+    async def _get_cuenta_pago(self) -> Optional[Dict]:
+        """Obtiene la cuenta de pago para recepción de clientes"""
+        try:
+            cuenta = await db.cuentas.find_one(
+                {"tipo_uso": "recepcion_cliente"},
+                {"_id": 0}
+            )
+            return cuenta
+        except Exception as e:
+            logger.error(f"[EmailMonitor] Error obteniendo cuenta de pago: {str(e)}")
+            return None
+    
+    def _format_cuenta_pago(self, cuenta: Optional[Dict]) -> str:
+        """Formatea la información de la cuenta de pago"""
+        if not cuenta:
+            return "Recuerda que los depósitos para NetCash deben realizarse a la cuenta autorizada de recepción. Si aún no la tienes a la mano, por favor consúltala en tu panel de NetCash o con tu ejecutivo."
+        
+        # Si tenemos la cuenta completa, formatearla
+        texto = "Recuerda realizar tu depósito a la cuenta autorizada:\n"
+        texto += f"Banco: {cuenta.get('banco', 'N/A')}\n"
+        texto += f"CLABE: {cuenta.get('clabe', 'N/A')}\n"
+        texto += f"Beneficiario: {cuenta.get('razon_social', 'N/A')}"
+        
+        return texto
     
     async def _send_success_response(self, to: str, thread_id: str, clave_operacion: str):
         """Envía respuesta de éxito al cliente"""
@@ -287,18 +364,46 @@ Equipo NetCash"""
         self.gmail.send_reply(to, subject, body, thread_id)
         logger.info(f"[EmailMonitor] Respuesta de éxito enviada a {to}")
     
-    async def _send_incomplete_response(self, to: str, thread_id: str):
-        """Envía respuesta de información incompleta al cliente"""
+    async def _send_incomplete_response_dynamic(self, to: str, thread_id: str, campos_faltantes: List[str]):
+        """Envía respuesta dinámica de información incompleta según campos faltantes"""
+        
+        # Construir lista dinámica de faltantes
+        lista_faltantes = []
+        
+        if 'adjuntos' in campos_faltantes:
+            lista_faltantes.append("• Comprobantes claros y legibles en PDF, JPG o PNG (adjunta todos los relacionados con la operación).")
+        
+        if 'beneficiario' in campos_faltantes:
+            lista_faltantes.append("• El nombre completo del beneficiario al que se aplicará el pago.")
+        
+        if 'idmex' in campos_faltantes:
+            lista_faltantes.append("• El IDMEX o identificador de la operación que usas con MBco.")
+        
+        if 'cantidad_ligas' in campos_faltantes:
+            lista_faltantes.append("• La cantidad de ligas NetCash que necesitas para esta operación.")
+        
+        # Construir mensaje
         subject = "NetCash – Hace falta información para tu operación"
+        
         body = """Hola,
 
 Recibimos tu correo para operar con NetCash, pero todavía nos falta información para poder registrar correctamente la operación.
 
-En tu próximo correo por favor incluye:
-• Comprobantes claros y legibles en PDF, JPG o PNG (si son varios, adjunta todos los relacionados con la operación).
-• La cantidad de ligas NetCash que necesitas para esta operación.
-
+En tu próximo correo por favor incluye lo siguiente que nos falta:
+"""
+        
+        # Agregar lista de faltantes
+        for item in lista_faltantes:
+            body += item + "\n"
+        
+        # Obtener y agregar información de cuenta de pago
+        cuenta = await self._get_cuenta_pago()
+        cuenta_texto = self._format_cuenta_pago(cuenta)
+        
+        body += f"""
 Si necesitas apoyo para completar la información, simplemente responde a este mismo correo escribiendo la palabra "AYUDA" y nuestro equipo se pondrá en contacto contigo.
+
+{cuenta_texto}
 
 En cuanto tengamos la información completa, registramos la operación y te confirmamos por este mismo medio.
 
@@ -307,7 +412,28 @@ Quedamos al pendiente.
 Equipo NetCash"""
         
         self.gmail.send_reply(to, subject, body, thread_id)
-        logger.info(f"[EmailMonitor] Respuesta de info incompleta enviada a {to}")
+        logger.info(f"[EmailMonitor] Respuesta dinámica de info incompleta enviada a {to}")
+        logger.info(f"[EmailMonitor] Campos faltantes notificados: {campos_faltantes}")
+    
+    async def _send_subject_missing_response(self, to: str, thread_id: str):
+        """Envía respuesta cuando el asunto no contiene 'NetCash'"""
+        subject = "NetCash – Ajuste en el asunto de tu correo"
+        body = """Hola,
+
+Recibimos tu correo, pero para poder procesar correctamente tu solicitud en NetCash es necesario que el asunto incluya la palabra "NetCash".
+
+Por favor vuelve a enviar tu correo a esta misma dirección, asegurándote de que el asunto contenga "NetCash" (puede ir acompañado de la referencia que tú quieras).
+
+Ejemplos:
+• NetCash – Pago proveedor
+• NetCash – Nómina semana 15
+
+Una vez que recibamos tu correo con el asunto correcto, podremos continuar con el proceso.
+
+Equipo NetCash"""
+        
+        self.gmail.send_reply(to, subject, body, thread_id)
+        logger.info(f"[EmailMonitor] Respuesta de asunto incorrecto enviada a {to}")
 
 
 async def main():
