@@ -931,11 +931,9 @@ class TelegramBotNetCash:
         query = update.callback_query
         await query.answer()
         
-        # Importar servicio de cuenta
-        from cuenta_deposito_service import cuenta_deposito_service
-        
-        # Obtener cuenta activa
-        cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
+        # Obtener cuenta activa (NetCash V1)
+        from config_cuentas_service import config_cuentas_service, TipoCuenta
+        cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
         
         if not cuenta:
             mensaje = "⚠️ No hay cuenta de depósito configurada.\n\n"
