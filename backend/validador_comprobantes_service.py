@@ -138,7 +138,7 @@ class ValidadorComprobantes:
         return False
     
     def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str) -> bool:
-        """Busca el beneficiario objetivo en el texto del comprobante"""
+        """Busca el beneficiario objetivo en el texto (tolerante a separaciones)"""
         if not beneficiario_objetivo:
             return False
         
@@ -148,22 +148,41 @@ class ValidadorComprobantes:
         
         # Buscar beneficiario completo
         if beneficiario_normalizado in texto_normalizado:
-            logger.info(f"[ValidadorComprobantes] ✅ Beneficiario '{beneficiario_objetivo}' encontrado")
+            logger.info(f"[ValidadorComprobantes] ✅ Beneficiario completo encontrado")
             return True
         
-        # Buscar por palabras clave del beneficiario (al menos 70% de las palabras)
-        palabras_beneficiario = beneficiario_normalizado.split()
-        if len(palabras_beneficiario) < 2:
-            return False
+        # Para "JARDINERIA Y COMERCIO THABYETHA SA DE CV"
+        # Buscar partes clave que suelen aparecer separadas
+        partes_clave = []
         
-        palabras_encontradas = sum(1 for palabra in palabras_beneficiario if palabra in texto_normalizado)
-        porcentaje = palabras_encontradas / len(palabras_beneficiario)
+        # Extraer palabras significativas (ignorar conectores)
+        palabras = beneficiario_normalizado.split()
+        for palabra in palabras:
+            if palabra not in ['Y', 'DE', 'SA', 'CV', 'LA', 'EL', 'LOS', 'LAS']:
+                if len(palabra) >= 4:  # Solo palabras significativas
+                    partes_clave.append(palabra)
         
-        if porcentaje >= 0.7:
-            logger.info(f"[ValidadorComprobantes] ✅ {int(porcentaje*100)}% del beneficiario encontrado")
-            return True
+        # Contar cuántas partes clave aparecen
+        encontradas = sum(1 for parte in partes_clave if parte in texto_normalizado)
         
-        logger.warning(f"[ValidadorComprobantes] ❌ Beneficiario '{beneficiario_objetivo}' NO encontrado")
+        if len(partes_clave) > 0:
+            porcentaje = encontradas / len(partes_clave)
+            
+            if porcentaje >= 0.7:
+                logger.info(f"[ValidadorComprobantes] ✅ {int(porcentaje*100)}% de partes clave encontradas: {encontradas}/{len(partes_clave)}")
+                return True
+        
+        # Fallback: buscar al menos 70% de TODAS las palabras
+        todas_palabras = beneficiario_normalizado.split()
+        if len(todas_palabras) >= 2:
+            palabras_encontradas = sum(1 for palabra in todas_palabras if palabra in texto_normalizado)
+            porcentaje_total = palabras_encontradas / len(todas_palabras)
+            
+            if porcentaje_total >= 0.7:
+                logger.info(f"[ValidadorComprobantes] ✅ {int(porcentaje_total*100)}% del beneficiario encontrado")
+                return True
+        
+        logger.warning(f"[ValidadorComprobantes] ❌ Beneficiario NO encontrado suficientemente")
         return False
     
     def validar_comprobante(self, 
