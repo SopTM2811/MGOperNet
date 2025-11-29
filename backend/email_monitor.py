@@ -390,46 +390,42 @@ Equipo NetCash"""
 
 Estamos dando seguimiento a tu correo con asunto: "{subject}".
 
-Recibimos tu correo, pero para poder registrar tu operación NetCash todavía falta o es inválido lo siguiente:
+Para poder crear una operación NetCash necesitamos corregir lo siguiente:
 
 """
         
-        # Listar campos FALTANTES
+        # Listar campos FALTANTES (sin OK)
         if validacion['campos_faltantes']:
             for campo in validacion['campos_faltantes']:
                 if campo == 'comprobante':
                     body += "• Comprobantes claros y legibles en PDF, JPG o PNG (adjunta todos los relacionados con la operación).\n"
                 elif campo == 'beneficiario':
-                    body += "• El nombre completo del beneficiario (nombre y dos apellidos, por ejemplo: Juan Pérez García).\n"
+                    body += "• El nombre completo del beneficiario: Debe tener al menos nombre y dos apellidos (mínimo 3 palabras, sin números).\n"
                 elif campo == 'idmex':
                     body += "• El IDMEX de 10 dígitos (identificador de la operación que usas con MBco).\n"
                 elif campo == 'cantidad_ligas':
-                    body += "• La cantidad de ligas NetCash que necesitas para esta operación.\n"
+                    body += "• La cantidad de ligas NetCash: No pude identificarla, indica algo como '2 ligas'.\n"
         
-        # Listar campos INVÁLIDOS
+        # Listar campos INVÁLIDOS con detalle específico
         if validacion['campos_invalidos']:
-            body += "\n⚠️  Además, lo siguiente es inválido:\n"
+            if not validacion['campos_faltantes']:
+                body += "\n"
             for item in validacion['campos_invalidos']:
                 campo = item['campo']
                 razon = item['razon']
                 
                 if campo == 'comprobante':
-                    body += f"• Comprobante: {razon}.\n"
-                    body += f"  Por favor verifica que el depósito se haya realizado a la cuenta NetCash autorizada:\n"
-                    if cuenta:
-                        body += f"  Banco: {cuenta.get('banco')}\n"
-                        body += f"  CLABE: {cuenta.get('clabe')}\n"
-                        body += f"  Beneficiario: {cuenta.get('beneficiario')}\n"
+                    body += f"• Comprobante: No corresponde a la cuenta NetCash autorizada.\n"
                 elif campo == 'beneficiario':
+                    # Específico: cuántas palabras tiene vs cuántas necesita
                     body += f"• Nombre del beneficiario: {razon}.\n"
                 elif campo == 'idmex':
+                    # Específico: cuántos dígitos tiene vs los 10 requeridos
                     body += f"• IDMEX: {razon}.\n"
                 elif campo == 'cantidad_ligas':
                     body += f"• Cantidad de ligas: {razon}.\n"
         
         body += f"""\nSi necesitas apoyo, responde con la palabra "AYUDA".
-
-{cuenta_texto}
 
 ────────────────────────────────
 Para ayudarte mejor, puedes responder usando esta plantilla:
@@ -437,10 +433,12 @@ Para ayudarte mejor, puedes responder usando esta plantilla:
 Nombre del beneficiario (nombre y dos apellidos):
 IDMEX (10 dígitos):
 Cantidad de ligas NetCash:
-(Adjunta los comprobantes en PDF, JPG o PNG a la cuenta autorizada)
+(Adjunta los comprobantes en PDF, JPG o PNG)
 ────────────────────────────────
 
-Quedamos al pendiente.
+{cuenta_texto}
+
+En cuanto tengamos la información completa y válida, registramos la operación y te confirmamos por este mismo medio.
 
 Equipo NetCash"""
         
