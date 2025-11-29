@@ -135,6 +135,13 @@ const Dashboard = () => {
               Ver Clientes
             </Button>
             <Button
+              variant="outline"
+              onClick={() => navigate('/config/cuenta-deposito')}
+              className="border-slate-300"
+            >
+              Configuración Cuenta
+            </Button>
+            <Button
               onClick={() => setShowNuevaOperacion(true)}
               className="bg-blue-600 hover:bg-blue-700 shadow-soft"
               data-testid="new-operation-btn"
