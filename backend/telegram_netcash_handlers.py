@@ -75,13 +75,40 @@ class TelegramNetCashHandlers:
         await query.answer()
         
         try:
+            # Verificar que solo haya UNA cuenta concertadora activa
+            from motor.motor_asyncio import AsyncIOMotorClient
+            import os
+            mongo_url = os.getenv('MONGO_URL')
+            db_name = os.getenv('DB_NAME', 'netcash_mbco')
+            client = AsyncIOMotorClient(mongo_url)
+            db = client[db_name]
+            
+            cuentas_activas = await db.config_cuentas_netcash.count_documents({
+                "tipo": "concertadora",
+                "activa": True
+            })
+            
+            if cuentas_activas > 1:
+                logger.error(f"[NC Telegram] Error: {cuentas_activas} cuentas concertadora activas (debe haber solo 1)")
+                mensaje = "⚠️ **Error de configuración**\n\n"
+                mensaje += "Por el momento no puedo mostrar la cuenta de depósito NetCash porque hay más de una cuenta activa configurada.\n\n"
+                mensaje += "Por favor avísale a Ana para que lo revisen."
+                
+                keyboard = [[InlineKeyboardButton("⬅️ Volver al menú", callback_data="nc_menu_principal")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await query.edit_message_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+                return
+            
             # Obtener cuenta concertadora activa del motor
             cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
             
             if not cuenta:
+                logger.warning(f"[NC Telegram] No hay cuenta concertadora activa configurada")
                 mensaje = "⚠️ No hay cuenta de depósito configurada.\n\n"
                 mensaje += "Por favor contacta a tu ejecutivo para obtener los datos de pago."
             else:
+                logger.info(f"[NC Telegram] Mostrando cuenta: {cuenta.get('banco')} / {cuenta.get('clabe')}")
                 mensaje = "🏦 **Cuenta autorizada para tus depósitos NetCash:**\n\n"
                 mensaje += f"**Banco:** {cuenta.get('banco')}\n"
                 mensaje += f"**CLABE:** {cuenta.get('clabe')}\n"
@@ -96,6 +123,8 @@ class TelegramNetCashHandlers:
             
         except Exception as e:
             logger.error(f"[NC Telegram] Error mostrando cuenta: {str(e)}")
+            import traceback
+            logger.error(f"[NC Telegram] Traceback: {traceback.format_exc()}")
             await query.edit_message_text(
                 "❌ Error obteniendo información de la cuenta. Intenta de nuevo.",
                 reply_markup=InlineKeyboardMarkup([[
