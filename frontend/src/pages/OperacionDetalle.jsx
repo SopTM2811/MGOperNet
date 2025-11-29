@@ -548,101 +548,97 @@ const OperacionDetalle = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calculator className="h-5 w-5" />
-                  Cálculos Financieros
+                  Cálculos Financieros NetCash
                 </CardTitle>
                 <CardDescription>
-                  Capital, comisiones y montos de la operación
+                  Montos, comisiones y utilidades de la operación
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Mostrar cálculos si existen (formato calculos) o si tienen los datos básicos guardados */}
-                {(operacion.calculos || (operacion.monto_total_comprobantes && operacion.comision_cobrada)) ? (
+              <CardContent className="space-y-6">
+                {(operacion.monto_total_comprobantes && operacion.comision_cobrada) ? (
                   <div className="space-y-6">
-                    {/* Datos básicos (siempre mostrar si existen) */}
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">Total Comprobantes</Label>
-                        <p className="text-2xl font-bold text-blue-700">
-                          ${(operacion.monto_total_comprobantes || operacion.calculos?.monto_depositado_cliente || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                        </p>
-                      </div>
-
-                      <div className="bg-amber-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">
-                          Comisión Cliente {operacion.porcentaje_comision_usado ? `(${operacion.porcentaje_comision_usado}%)` : ''}
-                        </Label>
-                        <p className="text-2xl font-bold text-amber-700">
-                          ${(operacion.comision_cobrada || operacion.calculos?.comision_cliente_cobrada || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                        </p>
-                      </div>
-
-                      <div className="bg-emerald-50 rounded-lg p-4">
-                        <Label className="text-slate-600 text-sm">Capital NetCash (a dispersar)</Label>
-                        <p className="text-2xl font-bold text-emerald-700">
-                          ${(operacion.capital_netcash || operacion.calculos?.capital_netcash || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                    {/* Sección 1: Totales de operación */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-3">1️⃣ Totales de operación</h3>
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <Label className="text-slate-600 text-sm">Monto total de comprobantes</Label>
+                        <p className="text-3xl font-bold text-blue-700">
+                          ${operacion.monto_total_comprobantes.toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                       </div>
                     </div>
 
-                    {/* Datos internos DNS - SOLO PARA BACKOFFICE */}
-                    {(operacion.costo_proveedor_monto || operacion.utilidad_neta) && (
-                      <div className="mt-6 p-4 bg-slate-50 border-l-4 border-slate-600">
-                        <h4 className="font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                          <Lock className="h-4 w-4" />
-                          Cálculos internos (Solo MBco)
-                        </h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {operacion.costo_proveedor_monto && (
-                            <div className="bg-orange-50 rounded-lg p-4">
-                              <Label className="text-slate-600 text-sm">
-                                Costo proveedor DNS ({(operacion.costo_proveedor_pct * 100).toFixed(3)}%)
-                              </Label>
-                              <p className="text-2xl font-bold text-orange-700">
-                                ${operacion.costo_proveedor_monto.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                              </p>
-                              <p className="text-xs text-slate-500 mt-1">Sobre capital NetCash</p>
-                            </div>
-                          )}
-                          
-                          {operacion.utilidad_neta && (
-                            <div className="bg-green-50 rounded-lg p-4">
-                              <Label className="text-slate-600 text-sm">Utilidad neta MBco</Label>
-                              <p className="text-2xl font-bold text-green-700">
-                                ${operacion.utilidad_neta.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                              </p>
-                              <p className="text-xs text-slate-500 mt-1">Comisión - Costo DNS</p>
-                            </div>
-                          )}
+                    {/* Sección 2: Comisión al cliente */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-3">2️⃣ Comisión al cliente</h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                          <Label className="text-slate-600 text-sm">Porcentaje comisión cliente</Label>
+                          <p className="text-2xl font-bold text-amber-700">
+                            {operacion.porcentaje_comision_usado || 1.0}%
+                          </p>
                         </div>
-                        <div className="mt-3 text-xs text-slate-600 bg-yellow-50 p-2 rounded">
-                          ⚠️ <strong>INFORMACIÓN CONFIDENCIAL:</strong> Estos datos NO deben mostrarse al cliente en ningún reporte, PDF o comunicación.
+                        <div className="bg-amber-100 rounded-lg p-4 border border-amber-300">
+                          <Label className="text-slate-600 text-sm">Importe comisión cliente</Label>
+                          <p className="text-2xl font-bold text-amber-800">
+                            ${operacion.comision_cobrada.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            ${operacion.monto_total_comprobantes.toLocaleString('es-MX')} × {operacion.porcentaje_comision_usado || 1.0}%
+                          </p>
                         </div>
                       </div>
-                    )}
-                    
-                    {/* Datos avanzados (solo si existe calculos completo) */}
-                    {operacion.calculos && (
-                      <>
-                        <div className="grid md:grid-cols-2 gap-4 mt-4">
-                          <div className="bg-purple-50 rounded-lg p-4">
-                            <Label className="text-slate-600 text-sm">Comisión Proveedor ({(operacion.calculos.comision_proveedor_porcentaje * 100).toFixed(3)}%)</Label>
-                            <p className="text-2xl font-bold text-purple-700">
-                              ${operacion.calculos.comision_proveedor.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                            </p>
-                          </div>
+                    </div>
 
-                          <div className="bg-slate-100 rounded-lg p-4 border-2 border-slate-300">
-                            <Label className="text-slate-600 text-sm">Total Egreso MBco</Label>
-                            <p className="text-2xl font-bold text-slate-800">
-                              ${operacion.calculos.total_egreso.toLocaleString('es-MX', {minimumFractionDigits: 2})}
-                            </p>
-                          </div>
+                    {/* Sección 3: Costo proveedor DNS (solo interno) */}
+                    <div className="p-4 bg-slate-50 border-l-4 border-slate-600 rounded">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Lock className="h-4 w-4 text-slate-700" />
+                        <h3 className="text-sm font-semibold text-slate-700">3️⃣ Costo proveedor DNS (solo interno)</h3>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                          <Label className="text-slate-600 text-sm">Porcentaje costo proveedor</Label>
+                          <p className="text-2xl font-bold text-orange-700">
+                            {operacion.costo_proveedor_pct ? (operacion.costo_proveedor_pct * 100).toFixed(3) : '0.375'}%
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">Fijo para proveedor DNS</p>
                         </div>
-                      </>
-                    )}
+                        <div className="bg-orange-100 rounded-lg p-4 border border-orange-300">
+                          <Label className="text-slate-600 text-sm">Importe costo proveedor</Label>
+                          <p className="text-2xl font-bold text-orange-800">
+                            ${(operacion.costo_proveedor_monto || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            ${operacion.monto_total_comprobantes.toLocaleString('es-MX')} × 0.375%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sección 4: Resultado - Utilidad neta */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-3">4️⃣ Resultado</h3>
+                      <div className="bg-green-50 rounded-lg p-4 border-2 border-green-400">
+                        <Label className="text-slate-600 text-sm">Utilidad neta MBco</Label>
+                        <p className="text-4xl font-bold text-green-700">
+                          ${(operacion.utilidad_neta || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                        </p>
+                        <p className="text-sm text-slate-600 mt-2">
+                          Comisión cliente (${operacion.comision_cobrada.toLocaleString('es-MX', {minimumFractionDigits: 2})}) 
+                          - Costo DNS (${(operacion.costo_proveedor_monto || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})})
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Nota importante */}
+                    <div className="mt-4 text-xs text-slate-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                      <p className="font-semibold mb-1">⚠️ INFORMACIÓN CONFIDENCIAL</p>
+                      <p>Los datos de costo proveedor DNS y utilidad neta NO deben mostrarse al cliente en ningún reporte, PDF o comunicación externa.</p>
+                    </div>
 
                     {puedeConfirmar && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
                         <p className="text-sm text-green-800 mb-3">
                           ¿Los cálculos son correctos? Al confirmar, la operación se enviará a Ana para generar el código del sistema.
                         </p>
@@ -662,11 +658,11 @@ const OperacionDetalle = () => {
                     {!puedeCalcular ? (
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                         <Clock className="h-12 w-12 mx-auto mb-4 text-amber-500" />
-                        <p className="text-amber-800">
-                          Completa los pasos anteriores para calcular los montos.
+                        <p className="text-amber-800 font-semibold">
+                          Completa los pasos anteriores para calcular los montos
                         </p>
                         <p className="text-sm text-amber-600 mt-2">
-                          Necesitas: comprobantes válidos y datos del titular.
+                          Necesitas: comprobantes válidos y datos del titular
                         </p>
                       </div>
                     ) : (
