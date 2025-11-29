@@ -436,20 +436,30 @@ class TelegramNetCashHandlers:
             if not agregado:
                 raise Exception("No se pudo agregar el comprobante")
             
-            # Obtener solicitud actualizada para mostrar resumen
+            # Obtener solicitud actualizada para contar comprobantes
             solicitud = await netcash_service.obtener_solicitud(solicitud_id)
             comprobantes = solicitud.get("comprobantes", [])
+            num_comprobantes = len(comprobantes)
             
-            if not comprobantes:
+            if num_comprobantes == 0:
                 raise Exception("No se encontró el comprobante procesado")
             
-            ultimo_comprobante = comprobantes[-1]
-            es_valido = ultimo_comprobante.get("es_valido", False)
+            # Mensaje de confirmación
+            mensaje = f"✅ Comprobante recibido.\n"
+            mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) agregados a esta operación.\n\n"
+            mensaje += "¿Quieres subir otro comprobante o continuamos?"
             
-            # Generar resumen completo
-            await self._mostrar_resumen_y_confirmar(update, context, solicitud_id)
+            # Botones inline
+            keyboard = [
+                [InlineKeyboardButton("➕ Agregar otro comprobante", callback_data=f"nc_mas_comprobantes_{solicitud_id}")],
+                [InlineKeyboardButton("➡️ Continuar", callback_data=f"nc_continuar_comprobantes_{solicitud_id}")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             
-            return NC_ESPERANDO_CONFIRMACION
+            await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            
+            # Mantener el estado en NC_ESPERANDO_COMPROBANTE
+            return NC_ESPERANDO_COMPROBANTE
             
         except Exception as e:
             logger.error(f"[NC Telegram] Error procesando comprobante: {str(e)}")
