@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-from models.netcash_models import CuentaBancaria, TipoCuenta
+from netcash_models import CuentaBancaria, TipoCuenta
 
 logger = logging.getLogger(__name__)
 
