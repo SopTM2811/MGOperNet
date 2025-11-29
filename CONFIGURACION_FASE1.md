@@ -138,7 +138,7 @@ tail -f /var/log/supervisor/frontend.err.log
 
 Abre tu navegador y ve a:
 ```
-https://netcash-finflow.preview.emergentagent.com
+https://mbco-assistant.preview.emergentagent.com
 ```
 
 ---

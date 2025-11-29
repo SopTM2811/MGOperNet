@@ -1,59 +1,99 @@
 <analysis>**original_problem_statement:**
-El usuario solicitó la creación de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero, con las siguientes funcionalidades principales:
-1.  **Flujos de Telegram y Web**: Para alta de clientes y creación de operaciones, incluyendo subida de comprobantes y validaciones.
-2.  **Roles y Permisos**: Un administrador (Ana) que valida y aprueba clientes desde Telegram.
-3.  **Flujo por Correo Electrónico**: Implementar un canal para procesar operaciones enviadas por email a .
-4.  **Pestaña de Cálculos en Web**: Arreglar y mejorar una pestaña en el detalle de la operación web para mostrar cálculos de comisiones, costos y utilidad según fórmulas de negocio específicas.
-5.  **Manejo de Inactividad y Reportes**: Tareas futuras para mejorar la robustez y funcionalidad del sistema.
+El usuario ha solicitado la creación y refinamiento de una aplicación full-stack (Asistente NetCash MBco) para gestionar un flujo financiero. La filosofía principal, y más crítica, es que el sistema debe actuar como un **FILTRO ESTRICTO**. No se debe crear ninguna operación NetCash (ni por email ni por Telegram) a menos que se cumplan **TODAS** las siguientes condiciones de validación:
+1.  **Cliente Válido**: El remitente (por email o Telegram) debe ser un cliente con estado activo.
+2.  **Comprobante Válido**: Debe haber al menos un adjunto (PDF/JPG/PNG) que, mediante OCR, se verifique que corresponde a la **cuenta de depósito activa** configurada en el sistema (verificando CLABE y beneficiario).
+3.  **Nombre de Beneficiario Válido**: El texto debe contener un nombre con un mínimo de 3 palabras (nombre + dos apellidos), sin números.
+4.  **IDMEX Válido**: Debe contener un identificador de exactamente 10 dígitos numéricos.
+5.  **Cantidad de Ligas Válida**: Debe contener un número entero > 0 asociado a palabras clave como ligas o líneas de captura.
+
+Si alguna de estas reglas falla, el sistema **NO CREA** la operación y debe responder al usuario explicando exactamente qué campo es incorrecto o falta, guiándolo para corregirlo.
 
 **User's preferred language**: español
 
 **what currently exists?**
-Se ha estabilizado el bot de Telegram resolviendo un bug crítico y recurrente causado por registros duplicados de usuarios en la base de datos. Se ha corregido la pestaña Cálculos en la interfaz web, que ahora muestra los valores correctos sin errores de ejecución. Finalmente, se ha implementado un nuevo flujo para procesar operaciones a través de correo electrónico usando la API de Gmail. Este flujo incluye un monitor en segundo plano que lee los correos, crea operaciones, responde automáticamente al cliente si falta información (de forma dinámica) o si la operación fue registrada, y etiqueta los correos en Gmail.
+La aplicación es una PWA full-stack con frontend en React y backend en FastAPI, usando MongoDB. Los componentes principales son:
+*   Un bot de Telegram () para interactuar con clientes.
+*   Un monitor de correos () que procesa solicitudes enviadas a .
+*   Un panel web para la administración de operaciones y clientes.
+*   Un módulo centralizado para gestionar la cuenta de depósito activa ().
+*   Un servicio de validación de comprobantes () que usa OCR () para leer PDFs e imágenes.
+
+El agente ha estado trabajando en implementar las reglas duras descritas, refactorizando el código para que tanto el email como Telegram las apliquen de forma consistente, eliminando cuentas hardcodeadas y mejorando la inteligencia del parser y la claridad de las respuestas de error.
 
 **Last working item**:
-El agente estaba implementando mejoras en el flujo de procesamiento de correos electrónicos.
+El agente estaba en medio de una refactorización mayor para implementar las reglas duras del usuario y corregir varios bugs críticos reportados.
 
--   **Last item agent was working**: Se implementaron mejoras en el script  para que:
-    1.  Se manejen correos que no contienen NetCash en el asunto, enviando una respuesta específica.
-    2.  El correo de Información incompleta sea dinámico, listando solo los campos que realmente faltan (adjuntos, beneficiario, IDMEX, cantidad de ligas).
-    3.  Se incluya un recordatorio de la cuenta de pago en los correos de información incompleta.
--   **Status**: IN PROGRESS (El usuario no ha validado esta nueva funcionalidad).
--   **Agent Testing Done**: N (Solo se verificó que el servicio se ejecuta y se insertó un dato de prueba en la BD).
--   **Which testing method agent to use?**: backend testing agent. Es necesario crear un test que simule el envío de correos en diferentes escenarios (completo, incompleto, sin 'NetCash' en el asunto) y verifique:
-    1.  Que se cree (o no) la operación en la BD.
-    2.  Que se envíe el correo de respuesta correcto.
-    3.  Que se aplique la etiqueta correcta en Gmail.
+-   **Last item agent was working**:
+    1.  Corrigiendo un bug crítico en  donde el endpoint de validación de comprobantes, usado por Telegram, comparaba contra una cuenta hardcodeada en lugar de la cuenta activa del sistema.
+    2.  Refactorizando  para mejorar el parser (para que extraiga datos como el nombre de una frase completa) y para implementar el nuevo formato de respuesta detallado (Esto es lo que entendí con un status ✅/❌ por cada campo).
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: both
+    *   **Backend Testing Agent**: Para crear una suite de tests que verifique las reglas duras en ambos canales. Debe simular envíos con datos correctos, incorrectos y mezclados para asegurar que las operaciones solo se crean cuando todo es válido. Es crucial probar el validador de OCR con comprobantes de diferentes cuentas (activas e inactivas).
+    *   **Frontend Testing Agent**: Para validar el flujo de Telegram (respuesta a saludos, validación de comprobantes) y los cambios en la UI web (ocultar operaciones marcadas como inválidas).
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Verificación de la funcionalidad de Email.**
--   **Issue 2 (P1): La notificación a Ana por alta de nuevo cliente desde Telegram no funciona.**
--   **Issue 3 (P2): El monitor de inactividad no funciona correctamente.**
--   **Issue 4 (P3): El modo espejo de la web está incompleto.**
--   **Issue 5 (P3): Los filtros de búsqueda de la web no funcionan.**
+-   **Issue 1 (P0)**: Telegram valida comprobantes contra una cuenta incorrecta/hardcodeada.
+-   **Issue 2 (P0)**: El parser de email no interpreta correctamente los datos cuando vienen en una frase.
+-   **Issue 3 (P0)**: El bot de Telegram no responde a saludos como Hola.
+-   **Issue 4 (P1)**: Las respuestas de error por email no son suficientemente específicas.
+-   **Issue 5 (P2)**: Operaciones inválidas antiguas siguen visibles en el panel web.
 
 **Issues Detail:**
--   **Issue 1: Verificación de la funcionalidad de Email.**
-    -   **Attempted fixes**: N/A
+-   **Issue 1: Telegram valida comprobantes contra una cuenta incorrecta/hardcodeada.**
+    -   **Attempted fixes**: El agente identificó que el endpoint  en  usaba una cuenta hardcodeada. Reemplazó este valor por una llamada a .
     -   **Next debug checklist**:
-        1.  El usuario debe realizar una prueba de extremo a extremo: enviar un correo a  con y sin la información requerida.
-        2.  Verificar en la bandeja de entrada del cliente que se recibe la respuesta automática correcta.
-        3.  Verificar en la bandeja de entrada de  que el correo original fue procesado y etiquetado como  o .
-        4.  Verificar en la base de datos  que el registro fue creado con .
-    -   **Why fix this issue and what will be achieved with the fix?**: Para validar que la nueva funcionalidad principal cumple con los requisitos del negocio.
-    -   **Status**: USER VERIFICATION PENDING
+        1.  Revisar  para asegurar que está llamando al endpoint correcto y manejando la respuesta de validación ().
+        2.  Si la validación es falsa, el bot debe detener el flujo, no crear la operación y enviar el mensaje de error correspondiente.
+        3.  Realizar una prueba end-to-end: configurar una cuenta activa A, enviar por Telegram un comprobante de una cuenta inactiva B y verificar que el bot lo rechace correctamente.
+    -   **Why fix this issue and what will be achieved with the fix?**: Es el bug más crítico. Permite crear operaciones con pagos inválidos, rompiendo la lógica de negocio fundamental.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Both.
+    -   **Blocked on other issue**: No.
+
+-   **Issue 2: El parser de email no interpreta correctamente los datos cuando vienen en una frase.**
+    -   **Attempted fixes**: El agente comenzó a refactorizar  para usar expresiones regulares más flexibles y poder extraer subcadenas (como el nombre del beneficiario) de una frase completa.
+    -   **Next debug checklist**:
+        1.  Finalizar la implementación del nuevo parser en .
+        2.  Probar con el caso de uso del usuario (NETCASH SPEED con todos los datos en una línea).
+        3.  Verificar que la respuesta por email refleje que el nombre, IDMEX y ligas fueron detectados como válidos.
+    -   **Why fix this issue and what will be achieved with the fix?**: Mejora la usabilidad del canal de correo al entender un lenguaje más natural.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Backend.
     -   **Blocked on other issue**: No.
 
--   **Issue 2: La notificación a Ana por alta de nuevo cliente desde Telegram no funciona.**
-    -   **Attempted fixes**: El agente implementó una solución verificando si  estaba inicializado antes de enviar la notificación. Los tests del agente pasaron, pero el usuario no ha confirmado la solución en un entorno real.
-    -   **Next debug checklist**: El usuario debe probar el flujo de registrar un nuevo cliente desde Telegram y confirmar si Ana () recibe la notificación de aprobación.
-    -   **Why fix this issue and what will be achieved with the fix?**: El flujo de alta de nuevos clientes por Telegram está incompleto sin esta notificación, ya que Ana no puede aprobarlos.
-    -   **Status**: USER VERIFICATION PENDING
+-   **Issue 3: El bot de Telegram no responde a saludos como Hola.**
+    -   **Attempted fixes**: El agente añadió una función  y un  con un patrón regex en . Corrigió un error de sintaxis en el regex que impedía que el bot iniciara.
+    -   **Next debug checklist**:
+        1.  Verificar que el  de saludos está registrado **antes** del handler genérico de mensaje no reconocido.
+        2.  Probar enviando Hola, buen día, etc., tanto al inicio como en medio de una conversación, para asegurar que el bot responde con el menú principal.
+    -   **Why fix this issue and what will be achieved with the fix?**: Mejora la experiencia de usuario, haciendo el bot más amigable y accesible.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Backend (bot).
+    -   **Should Test frontend/backend/both after fix?**: Backend.
+    -   **Blocked on other issue**: No.
+
+-   **Issue 4: Las respuestas de error por email no son suficientemente específicas.**
+    -   **Attempted fixes**: El agente refactorizó la función de respuesta en  para construir un mensaje con el formato Esto es lo que entendí, que muestra un ✅ o ❌ para cada campo.
+    -   **Next debug checklist**: Conectar el resultado del nuevo parser (Issue 2) con esta función de respuesta. Probar enviando correos con diferentes combinaciones de errores (IDMEX corto, nombre con 2 palabras, etc.) y verificar que el email de respuesta liste correctamente solo los errores.
+    -   **Why fix this issue and what will be achieved with the fix?**: Es un pilar de la nueva filosofía. Guía al cliente de forma efectiva para que corrija su solicitud.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Backend.
+    -   **Blocked on other issue**: Issue 2.
+
+-   **Issue 5: Operaciones inválidas antiguas siguen visibles en el panel web.**
+    -   **Attempted fixes**: El agente creó un script para marcar operaciones antiguas con  en la base de datos.
+    -   **Next debug checklist**:
+        1.  Modificar el endpoint de backend () para que por defecto filtre y no devuelva las operaciones con .
+        2.  Modificar el componente de frontend (ej. ) que muestra la tabla de operaciones para que no las renderice.
+    -   **Why fix this issue and what will be achieved with the fix?**: Limpia el panel de operaciones de ruido, permitiendo que el equipo se enfoque solo en operaciones válidas.
+    -   **Status**: NOT STARTED (solo se hizo el cambio en BD).
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Both.
     -   **Blocked on other issue**: No.
 
 **In progress Task List**:
@@ -61,112 +101,78 @@ El agente estaba implementando mejoras en el flujo de procesamiento de correos e
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P2) Corregir el monitor de inactividad para que cancele operaciones correctamente. ()
-    -   (P3) Finalizar el modo espejo en el frontend para que sea 100% de solo lectura en operaciones de Telegram. ()
-    -   (P3) Implementar los filtros de búsqueda funcionales en el listado de operaciones y clientes.
+    -   (P2) Corregir el monitor de inactividad para que cancele operaciones correctamente ().
+    -   (P3) Finalizar el modo espejo en el frontend (solo lectura para operaciones de Telegram).
+    -   (P3) Implementar los filtros de búsqueda en el listado de operaciones y clientes.
 -   **Future Tasks**:
     -   Implementar el módulo de Comunicados para Ana.
     -   Implementar el módulo de control diario para Claudia.
     -   Implementar los reportes para la Dirección.
-    -   Implementar la lógica de partición de pagos para el proveedor.
 
 **Completed work in this session**
--   **Resolución de Bug Crítico del Bot de Telegram (P0)**: Se identificó y resolvió la causa raíz de la inestabilidad del bot: registros de usuarios duplicados en la colección . Se eliminaron los duplicados, restaurando el funcionamiento correcto para clientes activos.
--   **Resolución de Bug de Notificación a Ana (P1)**: Se corrigió un error que impedía enviar la notificación a Ana cuando un nuevo usuario se registraba, agregando una verificación para asegurar que el bot estuviera inicializado.
--   **Corrección de Pestaña Cálculos en Web**: Se solucionó un error de runtime  en . Se actualizó el backend (, ) y el frontend para calcular y mostrar correctamente los importes de comisión, costo de proveedor y utilidad neta según las fórmulas del negocio.
--   **Implementación de Flujo de Correo (Fase 1 y 2)**:
-    -   Se integró la API de Gmail para leer correos de .
-    -   Se creó un monitor en segundo plano () que se ejecuta con .
-    -   El monitor crea operaciones NetCash a partir de correos, extrae adjuntos e información del cuerpo del mail.
-    -   Envía respuestas automáticas dinámicas al cliente si la información está completa o incompleta.
-    -   Maneja correos cuyo asunto no contiene NetCash.
-    -   Etiqueta los correos procesados en Gmail (, ).
+-   **Corrección de bug crítico**: Se corrigió el endpoint  en  para que use la cuenta de depósito activa en lugar de una hardcodeada.
+-   **Refactorización del monitor de email**: Se inició la reescritura de  para implementar un parser más inteligente y el formato de respuesta de error específico Esto es lo que entendí.
+-   **Mejora del validador de comprobantes**: Se actualizó  para que el OCR sea más flexible al buscar la razón social y la CLABE.
+-   **Mejora del bot de Telegram**: Se añadió un handler para responder a saludos (Hola) y se eliminaron cuentas hardcodeadas de los mensajes del bot. Se corrigió un error de sintaxis que impedía que el bot se iniciara.
+-   **Limpieza de datos**: Se crearon y ejecutaron scripts para marcar operaciones antiguas e inválidas en la base de datos con .
+-   **Mejora de UI**: Se agregó un botón de Volver al menú principal en la página de alta de Telegram ().
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Los sinónimos de listo siguen fallando.**
-    -   **Debug checklist**: Revisar  en . Asegurarse de que el estado  no esté siendo interceptado por otro handler.
-    -   **Why to solve this issue and what will be achieved with this?**: Mejora la UX del bot.
-    -   **Should Test frontend/backend/both after fix**: Backend (bot).
-    -   **Is recurring issue?**: Y
--   **Issue 2: Validación del nombre del titular.**
-    -   **Debug checklist**: En , en el handler que recibe el nombre del titular, agregar una validación con una expresión regular para permitir solo letras y espacios.
-    -   **Why to solve this issue and what will be achieved with this?**: Asegura la calidad de los datos.
-    -   **Should Test frontend/backend/both after fix**: Backend (bot).
-    -   **Is recurring issue?**: N
+-   Los problemas mencionados en resúmenes anteriores han sido reemplazados por la nueva lista de reglas duras y bugs del usuario, que son la prioridad actual.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Inconsistencia de estado del cliente en el bot de Telegram.
+-   **Issue recurrence in previous fork**: Uso de valores hardcodeados en lugar de configuraciones dinámicas de la base de datos (Ej: cuentas de depósito).
 -   **Recurrence count**: Alto.
--   **Status**: RESOLVED. Se encontró que la causa raíz era la existencia de registros duplicados en la colección . La limpieza de estos duplicados solucionó el problema. Se debe considerar añadir una restricción a nivel de base de datos o lógica de aplicación para prevenir futuras duplicaciones.
+-   **Status**: IN PROGRESS. El agente corrigió varias instancias, pero el problema reapareció en el endpoint de validación de comprobantes, demostrando que es un riesgo recurrente.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** React.js, shadcn/ui
--   **Backend:** FastAPI, , , 
--   **Database:** MongoDB
--   **Integrations:** Supervisor, Gmail API
+-   **Backend**: FastAPI, ,  (MongoDB async).
+-   **Frontend**: React.js, .
+-   **Base de datos**: MongoDB.
+-   **Integraciones**: Gmail API,  para OCR, .
+-   **Core Logic**: La nueva filosofía de filtro estricto donde no se crean operaciones hasta que todos los datos son 100% válidos.
 
 **key DB schema**
--   **clientes**: 
--   **usuarios_telegram**: 
--   **operaciones**: 
--   **cuentas_pago**:  (Nueva colección)
+-   **operaciones**:  (campo nuevo/modificado).
+-   **config_cuenta_deposito_netcash**: . Es la única fuente de verdad para la cuenta de depósito.
+-   **clientes**: .
+-   **usuarios_telegram**: .
 
 **changes in tech stack**
--   Se agregó la librería  y sus dependencias para la integración con Gmail.
+-   Se añadieron y configuraron las dependencias para OCR:  y  (vía ).
 
 **All files**
--   **/app/backend/telegram_bot.py**: Modificado extensivamente para corregir la lógica de validación de cliente, la actualización de  y la notificación a Ana.
--   **/app/backend/server.py**: Modificado para actualizar el endpoint de cálculos de operaciones.
--   **/app/backend/calculos_service.py**: Modificado para implementar las nuevas fórmulas de cálculo de negocio.
--   **/app/frontend/src/pages/OperacionDetalle.jsx**: Modificado para corregir un error de runtime y mostrar la nueva pestaña de Cálculos.
--   **/app/backend/gmail_service.py**: Nuevo archivo para encapsular la lógica de la API de Gmail.
--   **/app/backend/email_monitor.py**: Nuevo archivo para el worker en segundo plano que procesa los correos.
--   **/app/backend/.env**: Actualizado con las credenciales de la API de Gmail.
--   **/etc/supervisor/conf.d/supervisord.conf**: Actualizado para añadir y configurar el nuevo proceso .
-
-**Areas that need refactoring**:
--   Añadir una restricción única en la colección  para los campos  y  para prevenir la recurrencia del bug de duplicados.
--    sigue siendo un archivo monolítico y complejo, candidato a ser descompuesto en módulos más pequeños por funcionalidad.
-
-**key api endpoints**
--   : Endpoint existente que fue modificado para usar las nuevas fórmulas y guardar los resultados.
+-   **/app/backend/server.py**: Modificado para eliminar una cuenta hardcodeada en el endpoint de validación de comprobantes y usar el servicio de cuenta activa.
+-   **/app/backend/email_monitor.py**: Refactorizado extensivamente para implementar las reglas duras, mejorar el parser y el formato de las respuestas de error.
+-   **/app/backend/telegram_bot.py**: Modificado para añadir un handler de saludos, eliminar todas las cuentas hardcodeadas y prepararlo para la validación estricta de comprobantes.
+-   **/app/backend/validador_comprobantes_service.py**: Actualizado para mejorar la lógica de OCR y hacerla más tolerante a formatos de comprobantes reales.
+-   **/app/frontend/src/pages/AltaClienteTelegram.jsx**: Modificado para añadir un botón de regreso al menú principal.
 
 **Critical Info for New Agent**
--   **BUG DE DUPLICADOS**: La causa raíz de la inestabilidad histórica del bot de Telegram fueron registros de usuarios duplicados en la base de datos. La solución fue limpiar la base de datos. El próximo agente debe ser consciente de esto y considerar implementar una salvaguarda (ej. un índice único en MongoDB) para evitar que vuelva a ocurrir.
--   **FLUJO DE EMAIL**: Se ha implementado una nueva funcionalidad mayor para procesar operaciones vía email. Está pendiente de validación por parte del usuario. La lógica principal se encuentra en  y .
--   **VERIFICACIÓN DE USUARIO PENDIENTE**: Tanto la solución al bug de notificación a Ana como la nueva funcionalidad de email requieren confirmación por parte del usuario.
-
-**documents created in this job**
-- N/A
+-   **FILOSOFÍA DE FILTRO ESTRICTO**: Este es el cambio más importante. NO se deben crear operaciones (ni en la BD, ni generar un folio NC-XXXX) si alguna de las 5 reglas duras (cliente, nombre, idmex, ligas, comprobante) falla. El sistema solo debe guiar al usuario para que corrija la información. Elimina cualquier lógica que cree operaciones incompletas.
+-   **CUENTA ACTIVA CENTRALIZADA**: Toda validación y muestra de la cuenta de depósito (en email, Telegram, web) debe usar **exclusivamente** . No debe existir ningún hardcode de CLABE, banco o beneficiario en ninguna parte del código.
+-   **VALIDACIÓN DE COMPROBANTES**: La validación de comprobantes es idéntica para email y Telegram y debe usar , pasándole la cuenta activa. El bug más reciente fue que Telegram no lo hacía.
 
 **Last 5 User Messages and any pending user messages**
-1.  **msg 144**: Proporcionó un nuevo requerimiento para arreglar la pestaña Cálculos en la web, detallando las fórmulas y el error de runtime a solucionar. **Estado: Completado.**
-2.  **msg 185**: Proporcionó un nuevo requerimiento para implementar la Fase 1 del flujo de correos vía Gmail API. **Estado: Completado.**
-3.  **msg 188**: Proporcionó las credenciales de Gmail necesarias para la integración. **Estado: Implementado.**
-4.  **msg 231**: Solicitó un cambio en el texto del correo de Información incompleta. **Estado: Completado.**
-5.  **msg 240**: Solicitó mejoras al flujo de correo: mensajes dinámicos de error, recordatorio de cuenta de pago y manejo de asuntos sin la palabra NetCash. **Estado: Completado.**
+-   **msg 269**: Es el mensaje más importante. Proporciona una lista exhaustiva de reglas duras, bugs concretos y criterios de aceptación. Reporta el bug crítico de Telegram validando comprobantes contra una cuenta incorrecta y el fallo del parser de email con frases. **Estado: IN PROGRESS.**
+-   **msg 218**: Versión anterior del mismo requerimiento, ahora superado por el mensaje 269 que tiene más contexto y detalles de los bugs encontrados.
+-   **msg 193, 152**: Mensajes anteriores que construyeron la idea de las reglas duras, ahora consolidados y detallados en el mensaje 269.
+-   **msg 107**: Requerimiento anterior donde se reportó por primera vez que la cuenta de depósito en el email seguía hardcodeada, lo que llevó a la creación del módulo de cuenta centralizado.
 
 **Project Health Check:**
--   **Broken**: Ninguna funcionalidad principal está rota.
+-   **Broken**: La validación de comprobantes en Telegram es incorrecta, ya que no utiliza la cuenta activa, lo que constituye un fallo crítico de la lógica de negocio.
 -   **Mocked**: N/A
--   **Working but pending verification**:
-    -   El flujo de notificación a Ana por nuevo cliente en Telegram.
-    -   Todo el nuevo flujo de creación de operaciones vía email.
+-   **Working but pending verification**: La corrección al endpoint del backend, el nuevo handler de saludos de Telegram y el nuevo parser/formato de respuesta del monitor de email.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES (para los bugs del bot de Telegram).
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: Un bug introducido por el agente que rompía el comando  fue reportado por el usuario y posteriormente corregido al encontrar la causa raíz de los usuarios duplicados.
-
-**Credentials to test flow:**
--   **Telegram Bot Token**: Disponible en .
--   **ANA_TELEGRAM_CHAT_ID**: .
--   **Usuario de prueba (Javier Telegram)**: .
--   **Credenciales de Gmail API**: Disponibles en  (, , , ).
+-   **Known regressions**: El flujo de validación de comprobantes en Telegram es una regresión, ya que ignora el módulo de cuenta activa centralizado.
 
 **What agent forgot to execute**
--   El agente no implementó una medida preventiva (como un índice único en la base de datos o una validación en el código) para evitar la creación de futuros usuarios duplicados en , que fue la causa raíz del bug más crítico y recurrente. Esto deja la puerta abierta a que el problema regrese.</analysis>
+-   El agente aún no ha modificado el frontend para ocultar las operaciones marcadas como .
+-   Aunque se corrigió el endpoint del backend, la lógica completa dentro de  para manejar la respuesta de validación () y detener el flujo no ha sido completamente implementada ni verificada.</analysis>
