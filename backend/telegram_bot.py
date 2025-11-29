@@ -1228,12 +1228,21 @@ class TelegramBotNetCash:
         query = update.callback_query
         await query.answer()
         
-        mensaje = "🏦 **Cuenta para depósitos NetCash**\n\n"
-        mensaje += "**Razón social:**\n"
-        mensaje += "JARDINERIA Y COMERCIO THABYETHA SA DE CV\n\n"
-        mensaje += "**Banco:** STP\n"
-        mensaje += "**CLABE:** 646180139409481462\n\n"
-        mensaje += "ℹ️ Realiza tu depósito a esta cuenta y después envíame los comprobantes."
+        # Importar servicio de cuenta
+        from cuenta_deposito_service import cuenta_deposito_service
+        
+        # Obtener cuenta activa
+        cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
+        
+        if not cuenta:
+            mensaje = "⚠️ No hay cuenta de depósito configurada.\n\n"
+            mensaje += "Por favor contacta a tu ejecutivo para obtener los datos de pago."
+        else:
+            mensaje = "🏦 **Cuenta para depósitos NetCash**\n\n"
+            mensaje += f"**Razón social:**\n{cuenta.get('beneficiario', 'N/A')}\n\n"
+            mensaje += f"**Banco:** {cuenta.get('banco', 'N/A')}\n"
+            mensaje += f"**CLABE:** {cuenta.get('clabe', 'N/A')}\n\n"
+            mensaje += "ℹ️ Realiza tu depósito a esta cuenta y después envíame los comprobantes."
         
         await query.edit_message_text(mensaje, parse_mode="Markdown")
     
