@@ -154,7 +154,9 @@ class EmailMonitor:
                 msg_data['subject'],
                 msg_data['thread_id'],
                 validacion,
-                cuenta_activa
+                cuenta_activa,
+                info_extraida,
+                archivos_adjuntos
             )
             self.gmail.add_label(message_id, "NETCASH/FALTA_INFO_O_INVALIDO")
             logger.info("[EmailMonitor] ❌ NO se creó operación - falta o es inválido")
