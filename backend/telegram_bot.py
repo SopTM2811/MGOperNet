@@ -1090,9 +1090,9 @@ class TelegramBotNetCash:
                                 # ISSUE 1 FIX: Usar mensaje_validacion del backend
                                 mensaje_validacion = comprobante.get("mensaje_validacion", "No se pudo leer el comprobante")
                                 
-                                # Obtener cuenta activa para mostrar datos esperados
-                                from cuenta_deposito_service import cuenta_deposito_service
-                                cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+                                # Obtener cuenta activa para mostrar datos esperados (NetCash V1)
+                                from config_cuentas_service import config_cuentas_service, TipoCuenta
+                                cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
                                 
                                 mensaje = "❌ **El comprobante no es válido.**\n\n"
                                 mensaje += f"**Razón:** {mensaje_validacion}\n\n"
