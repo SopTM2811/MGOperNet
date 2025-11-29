@@ -427,25 +427,37 @@ async def procesar_comprobante(
                     mensaje_validacion = f"Este comprobante ya había sido registrado anteriormente en la operación {operacion_con_duplicado['id'][:8]}... No es necesario procesarlo de nuevo."
                     logger.warning(f"Comprobante duplicado detectado: clave_rastreo={clave_rastreo}")
             
-            # PASO 2: Si NO es duplicado, validar cuenta y beneficiario
+            # PASO 2: Si NO es duplicado, validar contra CUENTA ACTIVA
             if not es_duplicado:
-                # Validar cuenta
-                cuenta_valida = ocr_service.validar_cuenta_beneficiaria(
-                    datos_ocr.get("cuenta_beneficiaria", ""),
-                    CUENTA_DEPOSITO_CLIENTE["clabe"]
-                )
+                # Obtener cuenta activa
+                cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
                 
-                # Validar nombre beneficiario
-                nombre_valido = ocr_service.validar_nombre_beneficiario(
-                    datos_ocr.get("nombre_beneficiario", ""),
-                    CUENTA_DEPOSITO_CLIENTE["razon_social"]
-                )
-                
-                if cuenta_valida and nombre_valido:
-                    es_valido = True
-                    mensaje_validacion = "Comprobante válido"
+                if not cuenta_activa:
+                    es_valido = False
+                    mensaje_validacion = "No hay cuenta de depósito activa configurada"
+                    logger.error("[Comprobante] No hay cuenta activa configurada")
                 else:
-                    mensaje_validacion = "La cuenta o el beneficiario no coinciden con la cuenta NetCash esperada"
+                    logger.info(f"[Comprobante] Validando contra cuenta activa: {cuenta_activa.get('banco')} - {cuenta_activa.get('clabe')}")
+                    
+                    # Validar usando el servicio de validación
+                    from validador_comprobantes_service import validador_comprobantes
+                    archivo_info = {
+                        'ruta': str(file_path),
+                        'mime_type': mime_type
+                    }
+                    
+                    es_valido, razon_validacion = validador_comprobantes.validar_comprobante(
+                        str(file_path),
+                        mime_type,
+                        cuenta_activa
+                    )
+                    
+                    if es_valido:
+                        mensaje_validacion = "Comprobante válido"
+                        logger.info(f"[Comprobante] ✅ Válido: {razon_validacion}")
+                    else:
+                        mensaje_validacion = f"El comprobante no corresponde a la cuenta NetCash autorizada (Banco {cuenta_activa.get('banco')}, CLABE {cuenta_activa.get('clabe')}, Beneficiario {cuenta_activa.get('beneficiario')})"
+                        logger.warning(f"[Comprobante] ❌ Inválido: {razon_validacion}")
         
         # Crear comprobante con file_url y hash
         comprobante_dict = {
