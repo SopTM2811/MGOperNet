@@ -40,6 +40,10 @@ db = client[db_name]
 ATTACHMENTS_DIR = Path("/app/backend/uploads/email_attachments")
 ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
+# Contacto Ana para clientes no identificados
+ANA_EMAIL = "gestion.ngdl@gmail.com"
+ANA_WHATSAPP = "+52 33 1218 6685"
+
 
 class EmailMonitor:
     """Monitor que procesa correos de Gmail para NetCash"""
@@ -92,13 +96,13 @@ class EmailMonitor:
         # Extraer email del remitente
         email_cliente = self._extract_email(msg_data['from'])
         
-        logger.info(f"[EmailMonitor] Email de: {email_cliente}")
-        logger.info(f"[EmailMonitor] Asunto: {msg_data['subject']}")
-        logger.info(f"[EmailMonitor] Adjuntos: {len(msg_data['attachments'])}")
+        logger.info(f"[EmailMonitor] ✉️  Email de: {email_cliente}")
+        logger.info(f"[EmailMonitor] 📝 Asunto: {msg_data['subject']}")
+        logger.info(f"[EmailMonitor] 📎 Adjuntos: {len(msg_data['attachments'])}")
         
         # VALIDACIÓN 1: Verificar que el asunto contenga "NetCash"
         if not self._has_netcash_in_subject(msg_data['subject']):
-            logger.warning(f"[EmailMonitor] Asunto sin 'NetCash' - enviando correo de ajuste")
+            logger.warning(f"[EmailMonitor] ⚠️  Asunto sin 'NetCash' - enviando correo de ajuste")
             await self._send_subject_missing_response(
                 email_cliente,
                 msg_data['thread_id']
@@ -106,6 +110,21 @@ class EmailMonitor:
             self.gmail.mark_as_read(message_id)
             self.gmail.add_label(message_id, "NETCASH/ASUNTO_INCORRECTO")
             return
+        
+        # VALIDACIÓN 2: Verificar que el cliente esté dado de alta
+        cliente = await self._buscar_cliente_por_email(email_cliente)
+        
+        if not cliente:
+            logger.warning(f"[EmailMonitor] ⛔ Cliente NO identificado: {email_cliente}")
+            await self._send_cliente_no_identificado_response(
+                email_cliente,
+                msg_data['thread_id']
+            )
+            self.gmail.mark_as_read(message_id)
+            self.gmail.add_label(message_id, "NETCASH/CLIENTE_NO_IDENTIFICADO")
+            return
+        
+        logger.info(f"[EmailMonitor] ✅ Cliente identificado: {cliente.get('nombre')} (estado: {cliente.get('estado')})")
         
         # CONVERSACIÓN GUIADA: Verificar si ya existe operación en este thread
         operacion_existente = await self._buscar_operacion_por_thread(msg_data['thread_id'])
@@ -116,12 +135,13 @@ class EmailMonitor:
         # Descargar adjuntos
         archivos_adjuntos = await self._download_attachments(
             message_id, 
-            msg_data['attachments']
+            msg_data['attachments'],
+            email_cliente
         )
         
         # Si hay operación existente, consolidar información
         if operacion_existente:
-            logger.info(f"[EmailMonitor] Thread existente - actualizando operación {operacion_existente['clave_operacion']}")
+            logger.info(f"[EmailMonitor] 🔄 Thread existente - actualizando operación {operacion_existente['clave_operacion']}")
             info_completa, campos_faltantes = await self._validate_info_consolidada(
                 operacion_existente,
                 archivos_adjuntos,
@@ -142,7 +162,7 @@ class EmailMonitor:
                     operacion_existente['clave_operacion']
                 )
                 self.gmail.add_label(message_id, "NETCASH/PROCESADO")
-                logger.info(f"[EmailMonitor] Operación {operacion_existente['clave_operacion']} completada")
+                logger.info(f"[EmailMonitor] ✅ Operación {operacion_existente['clave_operacion']} completada")
             else:
                 # Todavía falta información
                 await self._send_incomplete_response_dynamic(
@@ -168,6 +188,8 @@ class EmailMonitor:
                 # Crear operación NetCash
                 operacion = await self._create_netcash_operation(
                     email_cliente=email_cliente,
+                    cliente_id=cliente.get('id'),
+                    cliente_nombre=cliente.get('nombre'),
                     asunto=msg_data['subject'],
                     cuerpo=msg_data['body'],
                     archivos_adjuntos=archivos_adjuntos,
@@ -184,7 +206,7 @@ class EmailMonitor:
                 )
                 self.gmail.add_label(message_id, "NETCASH/PROCESADO")
                 
-                logger.info(f"[EmailMonitor] Operación {operacion['clave_operacion']} creada desde email")
+                logger.info(f"[EmailMonitor] ✅ Operación {operacion['clave_operacion']} creada desde email")
             else:
                 # Enviar respuesta dinámica de información incompleta
                 await self._send_incomplete_response_dynamic(
@@ -207,6 +229,21 @@ class EmailMonitor:
         if match:
             return match.group(1)
         return from_header
+    
+    async def _buscar_cliente_por_email(self, email: str) -> Optional[Dict]:
+        """Busca un cliente activo por su email"""
+        try:
+            cliente = await db.clientes.find_one(
+                {
+                    "email": email,
+                    "estado": "activo"
+                },
+                {"_id": 0}
+            )
+            return cliente
+        except Exception as e:
+            logger.error(f"[EmailMonitor] Error buscando cliente: {str(e)}")
+            return None
     
     def _extract_info_from_body(self, body: str) -> Dict:
         """Extrae información relevante del cuerpo del correo"""
@@ -252,9 +289,11 @@ class EmailMonitor:
         
         return info
     
-    async def _download_attachments(self, message_id: str, attachments: List[Dict]) -> List[Dict]:
+    async def _download_attachments(self, message_id: str, attachments: List[Dict], email_cliente: str) -> List[Dict]:
         """Descarga los adjuntos del correo"""
         archivos = []
+        
+        logger.info(f"[EmailMonitor] 📎 Procesando {len(attachments)} adjuntos para mensaje {message_id}")
         
         for att in attachments:
             try:
@@ -280,10 +319,12 @@ class EmailMonitor:
                     'tamaño': att['size']
                 })
                 
-                logger.info(f"[EmailMonitor] Adjunto descargado: {filename}")
+                logger.info(f"[EmailMonitor] ✅ Adjunto descargado: {filename} ({att['size']} bytes) de {email_cliente}")
                 
             except Exception as e:
-                logger.error(f"[EmailMonitor] Error descargando adjunto {att['filename']}: {str(e)}")
+                logger.error(f"[EmailMonitor] ❌ Error descargando adjunto {att['filename']}: {str(e)}")
+        
+        logger.info(f"[EmailMonitor] 📦 Total adjuntos guardados: {len(archivos)} de {len(attachments)} detectados")
         
         return archivos
     
@@ -406,6 +447,8 @@ class EmailMonitor:
     
     async def _create_netcash_operation(self,
                                         email_cliente: str,
+                                        cliente_id: str,
+                                        cliente_nombre: str,
                                         asunto: str,
                                         cuerpo: str,
                                         archivos_adjuntos: List[Dict],
@@ -423,6 +466,8 @@ class EmailMonitor:
             "id": str(uuid4()),
             "clave_operacion": clave_operacion,
             "medio_origen": "email",
+            "cliente_id": cliente_id,
+            "cliente_nombre": cliente_nombre,
             "email_cliente": email_cliente,
             "asunto_email": asunto,
             "cuerpo_email": cuerpo,
@@ -444,6 +489,7 @@ class EmailMonitor:
         await db.operaciones.insert_one(operacion)
         
         logger.info(f"[EmailMonitor] Operación {clave_operacion} creada en BD")
+        logger.info(f"[EmailMonitor] 📦 Adjuntos vinculados: {len(archivos_adjuntos)}")
         
         return operacion
     
@@ -451,6 +497,10 @@ class EmailMonitor:
         """Obtiene la cuenta de pago activa para recepción de clientes"""
         try:
             cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
+            if cuenta:
+                logger.info(f"[EmailMonitor] 🏦 Cuenta obtenida: {cuenta.get('banco')} - {cuenta.get('clabe')}")
+            else:
+                logger.warning("[EmailMonitor] ⚠️  No hay cuenta activa configurada")
             return cuenta
         except Exception as e:
             logger.error(f"[EmailMonitor] Error obteniendo cuenta de pago: {str(e)}")
@@ -461,7 +511,7 @@ class EmailMonitor:
         if not cuenta:
             return "Recuerda que los depósitos para NetCash deben realizarse a la cuenta autorizada de recepción. Si aún no la tienes a la mano, por favor consúltala en tu panel de NetCash o con tu ejecutivo."
         
-        # Formatear usando el servicio
+        # Formatear usando los datos de la cuenta activa
         texto = "Recuerda realizar tu depósito a la cuenta autorizada:\n"
         texto += f"Banco: {cuenta.get('banco', 'N/A')}\n"
         texto += f"CLABE: {cuenta.get('clabe', 'N/A')}\n"
@@ -471,6 +521,10 @@ class EmailMonitor:
     
     async def _send_success_response(self, to: str, thread_id: str, clave_operacion: str):
         """Envía respuesta de éxito al cliente"""
+        # Obtener cuenta activa para incluir en el mensaje
+        cuenta = await self._get_cuenta_pago()
+        cuenta_texto = self._format_cuenta_pago(cuenta)
+        
         subject = "NetCash – Operación registrada"
         body = f"""Hola,
 
@@ -480,6 +534,8 @@ Tu operación NetCash ha sido registrada con el código: {clave_operacion}
 
 Esta operación está en proceso de validación interna.
 En caso de requerir información adicional, nos pondremos en contacto contigo.
+
+{cuenta_texto}
 
 Gracias por usar NetCash.
 
@@ -558,6 +614,24 @@ Equipo NetCash"""
         
         self.gmail.send_reply(to, subject, body, thread_id)
         logger.info(f"[EmailMonitor] Respuesta de asunto incorrecto enviada a {to}")
+    
+    async def _send_cliente_no_identificado_response(self, to: str, thread_id: str):
+        """Envía respuesta cuando el cliente no está dado de alta"""
+        subject = "NetCash – Registro necesario para usar este canal"
+        body = f"""Hola,
+
+Recibimos tu correo, pero para poder operar con NetCash es necesario que primero estés dado de alta como cliente.
+
+Por favor contacta a Ana para realizar tu registro:
+• Correo: {ANA_EMAIL}
+• WhatsApp: {ANA_WHATSAPP}
+
+Una vez que Ana te confirme tu alta, podrás usar este correo y el asistente NetCash sin problema.
+
+Equipo NetCash"""
+        
+        self.gmail.send_reply(to, subject, body, thread_id)
+        logger.info(f"[EmailMonitor] Respuesta de cliente no identificado enviada a {to}")
 
 
 async def main():
@@ -566,16 +640,16 @@ async def main():
     
     monitor = EmailMonitor()
     
-    # Loop infinito que revisa correos cada 2 minutos
+    # Loop infinito que revisa correos cada 20 segundos
     while True:
         try:
             await monitor.process_emails()
         except Exception as e:
             logger.error(f"[EmailMonitor] Error en el ciclo principal: {str(e)}")
         
-        # Esperar 2 minutos antes de revisar de nuevo
-        logger.info("[EmailMonitor] Esperando 2 minutos antes de la próxima revisión...")
-        await asyncio.sleep(120)
+        # Esperar 20 segundos antes de revisar de nuevo (sensación de inmediatez)
+        logger.info("[EmailMonitor] Esperando 20 segundos antes de la próxima revisión...")
+        await asyncio.sleep(20)
 
 
 if __name__ == "__main__":
