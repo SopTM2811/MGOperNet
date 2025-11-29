@@ -200,38 +200,57 @@ class ValidadorComprobantes:
         Returns:
             Tuple (es_valido: bool, razon: str)
         """
+        logger.info(f"[ValidadorComprobantes] ========== INICIO VALIDACIÓN ==========")
+        logger.info(f"[ValidadorComprobantes] Archivo: {ruta_archivo}")
+        
         if not cuenta_activa:
+            logger.error(f"[ValidadorComprobantes] ❌ No hay cuenta activa configurada")
             return False, "No hay cuenta activa configurada"
         
         clabe_activa = cuenta_activa.get('clabe')
         beneficiario_activo = cuenta_activa.get('beneficiario')
+        banco_activo = cuenta_activa.get('banco')
+        
+        logger.info(f"[ValidadorComprobantes] Cuenta ACTIVA esperada:")
+        logger.info(f"[ValidadorComprobantes]   - Banco: {banco_activo}")
+        logger.info(f"[ValidadorComprobantes]   - CLABE: {clabe_activa}")
+        logger.info(f"[ValidadorComprobantes]   - Beneficiario: {beneficiario_activo}")
         
         if not clabe_activa or not beneficiario_activo:
+            logger.error(f"[ValidadorComprobantes] ❌ Cuenta activa incompleta")
             return False, "Cuenta activa incompleta"
         
         # Extraer texto del comprobante
         texto_comprobante = self.extraer_texto_comprobante(ruta_archivo, mime_type)
         
         if not texto_comprobante or len(texto_comprobante) < 20:
-            logger.warning(f"[ValidadorComprobantes] No se pudo extraer texto suficiente del comprobante")
-            # Si no se puede extraer texto, lo consideramos inválido por precaución
+            logger.warning(f"[ValidadorComprobantes] ❌ No se pudo extraer texto suficiente del comprobante (len={len(texto_comprobante) if texto_comprobante else 0})")
             return False, "No se pudo leer el comprobante o está vacío"
+        
+        logger.info(f"[ValidadorComprobantes] Texto extraído del comprobante ({len(texto_comprobante)} caracteres)")
+        logger.info(f"[ValidadorComprobantes] Primeros 500 caracteres: {texto_comprobante[:500]}")
         
         # Validar CLABE
         clabe_encontrada = self.buscar_clabe_en_texto(texto_comprobante, clabe_activa)
+        logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada en comprobante: {clabe_encontrada}")
         
         # Validar beneficiario
         beneficiario_encontrado = self.buscar_beneficiario_en_texto(texto_comprobante, beneficiario_activo)
+        logger.info(f"[ValidadorComprobantes] Beneficiario activo ({beneficiario_activo}) encontrado en comprobante: {beneficiario_encontrado}")
         
         # Resultado
         if clabe_encontrada and beneficiario_encontrado:
+            logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE y beneficiario coinciden con cuenta activa")
             return True, "Comprobante válido: CLABE y beneficiario coinciden"
         elif clabe_encontrada and not beneficiario_encontrado:
+            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: CLABE correcta pero beneficiario NO coincide")
             return False, f"El comprobante tiene la CLABE correcta pero el beneficiario no coincide con {beneficiario_activo}"
         elif not clabe_encontrada and beneficiario_encontrado:
+            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Beneficiario correcto pero CLABE NO coincide")
             return False, f"El comprobante tiene el beneficiario correcto pero la CLABE no coincide con {clabe_activa}"
         else:
-            return False, f"El comprobante no corresponde a la cuenta NetCash activa (Banco: {cuenta_activa.get('banco')}, CLABE: {clabe_activa}, Beneficiario: {beneficiario_activo})"
+            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Ni CLABE ni beneficiario coinciden con cuenta activa")
+            return False, f"El comprobante no corresponde a la cuenta NetCash activa (Banco: {banco_activo}, CLABE: {clabe_activa}, Beneficiario: {beneficiario_activo})"
     
     def validar_todos_comprobantes(self, 
                                    archivos_adjuntos: list,
