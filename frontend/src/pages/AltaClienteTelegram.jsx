@@ -83,6 +83,18 @@ const AltaClienteTelegram = () => {
 
   return (
     <div className="container mx-auto p-6 max-w-2xl">
+      {/* Botón de regreso al menú principal */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al menú principal
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Alta Cliente Telegram</CardTitle>
