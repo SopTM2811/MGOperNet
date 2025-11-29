@@ -1217,10 +1217,18 @@ class TelegramBotNetCash:
         mensaje += "   - Necesitas estar registrado primero\n\n"
         mensaje += "3️⃣ **Procesar tus comprobantes**\n"
         mensaje += "   - Envía PDF o imagen del depósito\n\n"
+        # Obtener cuenta activa
+        from cuenta_deposito_service import cuenta_deposito_service
+        cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+        
         mensaje += "📌 **Cuenta para depósitos:**\n"
-        mensaje += "Razón social: JARDINERIA Y COMERCIO THABYETHA SA DE CV\n"
-        mensaje += "Banco: STP\n"
-        mensaje += "CLABE: 646180139409481462\n\n"
+        if cuenta_activa:
+            mensaje += f"Razón social: {cuenta_activa.get('beneficiario')}\n"
+            mensaje += f"Banco: {cuenta_activa.get('banco')}\n"
+            mensaje += f"CLABE: {cuenta_activa.get('clabe')}\n\n"
+        else:
+            mensaje += "Consulta con tu ejecutivo\n\n"
+        
         mensaje += "📞 **Ayuda personalizada:**\n"
         mensaje += "Contacta a Ana:\n"
         mensaje += "📧 gestion.ngdl@gmail.com\n"
