@@ -1515,6 +1515,36 @@ class TelegramBotNetCash:
         texto = update.message.text.strip()
         user_name = update.effective_user.first_name
         
+        # PRIORIDAD 0: Detectar saludos básicos
+        texto_lower = texto.lower().strip()
+        saludos = ['hola', 'buenas', 'buen dia', 'buenos dias', 'buenas tardes', 'buenas noches', 'hey', 'hello']
+        
+        if texto_lower in saludos or any(saludo in texto_lower for saludo in saludos):
+            # Verificar si es cliente activo
+            chat_id = str(update.effective_chat.id)
+            telegram_id = str(update.effective_user.id)
+            
+            usuario = await db.usuarios_telegram.find_one(
+                {"$or": [{"chat_id": chat_id}, {"telegram_id": telegram_id}]},
+                {"_id": 0}
+            )
+            
+            if usuario and await self.es_cliente_activo(telegram_id):
+                # Cliente activo: mostrar menú principal
+                await self.start(update, context)
+                return
+            else:
+                # No es cliente activo: mensaje de alta con Ana
+                mensaje = f"Hola {user_name} 👋\n\n"
+                mensaje += "Para poder usar el asistente NetCash necesitas estar dado de alta como cliente.\n\n"
+                mensaje += "Por favor contacta a Ana para realizar tu registro:\n"
+                mensaje += "• Correo: gestion.ngdl@gmail.com\n"
+                mensaje += "• WhatsApp: +52 33 1218 6685\n\n"
+                mensaje += "Una vez que Ana te confirme tu alta, podrás operar desde aquí sin problema."
+                
+                await update.message.reply_text(mensaje)
+                return
+        
         # Actualizar timestamp de último mensaje si hay operación en curso
         if context.user_data.get('operacion_actual'):
             operacion_id = context.user_data['operacion_actual']
