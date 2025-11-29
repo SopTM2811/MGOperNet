@@ -377,8 +377,11 @@ class TelegramNetCashHandlers:
             context.user_data['nc_paso_actual'] = 'comprobante'
             
             mensaje = f"✅ Cantidad de ligas: **{ligas}**\n\n"
-            mensaje += "📝 **Paso 4 de 4: Comprobante de depósito**\n\n"
-            mensaje += "Ahora envíame el **comprobante de tu depósito**.\n\n"
+            mensaje += "📝 **Paso 4 de 4: Comprobantes de depósito**\n\n"
+            mensaje += "Puedes enviarme uno o varios comprobantes.\n"
+            mensaje += "• Si tienes varios, puedes enviarlos todos juntos (álbum / disparo múltiple).\n"
+            mensaje += "• O enviarlos uno por uno.\n\n"
+            mensaje += "Cuando termines, te voy a preguntar si quieres agregar más o continuar.\n\n"
             mensaje += "Puedes enviar:\n"
             mensaje += "• Archivo PDF\n"
             mensaje += "• Imagen (JPG, PNG)\n\n"
