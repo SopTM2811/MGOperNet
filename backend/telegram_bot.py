@@ -904,9 +904,9 @@ class TelegramBotNetCash:
         mensaje += "   - Necesitas estar registrado primero\n\n"
         mensaje += "3️⃣ **Procesar tus comprobantes**\n"
         mensaje += "   - Envía PDF o imagen del depósito\n\n"
-        # Obtener cuenta activa
-        from cuenta_deposito_service import cuenta_deposito_service
-        cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+        # Obtener cuenta activa (NetCash V1)
+        from config_cuentas_service import config_cuentas_service, TipoCuenta
+        cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
         
         mensaje += "📌 **Cuenta para depósitos:**\n"
         if cuenta_activa:
