@@ -2000,7 +2000,7 @@ class TelegramBotNetCash:
         self.app.add_handler(MessageHandler(filters.PHOTO, self.handle_photo))
         
         # Handler de saludos (ANTES del genérico)
-        saludo_filter = filters.Regex(r'^(?i)(hola|buenas|buen\s*d[ií]a|buenos\s*d[ií]as|buenas\s*tardes|buenas\s*noches|hey|hello)[\s!¡¿?.,]*$')
+        saludo_filter = filters.Regex(r'^(hola|buenas|buen\s*d[ií]a|buenos\s*d[ií]as|buenas\s*tardes|buenas\s*noches|hey|hello|HOLA|BUENAS|BUEN\s*D[ÍI]A|BUENOS\s*D[ÍI]AS|BUENAS\s*TARDES|BUENAS\s*NOCHES|HEY|HELLO)[\s!¡¿?.,]*$')
         self.app.add_handler(MessageHandler(saludo_filter & ~filters.COMMAND, self.handle_saludo))
         
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_mensaje_no_reconocido))
