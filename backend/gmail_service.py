@@ -40,12 +40,7 @@ class GmailService:
                 refresh_token=self.refresh_token,
                 token_uri="https://oauth2.googleapis.com/token",
                 client_id=self.client_id,
-                client_secret=self.client_secret,
-                scopes=[
-                    'https://www.googleapis.com/auth/gmail.modify',
-                    'https://www.googleapis.com/auth/gmail.send',
-                    'https://www.googleapis.com/auth/gmail.labels'
-                ]
+                client_secret=self.client_secret
             )
             
             # Refrescar el token
