@@ -1191,7 +1191,9 @@ class TelegramBotNetCash:
                 NC_ESPERANDO_LIGAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_ligas)],
                 NC_ESPERANDO_COMPROBANTE: [
                     MessageHandler(filters.Document.ALL, self.nc_handlers.recibir_comprobante),
-                    MessageHandler(filters.PHOTO, self.nc_handlers.recibir_comprobante)
+                    MessageHandler(filters.PHOTO, self.nc_handlers.recibir_comprobante),
+                    CallbackQueryHandler(self.nc_handlers.agregar_otro_comprobante, pattern="^nc_mas_comprobantes_"),
+                    CallbackQueryHandler(self.nc_handlers.continuar_con_comprobantes, pattern="^nc_continuar_comprobantes_")
                 ],
                 NC_ESPERANDO_CONFIRMACION: [
                     CallbackQueryHandler(self.nc_handlers.confirmar_operacion, pattern="^nc_confirmar_"),
