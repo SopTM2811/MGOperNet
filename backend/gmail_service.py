@@ -66,8 +66,9 @@ class GmailService:
         """
         try:
             if query is None:
-                # Query por defecto: INBOX, no leídos, con adjuntos o asunto NetCash
-                query = "label:INBOX is:unread (has:attachment OR subject:NetCash)"
+                # Query por defecto: TODOS los correos no leídos del INBOX
+                # Esto permite que el monitor procese también correos sin "NetCash" en el asunto
+                query = "label:INBOX is:unread"
             
             logger.info(f"[Gmail] Buscando mensajes con query: {query}")
             
