@@ -31,7 +31,7 @@ from netcash_models import (
     ComprobanteDetalle, HistoricoEstado, CanalMetadata
 )
 from config_cuentas_service import config_cuentas_service
-from validador_comprobantes_service import ValidadorComprobantesService
+from validador_comprobantes_service import ValidadorComprobantes
 
 logger = logging.getLogger(__name__)
 
