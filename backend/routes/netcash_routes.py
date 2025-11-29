@@ -18,7 +18,7 @@ from typing import List, Optional
 from pathlib import Path
 import uuid
 
-from models.netcash_models import (
+from netcash_models import (
     SolicitudCreate, SolicitudUpdate, ResumenCliente,
     EstadoSolicitud, CanalOrigen
 )
