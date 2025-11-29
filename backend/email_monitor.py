@@ -204,7 +204,7 @@ class EmailMonitor:
         return archivos
     
     def _extract_info_mejorado(self, body: str) -> Dict:
-        """Extrae info con reglas estrictas"""
+        """Extrae info con reglas estrictas - capaz de detectar en frases"""
         info = {
             'beneficiario': None,
             'idmex': None,
@@ -218,17 +218,50 @@ class EmailMonitor:
             info['idmex'] = matches_10[0]
             logger.info(f"[Parser] IDMEX detectado: {info['idmex']}")
         
-        # Beneficiario: 3+ palabras sin números
-        lineas = body.split('\n')
-        for linea in lineas:
-            linea = linea.strip()
-            if not linea or re.search(r'\d', linea):
-                continue
-            palabras = re.findall(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ]+", linea)
-            if len(palabras) >= 3:
-                info['beneficiario'] = linea
-                logger.info(f"[Parser] Beneficiario detectado: {info['beneficiario']}")
-                break
+        # Beneficiario: Intentar múltiples estrategias
+        # Estrategia 1: Detectar en frases con patrones
+        patrones_nombre = [
+            r'para\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñA-ZÁÉÍÓÚÑ\s]+?)\s+con\s+(?:idmex|IDMEX|rfc|RFC)',
+            r'SOLICITO\s+NET\s+PARA\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñA-ZÁÉÍÓÚÑ\s]+?)\s+CON\s+(?:IDMEX|idmex)',
+            r'beneficiario[:\s]+([A-ZÁÉÍÓÚÑ][a-záéíóúñA-ZÁÉÍÓÚÑ\s]+?)(?:\s*$|\s*\n|\s+con|\s+idmex)',
+        ]
+        
+        for patron in patrones_nombre:
+            match = re.search(patron, body, re.IGNORECASE)
+            if match:
+                candidato = match.group(1).strip()
+                # Validar que tenga al menos 3 palabras y sin números
+                palabras = re.findall(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ]+", candidato)
+                if len(palabras) >= 3 and not re.search(r'\d', candidato):
+                    info['beneficiario'] = candidato.upper()
+                    logger.info(f"[Parser] Beneficiario detectado (patrón): {info['beneficiario']}")
+                    break
+        
+        # Estrategia 2: Si no se encontró con patrones, buscar por líneas
+        if not info['beneficiario']:
+            lineas = body.split('\n')
+            for linea in lineas:
+                linea = linea.strip()
+                if not linea or re.search(r'\d', linea):
+                    continue
+                palabras = re.findall(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ]+", linea)
+                if len(palabras) >= 3:
+                    info['beneficiario'] = linea.upper()
+                    logger.info(f"[Parser] Beneficiario detectado (línea): {info['beneficiario']}")
+                    break
+        
+        # Estrategia 3: Buscar la subsecuencia más larga de palabras sin números
+        if not info['beneficiario']:
+            # Quitar todo menos letras y espacios
+            solo_letras = re.sub(r'[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]', ' ', body)
+            # Encontrar secuencias de palabras
+            secuencias = re.findall(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{10,}', solo_letras)
+            for seq in secuencias:
+                palabras = re.findall(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ]+", seq)
+                if len(palabras) >= 3:
+                    info['beneficiario'] = ' '.join(palabras[:10]).upper()  # Max 10 palabras
+                    logger.info(f"[Parser] Beneficiario detectado (subsecuencia): {info['beneficiario']}")
+                    break
         
         # Ligas
         patterns = [
@@ -241,8 +274,7 @@ class EmailMonitor:
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, body.lower())
-            if match:
+            match = re.search(pattern, body.lower()):
                 try:
                     info['cantidad_ligas'] = int(match.group(1))
                     logger.info(f"[Parser] Ligas detectadas: {info['cantidad_ligas']}")
