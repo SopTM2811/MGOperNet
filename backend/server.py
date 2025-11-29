@@ -960,6 +960,147 @@ async def listar_correos_pendientes(etiqueta: str = "NETCASH_INBOX"):
         logger.error(f"Error listando correos: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============================================
+# RUTAS DE CONFIGURACIÓN - CUENTA DEPÓSITO NETCASH
+# ============================================
+
+@api_router.get("/config/cuenta-deposito-activa")
+async def obtener_cuenta_deposito_activa():
+    """
+    Obtiene la cuenta de depósito NetCash actualmente activa.
+    Esta es la cuenta que se muestra a los clientes para hacer depósitos.
+    """
+    try:
+        cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
+        
+        if not cuenta:
+            raise HTTPException(
+                status_code=404,
+                detail="No hay cuenta de depósito activa configurada"
+            )
+        
+        return cuenta
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obteniendo cuenta activa: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/config/cuentas-deposito")
+async def listar_cuentas_deposito(incluir_inactivas: bool = True):
+    """
+    Lista todas las cuentas de depósito (historial).
+    """
+    try:
+        cuentas = await cuenta_deposito_service.listar_todas_cuentas(incluir_inactivas)
+        return {
+            "total": len(cuentas),
+            "cuentas": cuentas
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listando cuentas: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/config/cuenta-deposito")
+async def crear_cuenta_deposito(
+    banco: str = Form(...),
+    clabe: str = Form(...),
+    beneficiario: str = Form(...),
+    activar_inmediatamente: bool = Form(True)
+):
+    """
+    Crea una nueva cuenta de depósito NetCash.
+    Si activar_inmediatamente=True, desactiva las demás cuentas.
+    """
+    try:
+        cuenta = await cuenta_deposito_service.crear_cuenta(
+            banco=banco,
+            clabe=clabe,
+            beneficiario=beneficiario,
+            activar_inmediatamente=activar_inmediatamente
+        )
+        
+        return {
+            "success": True,
+            "cuenta": cuenta,
+            "message": "Cuenta creada exitosamente"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creando cuenta: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/config/cuenta-deposito/{cuenta_id}/activar")
+async def activar_cuenta_deposito(cuenta_id: str):
+    """
+    Activa una cuenta específica y desactiva las demás.
+    """
+    try:
+        exito = await cuenta_deposito_service.activar_cuenta(cuenta_id)
+        
+        if not exito:
+            raise HTTPException(
+                status_code=404,
+                detail="Cuenta no encontrada"
+            )
+        
+        return {
+            "success": True,
+            "message": "Cuenta activada exitosamente"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error activando cuenta: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/config/cuenta-deposito/{cuenta_id}")
+async def actualizar_cuenta_deposito(
+    cuenta_id: str,
+    banco: Optional[str] = Form(None),
+    clabe: Optional[str] = Form(None),
+    beneficiario: Optional[str] = Form(None)
+):
+    """
+    Actualiza los datos de una cuenta existente.
+    """
+    try:
+        exito = await cuenta_deposito_service.actualizar_cuenta(
+            cuenta_id=cuenta_id,
+            banco=banco,
+            clabe=clabe,
+            beneficiario=beneficiario
+        )
+        
+        if not exito:
+            raise HTTPException(
+                status_code=404,
+                detail="Cuenta no encontrada o sin cambios"
+            )
+        
+        return {
+            "success": True,
+            "message": "Cuenta actualizada exitosamente"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error actualizando cuenta: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Montar archivos estáticos para comprobantes
 uploads_dir = Path("/app/backend/uploads")
 uploads_dir.mkdir(parents=True, exist_ok=True)
