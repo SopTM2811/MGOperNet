@@ -96,7 +96,7 @@ class EmailMonitor:
         logger.info(f"[EmailMonitor] Asunto: {msg_data['subject']}")
         logger.info(f"[EmailMonitor] Adjuntos: {len(msg_data['attachments'])}")
         
-        # NUEVA VALIDACIÓN 1: Verificar que el asunto contenga "NetCash"
+        # VALIDACIÓN 1: Verificar que el asunto contenga "NetCash"
         if not self._has_netcash_in_subject(msg_data['subject']):
             logger.warning(f"[EmailMonitor] Asunto sin 'NetCash' - enviando correo de ajuste")
             await self._send_subject_missing_response(
@@ -107,6 +107,9 @@ class EmailMonitor:
             self.gmail.add_label(message_id, "NETCASH/ASUNTO_INCORRECTO")
             return
         
+        # CONVERSACIÓN GUIADA: Verificar si ya existe operación en este thread
+        operacion_existente = await self._buscar_operacion_por_thread(msg_data['thread_id'])
+        
         # Extraer información del cuerpo
         info_extraida = self._extract_info_from_body(msg_data['body'])
         
@@ -116,47 +119,80 @@ class EmailMonitor:
             msg_data['attachments']
         )
         
-        # NUEVA VALIDACIÓN 2: Validar campos y obtener lista de faltantes
-        info_completa, campos_faltantes = await self._validate_info_detailed(
-            email_cliente,
-            archivos_adjuntos,
-            info_extraida
-        )
-        
-        logger.info(f"[EmailMonitor] Info completa: {info_completa}")
-        if not info_completa:
-            logger.info(f"[EmailMonitor] Campos faltantes: {campos_faltantes}")
-        
-        # Si la información está completa, crear operación
-        if info_completa:
-            # Crear operación NetCash
-            operacion = await self._create_netcash_operation(
-                email_cliente=email_cliente,
-                asunto=msg_data['subject'],
-                cuerpo=msg_data['body'],
-                archivos_adjuntos=archivos_adjuntos,
-                info_extraida=info_extraida,
-                mensaje_id=message_id,
-                thread_id=msg_data['thread_id']
+        # Si hay operación existente, consolidar información
+        if operacion_existente:
+            logger.info(f"[EmailMonitor] Thread existente - actualizando operación {operacion_existente['clave_operacion']}")
+            info_completa, campos_faltantes = await self._validate_info_consolidada(
+                operacion_existente,
+                archivos_adjuntos,
+                info_extraida
             )
             
-            # Enviar respuesta de éxito
-            await self._send_success_response(
-                email_cliente,
-                msg_data['thread_id'],
-                operacion['clave_operacion']
-            )
-            self.gmail.add_label(message_id, "NETCASH/PROCESADO")
-            
-            logger.info(f"[EmailMonitor] Operación {operacion['clave_operacion']} creada desde email")
+            if info_completa:
+                # Actualizar operación existente
+                await self._actualizar_operacion(
+                    operacion_existente['id'],
+                    archivos_adjuntos,
+                    info_extraida
+                )
+                
+                await self._send_success_response(
+                    email_cliente,
+                    msg_data['thread_id'],
+                    operacion_existente['clave_operacion']
+                )
+                self.gmail.add_label(message_id, "NETCASH/PROCESADO")
+                logger.info(f"[EmailMonitor] Operación {operacion_existente['clave_operacion']} completada")
+            else:
+                # Todavía falta información
+                await self._send_incomplete_response_dynamic(
+                    email_cliente,
+                    msg_data['thread_id'],
+                    campos_faltantes
+                )
+                self.gmail.add_label(message_id, "NETCASH/FALTA_INFO")
         else:
-            # Enviar respuesta dinámica de información incompleta
-            await self._send_incomplete_response_dynamic(
+            # Primera vez - validación normal
+            info_completa, campos_faltantes = await self._validate_info_detailed(
                 email_cliente,
-                msg_data['thread_id'],
-                campos_faltantes
+                archivos_adjuntos,
+                info_extraida
             )
-            self.gmail.add_label(message_id, "NETCASH/FALTA_INFO")
+            
+            logger.info(f"[EmailMonitor] Info completa: {info_completa}")
+            if not info_completa:
+                logger.info(f"[EmailMonitor] Campos faltantes: {campos_faltantes}")
+            
+            # Si la información está completa, crear operación
+            if info_completa:
+                # Crear operación NetCash
+                operacion = await self._create_netcash_operation(
+                    email_cliente=email_cliente,
+                    asunto=msg_data['subject'],
+                    cuerpo=msg_data['body'],
+                    archivos_adjuntos=archivos_adjuntos,
+                    info_extraida=info_extraida,
+                    mensaje_id=message_id,
+                    thread_id=msg_data['thread_id']
+                )
+                
+                # Enviar respuesta de éxito
+                await self._send_success_response(
+                    email_cliente,
+                    msg_data['thread_id'],
+                    operacion['clave_operacion']
+                )
+                self.gmail.add_label(message_id, "NETCASH/PROCESADO")
+                
+                logger.info(f"[EmailMonitor] Operación {operacion['clave_operacion']} creada desde email")
+            else:
+                # Enviar respuesta dinámica de información incompleta
+                await self._send_incomplete_response_dynamic(
+                    email_cliente,
+                    msg_data['thread_id'],
+                    campos_faltantes
+                )
+                self.gmail.add_label(message_id, "NETCASH/FALTA_INFO")
         
         # Marcar como leído
         self.gmail.mark_as_read(message_id)
