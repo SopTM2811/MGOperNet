@@ -458,6 +458,18 @@ class TelegramNetCashHandlers:
             
             await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
             
+            # Mantener el estado en NC_ESPERANDO_COMPROBANTE
+            return NC_ESPERANDO_COMPROBANTE
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error procesando comprobante: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            await update.message.reply_text(
+                "❌ Error procesando el comprobante. Por favor intenta de nuevo o contacta a soporte."
+            )
+            return NC_ESPERANDO_COMPROBANTE
     
     async def agregar_otro_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler para el botón 'Agregar otro comprobante'"""
