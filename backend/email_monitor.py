@@ -322,12 +322,9 @@ class EmailMonitor:
         return operacion
     
     async def _get_cuenta_pago(self) -> Optional[Dict]:
-        """Obtiene la cuenta de pago para recepción de clientes"""
+        """Obtiene la cuenta de pago activa para recepción de clientes"""
         try:
-            cuenta = await db.cuentas.find_one(
-                {"tipo_uso": "recepcion_cliente"},
-                {"_id": 0}
-            )
+            cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
             return cuenta
         except Exception as e:
             logger.error(f"[EmailMonitor] Error obteniendo cuenta de pago: {str(e)}")
@@ -338,11 +335,11 @@ class EmailMonitor:
         if not cuenta:
             return "Recuerda que los depósitos para NetCash deben realizarse a la cuenta autorizada de recepción. Si aún no la tienes a la mano, por favor consúltala en tu panel de NetCash o con tu ejecutivo."
         
-        # Si tenemos la cuenta completa, formatearla
+        # Formatear usando el servicio
         texto = "Recuerda realizar tu depósito a la cuenta autorizada:\n"
         texto += f"Banco: {cuenta.get('banco', 'N/A')}\n"
         texto += f"CLABE: {cuenta.get('clabe', 'N/A')}\n"
-        texto += f"Beneficiario: {cuenta.get('razon_social', 'N/A')}"
+        texto += f"Beneficiario: {cuenta.get('beneficiario', 'N/A')}"
         
         return texto
     
