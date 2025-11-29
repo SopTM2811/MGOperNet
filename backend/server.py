@@ -916,7 +916,10 @@ async def verificar_gmail_status():
     """
     Verifica el estado de la configuración de Gmail API
     """
-    return verificar_configuracion_gmail()
+    if gmail_service:
+        return {"status": "ok", "configured": True}
+    else:
+        return {"status": "error", "configured": False}
 
 
 @api_router.post("/gmail/enviar-prueba")
