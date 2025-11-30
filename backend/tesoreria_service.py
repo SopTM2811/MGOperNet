@@ -381,29 +381,30 @@ class TesoreriaService:
             cuerpo += f"<li><strong>→ Total depósitos detectados: ${total_comp:,.2f}</strong></li>"
             cuerpo += "</ul>"
             
-            # Resumen financiero
+            # Resumen financiero (solo lo que Tesorería necesita)
+            # NO se debe mostrar el margen/utilidad MBco
             total_dep = solicitud.get('total_comprobantes_validos', 0)
-            comision = solicitud.get('comision_cliente', 0)
+            comision_dns = solicitud.get('comision_cliente', 0)  # Es comisión DNS (al proveedor), no al cliente
             monto_ligas = solicitud.get('monto_ligas', 0)
             n_ligas = solicitud.get('cantidad_ligas_reportada', 0)
             
-            cuerpo += "<p><strong>Resumen financiero NetCash:</strong></p>"
+            cuerpo += "<p><strong>Resumen financiero para Tesorería:</strong></p>"
             cuerpo += "<ul>"
-            cuerpo += f"<li>Total depósitos: ${total_dep:,.2f}</li>"
-            cuerpo += f"<li>Comisión NetCash (1.00%): ${comision:,.2f}</li>"
-            cuerpo += f"<li>Monto a enviar en ligas (capital): ${monto_ligas:,.2f}</li>"
+            cuerpo += f"<li>Total depósitos recibidos: ${total_dep:,.2f}</li>"
+            cuerpo += f"<li>Monto a enviar en ligas (capital a proveedor): ${monto_ligas:,.2f}</li>"
+            cuerpo += f"<li>Comisión DNS (a proveedor): ${comision_dns:,.2f}</li>"
             cuerpo += "</ul>"
             
-            # Resumen layout
-            cuerpo += "<p><strong>Resumen de layout generado (para Fondeadora):</strong></p>"
+            # Resumen layout - SOLO información de proveedor
+            cuerpo += "<p><strong>Resumen de dispersión al proveedor:</strong></p>"
             cuerpo += "<ul>"
-            cuerpo += f"<li>Número de transferencias (capital): {n_ligas}</li>"
+            cuerpo += f"<li>Transferencias de capital (ligas): {n_ligas}</li>"
             cuerpo += f"<li>Monto total capital: ${monto_ligas:,.2f}</li>"
-            cuerpo += f"<li>Cuenta de salida capital: {self.capital_clabe}</li>"
-            cuerpo += f"<li>Número de transferencias (comisión): 1</li>"
-            cuerpo += f"<li>Monto total comisión: ${comision:,.2f}</li>"
-            cuerpo += f"<li>Cuenta de salida comisión: {self.comision_clabe}</li>"
+            cuerpo += f"<li>Transferencias de comisión DNS: 1</li>"
+            cuerpo += f"<li>Monto comisión DNS: ${comision_dns:,.2f}</li>"
+            cuerpo += f"<li><strong>Total a dispersar al proveedor: ${monto_ligas + comision_dns:,.2f}</strong></li>"
             cuerpo += "</ul>"
+            cuerpo += "<p><em>Nota: Los destinatarios de todas las transferencias son cuentas del proveedor (ver CSV adjunto).</em></p>"
             
             cuerpo += "</div>"
         
