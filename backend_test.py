@@ -1157,13 +1157,321 @@ class BackendTester:
             logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return False
 
+    async def test_netcash_flujo_completo_telegram(self):
+        """Test completo del flujo NetCash en Telegram con nuevas funcionalidades"""
+        logger.info("🔍 Test NetCash: Flujo completo end-to-end con usuario 19440987")
+        
+        # Datos del usuario de prueba según el request
+        telegram_id = "19440987"
+        cliente_id = "d9115936-733e-4598-a23c-2ae7633216f9"
+        
+        try:
+            # PASO 1: Verificar usuario y cliente activo
+            logger.info("   📊 PASO 1: Verificando usuario y cliente activo...")
+            
+            usuario = await self.db.usuarios_telegram.find_one({"telegram_id": telegram_id}, {"_id": 0})
+            if not usuario:
+                logger.error(f"   ❌ Usuario {telegram_id} no encontrado")
+                return False
+            
+            cliente = await self.db.clientes.find_one({"id": cliente_id}, {"_id": 0})
+            if not cliente:
+                logger.error(f"   ❌ Cliente {cliente_id} no encontrado")
+                return False
+            
+            logger.info(f"   ✅ Usuario encontrado: {usuario.get('rol')}")
+            logger.info(f"   ✅ Cliente encontrado: {cliente.get('nombre')} - Estado: {cliente.get('estado')}")
+            
+            # PASO 2: Crear solicitud NetCash usando el nuevo motor
+            logger.info("   📝 PASO 2: Creando solicitud NetCash...")
+            
+            solicitud_data = {
+                "canal": "telegram",
+                "cliente_id": cliente_id,
+                "cliente_nombre": cliente.get("nombre")
+            }
+            
+            async with self.session.post(f"{BACKEND_URL}/netcash/solicitudes", json=solicitud_data) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    solicitud = result.get("solicitud")
+                    solicitud_id = solicitud.get("id")
+                    logger.info(f"   ✅ Solicitud creada: {solicitud_id}")
+                else:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Error creando solicitud: {response.status} - {error_text}")
+                    return False
+            
+            # PASO 3: Subir múltiples comprobantes de THABYETHA
+            logger.info("   📎 PASO 3: Subiendo múltiples comprobantes de THABYETHA...")
+            
+            # Buscar comprobantes de THABYETHA disponibles
+            import glob
+            comprobantes_thabyetha = glob.glob("/app/backend/uploads/comprobantes_telegram/*THABYETHA*.pdf")[:2]
+            
+            if len(comprobantes_thabyetha) < 2:
+                logger.warning(f"   ⚠️ Solo se encontraron {len(comprobantes_thabyetha)} comprobantes de THABYETHA")
+                # Usar los disponibles
+                comprobantes_thabyetha = comprobantes_thabyetha or ["/app/backend/uploads/comprobantes_telegram/nc-1764481170731_THABYETHA SA $179,800.00.pdf"]
+            
+            comprobantes_agregados = []
+            total_montos = 0.0
+            
+            for idx, comprobante_path in enumerate(comprobantes_thabyetha[:2], 1):
+                logger.info(f"   📄 Subiendo comprobante {idx}: {Path(comprobante_path).name}")
+                
+                try:
+                    with open(comprobante_path, 'rb') as f:
+                        form_data = aiohttp.FormData()
+                        form_data.add_field('file', f, filename=Path(comprobante_path).name, content_type='application/pdf')
+                        
+                        async with self.session.post(
+                            f"{BACKEND_URL}/netcash/solicitudes/{solicitud_id}/comprobante",
+                            data=form_data
+                        ) as response:
+                            if response.status == 200:
+                                result = await response.json()
+                                comprobante = result.get("comprobante", {})
+                                monto = comprobante.get("monto_detectado", 0)
+                                es_valido = comprobante.get("es_valido", False)
+                                
+                                logger.info(f"      ✅ Comprobante {idx} procesado - Válido: {es_valido}, Monto: ${monto:,.2f}")
+                                
+                                if es_valido and monto > 0:
+                                    comprobantes_agregados.append(comprobante)
+                                    total_montos += monto
+                            else:
+                                error_text = await response.text()
+                                logger.warning(f"      ⚠️ Error procesando comprobante {idx}: {response.status}")
+                
+                except Exception as e:
+                    logger.warning(f"      ⚠️ Error leyendo comprobante {idx}: {str(e)}")
+            
+            if len(comprobantes_agregados) == 0:
+                logger.error("   ❌ No se pudieron agregar comprobantes válidos")
+                return False
+            
+            logger.info(f"   ✅ {len(comprobantes_agregados)} comprobantes válidos agregados")
+            logger.info(f"   💰 Total de depósitos detectados: ${total_montos:,.2f}")
+            
+            # PASO 4: Verificar resumen intermedio (NUEVA FUNCIONALIDAD)
+            logger.info("   📊 PASO 4: Verificando resumen intermedio después de validar comprobantes...")
+            
+            # Obtener solicitud actualizada
+            async with self.session.get(f"{BACKEND_URL}/netcash/solicitudes/{solicitud_id}") as response:
+                if response.status == 200:
+                    result = await response.json()
+                    solicitud_actualizada = result.get("solicitud")
+                    comprobantes = solicitud_actualizada.get("comprobantes", [])
+                    comprobantes_validos = [c for c in comprobantes if c.get("es_valido")]
+                    
+                    # Verificar que el resumen intermedio muestra la suma correcta
+                    suma_comprobantes = sum(c.get("monto_detectado", 0) for c in comprobantes_validos)
+                    
+                    logger.info(f"   📋 RESUMEN INTERMEDIO:")
+                    logger.info(f"      - Comprobantes válidos: {len(comprobantes_validos)}")
+                    logger.info(f"      - Lista de montos:")
+                    for i, comp in enumerate(comprobantes_validos, 1):
+                        monto = comp.get("monto_detectado", 0)
+                        nombre = comp.get("nombre_archivo", "Sin nombre")
+                        logger.info(f"        {i}. {nombre}: ${monto:,.2f}")
+                    logger.info(f"      - Total depósitos detectados: ${suma_comprobantes:,.2f}")
+                    
+                    if suma_comprobantes == total_montos:
+                        logger.info("   ✅ RESUMEN INTERMEDIO: Suma correcta de TODOS los comprobantes")
+                    else:
+                        logger.error(f"   ❌ RESUMEN INTERMEDIO: Suma incorrecta. Esperado: ${total_montos:,.2f}, Obtenido: ${suma_comprobantes:,.2f}")
+                        return False
+                else:
+                    logger.error("   ❌ Error obteniendo solicitud actualizada")
+                    return False
+            
+            # PASO 5: Completar datos del beneficiario e IDMEX
+            logger.info("   👤 PASO 5: Completando datos del beneficiario e IDMEX...")
+            
+            beneficiario = "JUAN CARLOS PEREZ GOMEZ"
+            idmex = "1234567890"
+            
+            update_data = {
+                "beneficiario_reportado": beneficiario,
+                "idmex_reportado": idmex
+            }
+            
+            async with self.session.put(f"{BACKEND_URL}/netcash/solicitudes/{solicitud_id}", json=update_data) as response:
+                if response.status == 200:
+                    logger.info(f"   ✅ Beneficiario agregado: {beneficiario}")
+                    logger.info(f"   ✅ IDMEX agregado: {idmex}")
+                else:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Error agregando beneficiario: {response.status} - {error_text}")
+                    return False
+            
+            # PASO 6: Completar cantidad de ligas
+            logger.info("   🔗 PASO 6: Completando cantidad de ligas...")
+            
+            cantidad_ligas = 5
+            
+            update_data = {
+                "cantidad_ligas": cantidad_ligas
+            }
+            
+            async with self.session.put(f"{BACKEND_URL}/netcash/solicitudes/{solicitud_id}", json=update_data) as response:
+                if response.status == 200:
+                    logger.info(f"   ✅ Cantidad de ligas agregada: {cantidad_ligas}")
+                else:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Error agregando ligas: {response.status} - {error_text}")
+                    return False
+            
+            # PASO 7: Validar y procesar solicitud (genera cálculos finales)
+            logger.info("   🧮 PASO 7: Validando y procesando solicitud (cálculos finales)...")
+            
+            async with self.session.post(f"{BACKEND_URL}/netcash/solicitudes/{solicitud_id}/validar") as response:
+                if response.status == 200:
+                    result = await response.json()
+                    resumen = result.get("resumen", {})
+                    exitoso = result.get("success", False)
+                    
+                    if exitoso:
+                        logger.info("   ✅ Solicitud procesada exitosamente")
+                        
+                        # VERIFICAR CÁLCULOS FINALES (NUEVA FUNCIONALIDAD)
+                        logger.info("   📊 PASO 7a: Verificando cálculos finales...")
+                        
+                        total_depositos = resumen.get("total_depositos", 0)
+                        comision_netcash = resumen.get("comision_netcash", 0)
+                        monto_ligas = resumen.get("monto_ligas", 0)
+                        porcentaje_comision = resumen.get("porcentaje_comision", 0)
+                        
+                        logger.info(f"      📋 RESUMEN FINAL:")
+                        logger.info(f"         - Total depósitos detectados: ${total_depositos:,.2f}")
+                        logger.info(f"         - Porcentaje comisión NetCash: {porcentaje_comision:.2%}")
+                        logger.info(f"         - Comisión NetCash (1.00%): ${comision_netcash:,.2f}")
+                        logger.info(f"         - Monto a enviar en ligas: ${monto_ligas:,.2f}")
+                        
+                        # Verificar cálculos
+                        comision_esperada = total_depositos * 0.01  # 1.00%
+                        monto_ligas_esperado = total_depositos - comision_esperada
+                        
+                        if abs(total_depositos - suma_comprobantes) < 0.01:
+                            logger.info("      ✅ Total depósitos = suma de TODOS los comprobantes ✓")
+                        else:
+                            logger.error(f"      ❌ Total depósitos incorrecto. Esperado: ${suma_comprobantes:,.2f}")
+                            return False
+                        
+                        if abs(comision_netcash - comision_esperada) < 0.01:
+                            logger.info("      ✅ Comisión NetCash calculada correctamente ✓")
+                        else:
+                            logger.error(f"      ❌ Comisión incorrecta. Esperado: ${comision_esperada:,.2f}")
+                            return False
+                        
+                        if abs(monto_ligas - monto_ligas_esperado) < 0.01:
+                            logger.info("      ✅ Monto ligas calculado correctamente ✓")
+                        else:
+                            logger.error(f"      ❌ Monto ligas incorrecto. Esperado: ${monto_ligas_esperado:,.2f}")
+                            return False
+                        
+                        folio_generado = resumen.get("folio")
+                        if folio_generado:
+                            logger.info(f"      ✅ Folio generado: {folio_generado}")
+                        else:
+                            logger.warning("      ⚠️ No se generó folio")
+                    else:
+                        mensaje = result.get("message", "Error desconocido")
+                        logger.error(f"   ❌ Error procesando solicitud: {mensaje}")
+                        return False
+                else:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Error validando solicitud: {response.status} - {error_text}")
+                    return False
+            
+            # PASO 8: Verificar persistencia en BD
+            logger.info("   💾 PASO 8: Verificando persistencia en BD...")
+            
+            solicitud_bd = await self.db.solicitudes_netcash.find_one({"id": solicitud_id}, {"_id": 0})
+            
+            if solicitud_bd:
+                logger.info("   ✅ Solicitud encontrada en BD:")
+                logger.info(f"      - ID: {solicitud_bd.get('id')}")
+                logger.info(f"      - Estado: {solicitud_bd.get('estado')}")
+                logger.info(f"      - Cliente: {solicitud_bd.get('cliente_nombre')}")
+                logger.info(f"      - Total comprobantes válidos: {solicitud_bd.get('total_comprobantes_validos')}")
+                logger.info(f"      - Número comprobantes válidos: {solicitud_bd.get('num_comprobantes_validos')}")
+                logger.info(f"      - Porcentaje comisión cliente: {solicitud_bd.get('porcentaje_comision_cliente')}")
+                logger.info(f"      - Comisión cliente: {solicitud_bd.get('comision_cliente')}")
+                logger.info(f"      - Monto ligas: {solicitud_bd.get('monto_ligas')}")
+                logger.info(f"      - Cuenta NetCash usada: {solicitud_bd.get('cuenta_netcash_usada')}")
+                
+                # Verificar campos nuevos
+                campos_requeridos = [
+                    'total_comprobantes_validos',
+                    'num_comprobantes_validos', 
+                    'porcentaje_comision_cliente',
+                    'comision_cliente',
+                    'monto_ligas'
+                ]
+                
+                campos_faltantes = [campo for campo in campos_requeridos if solicitud_bd.get(campo) is None]
+                
+                if campos_faltantes:
+                    logger.error(f"   ❌ Campos faltantes en BD: {campos_faltantes}")
+                    return False
+                else:
+                    logger.info("   ✅ Todos los campos nuevos están presentes en BD")
+            else:
+                logger.error("   ❌ Solicitud no encontrada en BD")
+                return False
+            
+            # PASO 9: Verificar visualización en web
+            logger.info("   🌐 PASO 9: Verificando visualización en web...")
+            
+            async with self.session.get(f"{BACKEND_URL}/netcash/solicitudes/cliente/{cliente_id}") as response:
+                if response.status == 200:
+                    result = await response.json()
+                    solicitudes = result.get("solicitudes", [])
+                    
+                    # Buscar nuestra solicitud
+                    solicitud_encontrada = None
+                    for sol in solicitudes:
+                        if sol.get("id") == solicitud_id:
+                            solicitud_encontrada = sol
+                            break
+                    
+                    if solicitud_encontrada:
+                        logger.info("   ✅ Solicitud visible en endpoint web:")
+                        logger.info(f"      - ID: {solicitud_encontrada.get('id')}")
+                        logger.info(f"      - Estado: {solicitud_encontrada.get('estado')}")
+                        logger.info(f"      - Folio: {solicitud_encontrada.get('folio')}")
+                        logger.info(f"      - Total: ${solicitud_encontrada.get('total_comprobantes_validos', 0):,.2f}")
+                    else:
+                        logger.error("   ❌ Solicitud no encontrada en listado web")
+                        return False
+                else:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Error obteniendo solicitudes del cliente: {response.status} - {error_text}")
+                    return False
+            
+            logger.info("🎉 FLUJO NETCASH COMPLETO EXITOSO")
+            logger.info("   ✅ Resumen intermedio implementado correctamente")
+            logger.info("   ✅ Cálculos finales usando suma de TODOS los comprobantes")
+            logger.info("   ✅ Persistencia completa en BD con campos nuevos")
+            logger.info("   ✅ Visualización en web funcionando")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error en test_netcash_flujo_completo_telegram: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
     async def run_all_tests(self):
         """Ejecutar todos los tests"""
-        logger.info("🚀 Iniciando pruebas exhaustivas del backend NetCash MBco")
+        logger.info("🚀 Iniciando pruebas exhaustivas del flujo NetCash en Telegram")
         logger.info("=" * 60)
         
         tests = [
-            ("Comando /start Usuario 1570668456 (daniel G)", self.test_start_command_usuario_1570668456)
+            ("NetCash - Flujo completo end-to-end con usuario 19440987", self.test_netcash_flujo_completo_telegram)
         ]
         
         results = []
