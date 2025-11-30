@@ -329,9 +329,12 @@ class ValidadorComprobantes:
         # Si hay CLABEs de destino pero no coinciden, comprobante inválido
         if len(clabes_destino) > 0:
             logger.warning(f"[ValidadorComprobantes] ❌ Hay CLABEs de destino pero NINGUNA coincide con {clabe_objetivo}")
-            if es_thabyetha:
-                logger.info(f"[THABYETHA_DEBUG] Resultado final: clabe_encontrada=False metodo=no_encontrada (hay CLABEs pero no coinciden)")
-                logger.info(f"[THABYETHA_DEBUG] ========== FIN DEBUG THABYETHA ==========")
+            if es_vault_thabyetha:
+                logger.warning(f"[VAULT_DEBUG] ❌ RESULTADO: INVÁLIDO")
+                logger.warning(f"[VAULT_DEBUG] Razón: Hay CLABEs de destino pero ninguna coincide")
+                logger.warning(f"[VAULT_DEBUG] CLABEs destino encontradas: {clabes_destino}")
+                logger.warning(f"[VAULT_DEBUG] CLABE esperada: {clabe_objetivo}")
+                logger.warning(f"[VAULT_DEBUG] ========== FIN DEBUG VAULT/THABYETHA ==========")
             return False, "no_encontrada"
         
         # PASO B: Buscar sufijos enmascarados en múltiples formatos
