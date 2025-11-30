@@ -193,11 +193,49 @@ class ValidadorComprobantes:
             lineas_contexto = lineas[inicio_contexto:fin_contexto]
             contexto = '\n'.join(lineas_contexto).upper()
             
-            # Ignorar si es ORIGEN o ASOCIADA (buscar solo ANTES de la línea de CLABE)
-            keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]
+            # MEJORADO: Detectar si es ORIGEN o DESTINO en layouts tabulares
+            # En layouts tipo "ORIGEN | DESTINO", la CLABE puede estar en la columna derecha
+            # Necesitamos verificar la posición RELATIVA de la CLABE respecto a las palabras clave
+            
+            linea_actual = lineas[linea_clabe].upper()
             lineas_antes = lineas[inicio_contexto:linea_clabe]
             texto_antes = '\n'.join(lineas_antes).upper()
-            es_origen = any(kw in texto_antes for kw in keywords_origen)
+            
+            # Verificar si este es un layout tabular (tiene "ORIGEN" y "DESTINO" en la misma línea anterior)
+            es_layout_tabular = False
+            linea_encabezado = None
+            for i in range(max(0, linea_clabe - 3), linea_clabe):
+                linea = lineas[i].upper()
+                if "ORIGEN" in linea and "DESTINO" in linea:
+                    es_layout_tabular = True
+                    linea_encabezado = linea
+                    break
+            
+            if es_layout_tabular and linea_encabezado:
+                # Layout tabular detectado: determinar columna por posición
+                # Buscar índice de "ORIGEN" y "DESTINO" en el encabezado
+                idx_origen = linea_encabezado.find("ORIGEN")
+                idx_destino = linea_encabezado.find("DESTINO")
+                
+                # Buscar posición de la CLABE en su línea
+                idx_clabe = linea_actual.find(clabe)
+                
+                if idx_clabe != -1:
+                    # Si la CLABE está más cerca de DESTINO que de ORIGEN
+                    if abs(idx_clabe - idx_destino) < abs(idx_clabe - idx_origen):
+                        es_origen = False
+                        logger.info(f"[ValidadorComprobantes] CLABE {clabe} en columna DESTINO (layout tabular)")
+                    else:
+                        es_origen = True
+                        logger.info(f"[ValidadorComprobantes] CLABE {clabe} en columna ORIGEN (layout tabular)")
+                else:
+                    # Fallback: búsqueda tradicional
+                    keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]
+                    es_origen = any(kw in texto_antes for kw in keywords_origen)
+            else:
+                # No es layout tabular, usar lógica tradicional
+                keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]
+                es_origen = any(kw in texto_antes for kw in keywords_origen)
             
             # Ignorar si la CLABE MISMA es CLAVE DE RASTREO o REFERENCIA
             # No ignorar si estas palabras aparecen en otras líneas del contexto
