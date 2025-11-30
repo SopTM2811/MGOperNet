@@ -139,6 +139,10 @@ class ValidadorComprobantes:
         clabes_completas = self.extraer_clabes_del_texto(texto)
         logger.info(f"[ValidadorComprobantes] CLABEs de 18 dígitos encontradas en el texto: {clabes_completas}")
         
+        # LOG DETALLADO PARA THABYETHA
+        if clabe_objetivo == "646180139409481462":
+            logger.info(f"[VALIDADOR_THABYETHA] CLABEs extraídas del PDF: {clabes_completas}")
+        
         # Filtrar CLABEs enmascaradas (con asteriscos) y CLABEs asociadas (origen)
         clabes_validas = []
         for clabe in clabes_completas:
