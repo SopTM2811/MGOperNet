@@ -361,9 +361,10 @@ class ValidadorComprobantes:
             logger.info(f"[THABYETHA_DEBUG] ========== FIN DEBUG THABYETHA ==========")
         return False, "no_encontrada"
     
-    def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str) -> bool:
+    def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str, 
+                                     clabe_completa_encontrada: bool = False) -> bool:
         """
-        Busca el beneficiario objetivo en el texto (V3.0 - Multi-layout)
+        Busca el beneficiario objetivo en el texto (V3.5 - Con fuzzy matching)
         
         Tolerante a:
         - Separaciones por líneas/saltos
@@ -371,6 +372,12 @@ class ValidadorComprobantes:
         - Abreviaciones en apps móviles
         - Mayúsculas/minúsculas
         - Acentos
+        - **NUEVO V3.5**: Errores pequeños de OCR (solo si CLABE completa de 18 dígitos fue detectada exacta)
+        
+        Args:
+            texto: Texto OCR del comprobante
+            beneficiario_objetivo: Nombre del beneficiario esperado
+            clabe_completa_encontrada: True si se detectó CLABE de 18 dígitos exacta previamente
         """
         if not beneficiario_objetivo:
             return False
