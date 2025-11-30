@@ -12,7 +12,6 @@ Flujo:
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
-from telegram_config import TELEGRAM_ID_ANA, es_usuario_admin_mbco
 from netcash_service import netcash_service
 
 logger = logging.getLogger(__name__)
