@@ -188,7 +188,10 @@ class ValidadorComprobantes:
             es_rastreo = any(kw in contexto for kw in keywords_ignorar)
             
             # Debe estar en contexto de DESTINO
-            keywords_destino = ["DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO"]
+            keywords_destino = [
+                "DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO",
+                "CLABE RECEPTOR", "CUENTA RECEPTOR", "CLABE BENEFICIAR"
+            ]
             es_destino = any(kw in contexto for kw in keywords_destino)
             
             if not es_origen and not es_rastreo and (es_destino or len(clabes_completas) == 1):
