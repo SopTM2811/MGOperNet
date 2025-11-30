@@ -261,9 +261,15 @@ class TreasuryWorkflowTest:
         logger.info(f"   - Solicitudes: {lote.get('n_solicitudes')}")
         logger.info(f"   - Total depósitos: ${lote.get('total_depositos', 0):,.2f}")
         logger.info(f"   - Total capital: ${lote.get('total_capital', 0):,.2f}")
-        logger.info(f"   - Total comisión: ${lote.get('total_comision', 0):,.2f}")
+        logger.info(f"   - Total comisión DNS: ${lote.get('total_comision_dns', 0):,.2f}")
+        logger.info(f"   - Comisión cliente (interno): ${lote.get('total_comision_cliente', 0):,.2f}")
+        logger.info(f"   - Margen MBco (interno): ${lote.get('margen_mbco', 0):,.2f}")
         
-        # Verificar datos correctos
+        # Verificar datos correctos usando fórmulas
+        # Solicitud 1: $5,000 total → $4,950 capital → $18.56 comisión DNS (0.375%)
+        # Solicitud 2: $12,000 total → $11,880 capital → $44.55 comisión DNS (0.375%)
+        # Total: $17,000 depósitos, $16,830 capital, $63.11 comisión DNS
+        
         if lote.get('n_solicitudes') != 2:
             logger.error(f"❌ [Test] Número de solicitudes incorrecto: {lote.get('n_solicitudes')} (esperado: 2)")
             return False
@@ -276,11 +282,36 @@ class TreasuryWorkflowTest:
             logger.error(f"❌ [Test] Total capital incorrecto: ${lote.get('total_capital')} (esperado: $16,830)")
             return False
         
-        if lote.get('total_comision') != 170.00:  # 50 + 120
-            logger.error(f"❌ [Test] Total comisión incorrecto: ${lote.get('total_comision')} (esperado: $170)")
+        # Comisión DNS = 0.375% del capital
+        # Capital total: 16830
+        # Comisión DNS esperada: 16830 * 0.00375 = 63.11 (redondeado)
+        comision_dns = lote.get('total_comision_dns', 0)
+        comision_dns_esperada = 63.11
+        
+        if abs(comision_dns - comision_dns_esperada) > 0.02:  # Tolerancia de 2 centavos
+            logger.error(f"❌ [Test] Total comisión DNS incorrecto: ${comision_dns:.2f} (esperado: ${comision_dns_esperada:.2f})")
+            return False
+        
+        # Verificar que el margen MBco NO está en el layout ni email (solo tracking interno)
+        margen_mbco = lote.get('margen_mbco', 0)
+        comision_cliente = lote.get('total_comision_cliente', 0)
+        
+        # Comisión cliente = 1% del total depósitos = 170.00
+        # Margen MBco = comision_cliente - comision_dns = 170 - 63.11 = 106.89
+        if abs(comision_cliente - 170.00) > 0.02:
+            logger.error(f"❌ [Test] Comisión cliente incorrecta: ${comision_cliente:.2f} (esperado: $170.00)")
+            return False
+        
+        margen_esperado = 106.89
+        if abs(margen_mbco - margen_esperado) > 0.02:
+            logger.error(f"❌ [Test] Margen MBco incorrecto: ${margen_mbco:.2f} (esperado: ${margen_esperado:.2f})")
             return False
         
         logger.info("✅ [Test] Todos los totales del lote son correctos")
+        logger.info(f"✅ [Test] Fórmulas validadas:")
+        logger.info(f"   - Comisión DNS = 0.375% capital = ${comision_dns:.2f}")
+        logger.info(f"   - Comisión cliente = 1% depósitos = ${comision_cliente:.2f}")
+        logger.info(f"   - Margen MBco = ${margen_mbco:.2f} (NO va al layout ni email)")
         return True
     
     async def verificar_csv_generado(self):
