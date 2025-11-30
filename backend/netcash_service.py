@@ -303,6 +303,32 @@ class NetCashService:
             logger.error(f"[NetCash] Error agregando comprobante: {str(e)}")
             return False, "error"
     
+    def _calcular_hash_archivo(self, archivo_url: str) -> str:
+        """
+        Calcula hash SHA-256 del contenido de un archivo.
+        
+        Args:
+            archivo_url: Ruta al archivo
+        
+        Returns:
+            Hash SHA-256 en formato hexadecimal
+        """
+        import hashlib
+        
+        try:
+            with open(archivo_url, 'rb') as f:
+                file_hash = hashlib.sha256()
+                # Leer en chunks para archivos grandes
+                while chunk := f.read(8192):
+                    file_hash.update(chunk)
+                return file_hash.hexdigest()
+        except Exception as e:
+            logger.error(f"[NetCash] Error calculando hash: {str(e)}")
+            # Retornar hash basado en nombre+timestamp como fallback
+            import time
+            fallback = f"{archivo_url}_{time.time()}"
+            return hashlib.sha256(fallback.encode()).hexdigest()
+    
     # ==================== VALIDACIONES (REGLAS DURAS) ====================
     
     async def validar_solicitud_completa(self, solicitud_id: str) -> Tuple[bool, Dict]:
