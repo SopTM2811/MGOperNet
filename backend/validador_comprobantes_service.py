@@ -320,9 +320,10 @@ class ValidadorComprobantes:
         for clabe_encontrada in clabes_destino:
             if clabe_encontrada == clabe_objetivo:
                 logger.info(f"[ValidadorComprobantes] ✅✅✅ CLABE COMPLETA ENCONTRADA: {clabe_encontrada}")
-                if es_thabyetha:
-                    logger.info(f"[THABYETHA_DEBUG] Resultado final: clabe_encontrada=True metodo=completa")
-                    logger.info(f"[THABYETHA_DEBUG] ========== FIN DEBUG THABYETHA ==========")
+                if es_vault_thabyetha:
+                    logger.info(f"[VAULT_DEBUG] ✅✅✅ RESULTADO: VÁLIDO")
+                    logger.info(f"[VAULT_DEBUG] Método: completa")
+                    logger.info(f"[VAULT_DEBUG] ========== FIN DEBUG VAULT/THABYETHA ==========")
                 return True, "completa"
         
         # Si hay CLABEs de destino pero no coinciden, comprobante inválido
