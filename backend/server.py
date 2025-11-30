@@ -1164,10 +1164,20 @@ async def startup_event():
     # Sembrar usuarios iniciales si no existen
     from usuarios_repo import usuarios_repo
     await usuarios_repo.sembrar_usuarios_iniciales()
+    
+    # Iniciar scheduler de Tesorería (lotes cada 15 minutos)
+    from scheduler_tesoreria import scheduler_tesoreria
+    scheduler_tesoreria.start()
+    logger.info("[Server] Scheduler de Tesorería iniciado")
 
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    # Detener scheduler
+    from scheduler_tesoreria import scheduler_tesoreria
+    scheduler_tesoreria.stop()
+    logger.info("[Server] Scheduler de Tesorería detenido")
+    
     client.close()
 
 
