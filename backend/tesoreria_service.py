@@ -122,7 +122,10 @@ class TesoreriaService:
             folio_concepto = self.convertir_folio_mbco_para_concepto(folio_mbco)
             n_ligas = solicitud.get('cantidad_ligas_reportada', 1)
             monto_ligas = Decimal(str(solicitud.get('monto_ligas', 0)))
-            comision_dns = Decimal(str(solicitud.get('comision_cliente', 0)))
+            
+            # IMPORTANTE: Usar la comisión DNS calculada (0.375% del capital)
+            # NO usar comision_cliente (que es 1% del total)
+            comision_dns = Decimal(str(solicitud.get('comision_dns_calculada', 0)))
             
             # Datos para contexto interno (NO van como destinatario en el layout)
             cliente = solicitud.get('cliente_nombre', 'N/A')
