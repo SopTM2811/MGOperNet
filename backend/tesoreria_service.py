@@ -377,7 +377,7 @@ class TesoreriaService:
             return
         
         # Construir mensaje
-        fecha_str = lote_info['fecha_corte'].strftime('%Y-%m-%d %H:%M')
+        fecha_str = lote_info['fecha_corte'].strftime('%Y-%m-%d %H:%M UTC')
         
         mensaje = "🧾 **Nuevo lote NetCash para Tesorería**\n\n"
         mensaje += f"⏱ **Corte:** {fecha_str}\n"
@@ -388,7 +388,7 @@ class TesoreriaService:
         mensaje += "**Detalle:**\n"
         
         for solicitud in solicitudes[:10]:  # Mostrar máximo 10 en Telegram
-            folio_nc = solicitud.get('folio_mbco', 'N/A')
+            folio_nc = solicitud.get('folio_netcash', 'N/A')
             folio_mbco = solicitud.get('folio_mbco', 'N/A')
             cliente = solicitud.get('cliente_nombre', 'N/A')
             beneficiario = solicitud.get('beneficiario_reportado', 'N/A')
@@ -398,31 +398,65 @@ class TesoreriaService:
             cliente_short = cliente[:20] + "..." if len(cliente) > 20 else cliente
             beneficiario_short = beneficiario[:20] + "..." if len(beneficiario) > 20 else beneficiario
             
-            mensaje += f"• {folio_nc} – MBco {folio_mbco} – Cliente: {cliente_short} – Beneficiario: {beneficiario_short} – Depósitos: ${total_dep:,.2f}\n"
+            mensaje += f"• Folio NC: {folio_nc}\n"
+            mensaje += f"  MBco: {folio_mbco}\n"
+            mensaje += f"  Cliente: {cliente_short}\n"
+            mensaje += f"  Beneficiario: {beneficiario_short}\n"
+            mensaje += f"  Depósitos: ${total_dep:,.2f}\n\n"
         
         if len(solicitudes) > 10:
-            mensaje += f"• ... y {len(solicitudes) - 10} más\n"
+            mensaje += f"... y {len(solicitudes) - 10} operación(es) más\n\n"
         
-        mensaje += f"\n✅ Se envió correo a Tesorería con layout adjunto."
+        mensaje += f"✅ Se envió correo a Tesorería con layout CSV adjunto.\n"
+        mensaje += f"📧 Revisa tu correo para el archivo de dispersión completo."
         
         # Enviar a cada usuario
+        errores_envio = 0
+        enviados_exitosos = 0
+        
         for usuario in usuarios:
             telegram_id = usuario.get('telegram_id')
+            nombre_usuario = usuario.get('nombre', 'Usuario sin nombre')
+            
             if not telegram_id:
+                logger.warning(f"[Tesorería] Usuario {nombre_usuario} no tiene telegram_id configurado")
                 continue
             
             try:
-                # TODO: Implementar envío de mensaje
-                # Por ahora solo logueamos
-                logger.info(f"[Tesorería] Notificaría a {usuario.get('nombre')} (telegram_id: {telegram_id})")
-                logger.info(f"[Tesorería] Mensaje: {mensaje[:100]}...")
+                # Importar el bot de proceso de servidor
+                # NOTA: El bot corre en telegram_bot.py como proceso separado
+                # Para enviar desde aquí, necesitamos acceder al bot vía HTTP API
+                import aiohttp
                 
-                # Importar bot y enviar
-                from telegram_bot import TelegramBotNetCash
-                # TODO: Enviar mensaje real cuando el bot esté disponible
+                bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+                if not bot_token:
+                    logger.error("[Tesorería] TELEGRAM_BOT_TOKEN no configurado")
+                    errores_envio += 1
+                    continue
+                
+                # Enviar mensaje directamente vía Telegram Bot API
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    'chat_id': telegram_id,
+                    'text': mensaje,
+                    'parse_mode': 'Markdown'
+                }
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload) as response:
+                        if response.status == 200:
+                            logger.info(f"[Tesorería] ✅ Notificación enviada a {nombre_usuario} (telegram_id: {telegram_id})")
+                            enviados_exitosos += 1
+                        else:
+                            error_text = await response.text()
+                            logger.error(f"[Tesorería] ❌ Error enviando a {nombre_usuario}: {response.status} - {error_text}")
+                            errores_envio += 1
                 
             except Exception as e:
-                logger.error(f"[Tesorería] Error notificando a {usuario.get('nombre')}: {str(e)}")
+                logger.error(f"[Tesorería] Error notificando a {nombre_usuario}: {str(e)}")
+                errores_envio += 1
+        
+        logger.info(f"[Tesorería] Notificaciones completadas: {enviados_exitosos} exitosos, {errores_envio} errores")
 
 
 # Instancia global
