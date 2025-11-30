@@ -84,9 +84,14 @@ def main():
         print("-" * 80)
         
         try:
+            # Descargar PDF
+            print(f"   Descargando PDF...")
+            pdf_path = descargar_pdf(pdf_info['url'], pdf_info['nombre'])
+            print(f"   ✓ PDF descargado: {pdf_path}")
+            
             # Extraer texto del PDF
-            print(f"   Descargando y extrayendo texto...")
-            texto = extraer_texto_pdf_url(pdf_info['url'])
+            print(f"   Extrayendo texto...")
+            texto = validador.extraer_texto_pdf(pdf_path)
             
             if not texto or len(texto) < 50:
                 print(f"   ❌ ERROR: No se pudo extraer texto del PDF")
