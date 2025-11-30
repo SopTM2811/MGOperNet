@@ -268,11 +268,13 @@ class NetCashService:
             # Intentar extraer monto
             monto_detectado = self._extraer_monto_del_texto(texto)
             
-            # Crear detalle del comprobante
+            # Crear detalle del comprobante (con hash para detección de duplicados)
             comprobante_detalle = {
                 "archivo_url": archivo_url,
                 "nombre_archivo": nombre_archivo,
+                "archivo_hash": file_hash,  # Hash SHA-256 para detección de duplicados
                 "es_valido": es_valido,
+                "es_duplicado": False,  # Este NO es duplicado
                 "validacion_detalle": {
                     "razon": razon,
                     "cuenta_activa_esperada": cuenta_activa,
