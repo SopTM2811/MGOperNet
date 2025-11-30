@@ -464,6 +464,67 @@ class ValidadorComprobantes:
                         logger.info(f"[ValidadorComprobantes] ✅ Beneficiario encontrado cerca de '{keyword}' ({int(porcentaje_frag*100)}%)")
                         return True
         
+        # V3.5: FUZZY MATCHING (solo si CLABE completa de 18 dígitos fue encontrada exacta)
+        if clabe_completa_encontrada:
+            logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] CLABE completa detectada. Aplicando fuzzy matching...")
+            
+            from difflib import SequenceMatcher
+            
+            # Extraer todas las posibles subcadenas del texto que tengan longitud similar al beneficiario
+            # Esto permite encontrar el nombre incluso con errores de OCR
+            longitud_benef = len(beneficiario_norm)
+            min_len = max(10, int(longitud_benef * 0.7))  # Mínimo 70% de longitud
+            max_len = int(longitud_benef * 1.3)  # Máximo 130% de longitud
+            
+            # Dividir texto en líneas y buscar líneas que puedan contener el beneficiario
+            lineas = texto_norm.split('\n')
+            mejores_candidatos = []
+            
+            for linea in lineas:
+                linea = linea.strip()
+                if len(linea) < min_len or len(linea) > max_len * 2:
+                    continue
+                
+                # Considerar la línea completa y sus subcadenas
+                candidatos_linea = [linea]
+                
+                # También considerar palabras consecutivas dentro de la línea
+                palabras = linea.split()
+                for i in range(len(palabras)):
+                    for j in range(i+1, min(i+10, len(palabras)+1)):
+                        subcadena = ' '.join(palabras[i:j])
+                        if min_len <= len(subcadena) <= max_len:
+                            candidatos_linea.append(subcadena)
+                
+                mejores_candidatos.extend(candidatos_linea)
+            
+            # Calcular similitud con cada candidato
+            mejor_score = 0.0
+            mejor_candidato = None
+            
+            for candidato in mejores_candidatos:
+                # Usar SequenceMatcher para calcular ratio de similitud
+                ratio = SequenceMatcher(None, beneficiario_norm, candidato).ratio()
+                
+                if ratio > mejor_score:
+                    mejor_score = ratio
+                    mejor_candidato = candidato
+            
+            # Umbral de similitud: 0.85 (85%)
+            UMBRAL_FUZZY = 0.85
+            
+            logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] Mejor candidato: '{mejor_candidato}'")
+            logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] Score de similitud: {mejor_score:.3f} (umbral: {UMBRAL_FUZZY})")
+            logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] Beneficiario objetivo: '{beneficiario_norm}'")
+            
+            if mejor_score >= UMBRAL_FUZZY:
+                logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] ✅ MATCH FUZZY exitoso! nombre_ocr='{mejor_candidato}' nombre_objetivo='{beneficiario_norm}' score={mejor_score:.3f}")
+                return True
+            else:
+                logger.warning(f"[VALIDADOR_FUZZY_BENEFICIARIO] ❌ Score insuficiente ({mejor_score:.3f} < {UMBRAL_FUZZY})")
+        else:
+            logger.info(f"[ValidadorComprobantes] No se aplicó fuzzy matching (CLABE completa no encontrada)")
+        
         logger.warning(f"[ValidadorComprobantes] ❌ Beneficiario NO encontrado suficientemente en el texto")
         return False
     
