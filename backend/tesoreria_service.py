@@ -220,6 +220,11 @@ class TesoreriaService:
         lote_id = f"LT-{int(datetime.now(timezone.utc).timestamp())}"
         fecha_corte = datetime.now(timezone.utc)
         
+        # Generar ID de Lote MBco "humano" basado en los folios
+        lote_id_mbco = self._generar_id_lote_mbco(solicitudes)
+        logger.info(f"[Tesorería] ID Lote interno: {lote_id}")
+        logger.info(f"[Tesorería] ID Lote MBco: {lote_id_mbco}")
+        
         # Calcular totales
         # IMPORTANTE: Usar las fórmulas correctas del negocio
         total_depositos = Decimal('0')
