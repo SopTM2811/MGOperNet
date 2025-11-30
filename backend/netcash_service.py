@@ -481,7 +481,7 @@ class NetCashService:
         """
         Procesa una solicitud automáticamente:
         1. Valida todos los campos
-        2. Si TODO está bien -> LISTA_PARA_MBC
+        2. Si TODO está bien -> Calcula totales y comisiones, guarda en BD, LISTA_PARA_MBC
         3. Si algo falla -> RECHAZADA
         
         Args:
@@ -496,6 +496,54 @@ class NetCashService:
         todas_validas, validaciones = await self.validar_solicitud_completa(solicitud_id)
         
         if todas_validas:
+            # Obtener solicitud para calcular totales
+            solicitud = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+            
+            # Calcular suma de todos los comprobantes válidos
+            comprobantes = solicitud.get("comprobantes", [])
+            comprobantes_validos = [c for c in comprobantes if c.get("es_valido", False)]
+            comprobantes_invalidos = [c for c in comprobantes if not c.get("es_valido", False)]
+            
+            total_comprobantes_validos = 0.0
+            for comp in comprobantes_validos:
+                monto = comp.get("monto_detectado")
+                if monto and monto > 0:
+                    total_comprobantes_validos += monto
+            
+            # Calcular comisiones
+            porcentaje_comision_cliente = 1.00  # 1.00%
+            comision_cliente = total_comprobantes_validos * (porcentaje_comision_cliente / 100)
+            monto_ligas = total_comprobantes_validos - comision_cliente
+            
+            # Obtener cuenta NetCash utilizada
+            cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            cuenta_netcash_info = None
+            if cuenta_activa:
+                cuenta_netcash_info = {
+                    "banco": cuenta_activa.get("banco"),
+                    "clabe": cuenta_activa.get("clabe"),
+                    "beneficiario": cuenta_activa.get("beneficiario")
+                }
+            
+            # Actualizar solicitud con todos los datos completos
+            update_data = {
+                "total_comprobantes_validos": total_comprobantes_validos,
+                "num_comprobantes_validos": len(comprobantes_validos),
+                "num_comprobantes_invalidos": len(comprobantes_invalidos),
+                "porcentaje_comision_cliente": porcentaje_comision_cliente,
+                "comision_cliente": comision_cliente,
+                "monto_ligas": monto_ligas,
+                "cuenta_netcash_usada": cuenta_netcash_info,
+                "updated_at": datetime.now(timezone.utc)
+            }
+            
+            await db[COLLECTION_NAME].update_one(
+                {"id": solicitud_id},
+                {"$set": update_data}
+            )
+            
+            logger.info(f"[NetCash] Totales calculados y guardados: total=${total_comprobantes_validos:,.2f}, comisión=${comision_cliente:,.2f}, monto_ligas=${monto_ligas:,.2f}")
+            
             # TODO OK -> LISTA_PARA_MBC
             await self.cambiar_estado(
                 solicitud_id,
