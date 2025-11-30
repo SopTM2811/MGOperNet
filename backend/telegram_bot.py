@@ -1173,6 +1173,13 @@ class TelegramBotNetCash:
         from telegram_netcash_handlers import TelegramNetCashHandlers
         self.nc_handlers = TelegramNetCashHandlers(self)
         
+        # Importar handlers de Ana (admin MBco) y Tesorería
+        from telegram_ana_handlers import init_ana_handlers, ANA_ESPERANDO_FOLIO_MBCO
+        from telegram_tesoreria_handlers import init_tesoreria_handlers
+        
+        self.ana_handlers = init_ana_handlers(self)
+        self.tesoreria_handlers = init_tesoreria_handlers(self)
+        
         # Handlers
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("ayuda", self.ayuda))
