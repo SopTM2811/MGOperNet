@@ -17,7 +17,7 @@ async def test_vault_pdfs():
     db = client['netcash_mbco']
     
     # Obtener cuenta activa (Jardinería y Comercio Thabyetha)
-    cuenta = await db.cuentas_netcash.find_one({"activo": True}, {"_id": 0})
+    cuenta = await db.config_cuentas_netcash.find_one({"activo": True}, {"_id": 0})
     
     if not cuenta:
         print("❌ No hay cuenta activa configurada")
