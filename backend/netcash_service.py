@@ -1149,20 +1149,25 @@ class NetCashService:
             
             logger.info(f"[NetCash] Folio MBco asignado: {folio_mbco}")
             
-            # 3. Generar orden interna para Tesorería
-            orden_interna = await self._generar_orden_interna_tesoreria(solicitud_id, folio_mbco)
-            
-            logger.info(f"[NetCash] Orden interna generada: {orden_interna.get('id')}")
-            
-            # 4. Enviar correo a Tesorería
-            await self._enviar_correo_tesoreria(solicitud_id, orden_interna)
-            
-            logger.info(f"[NetCash] Correo enviado a Tesorería")
-            
-            # 5. Notificar a Tesorería por Telegram
-            await self._notificar_tesoreria_telegram(solicitud_id, orden_interna)
-            
-            logger.info(f"[NetCash] Tesorería notificada por Telegram")
+            # 3. NUEVO FLUJO: Procesar operación de tesorería individual
+            # (Layout CSV + correo por operación + estado enviado_a_tesoreria)
+            try:
+                logger.info(f"[NetCash] Iniciando proceso de tesorería por operación para {solicitud_id}")
+                
+                from tesoreria_operacion_service import tesoreria_operacion_service
+                resultado_tesoreria = await tesoreria_operacion_service.procesar_operacion_tesoreria(solicitud_id)
+                
+                if resultado_tesoreria and resultado_tesoreria.get('success'):
+                    logger.info(f"[NetCash] ✅ Tesorería por operación procesada exitosamente")
+                else:
+                    logger.warning(f"[NetCash] ⚠️ Problema procesando tesorería por operación")
+                    # NO fallar todo el flujo, solo advertir
+                    
+            except Exception as e:
+                logger.error(f"[NetCash] ❌ Error en tesorería por operación: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                # NO fallar todo el flujo, continuar
             
             # 6. Obtener solicitud actualizada
             solicitud_actualizada = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
