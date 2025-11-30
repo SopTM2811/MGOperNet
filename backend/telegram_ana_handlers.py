@@ -27,14 +27,19 @@ class TelegramAnaHandlers:
     def __init__(self, bot_app):
         self.bot = bot_app
     
-    async def notificar_nueva_solicitud_para_mbco(self, solicitud: dict):
+    async def notificar_nueva_solicitud_para_mbco(self, solicitud: dict, usuario: dict):
         """
         Envía notificación a Ana cuando una solicitud queda lista para MBco
         
         Args:
             solicitud: Dict con los datos de la solicitud
+            usuario: Dict con datos del usuario (desde catálogo)
         """
         try:
+            telegram_id = usuario.get("telegram_id")
+            if not telegram_id:
+                logger.warning(f"[Ana Telegram] Usuario {usuario.get('nombre')} no tiene telegram_id")
+                return
             folio_netcash = solicitud.get("folio_netcash", "N/A")
             solicitud_id = solicitud.get("id")
             cliente_id = solicitud.get("cliente_id")
