@@ -234,8 +234,8 @@ class NetCashService:
             
             # PASO 2B: Verificar duplicado GLOBAL (en otras operaciones del mismo cliente)
             # Buscar si este hash ya existe en otras solicitudes del cliente
-            # Excluir estados rechazados y la solicitud actual
-            estados_validos = ["lista_para_mbc", "en_proceso_mbc", "completada", "borrador"]
+            # Excluir estados: rechazada, demo, cancelada (permiten reutilizar comprobante)
+            estados_que_bloquean_duplicados = ["lista_para_mbc", "en_proceso_mbc", "completada", "borrador"]
             
             otras_solicitudes = await db[COLLECTION_NAME].find(
                 {
