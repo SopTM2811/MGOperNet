@@ -243,13 +243,18 @@ class TelegramAnaHandlers:
                 
             else:
                 error = resultado.get("error", "Error desconocido")
-                await update.message.reply_text(f"❌ Error al asignar folio: {error}")
+                logger.error(f"[Ana] Error al asignar folio: {error}")
+                await update.message.reply_text(f"❌ **Error al asignar folio:**\n\n{error}")
             
         except Exception as e:
-            logger.error(f"[Ana] Error asignando folio: {str(e)}")
+            logger.error(f"[Ana] Excepción asignando folio: {str(e)}")
             import traceback
-            traceback.print_exc()
-            await update.message.reply_text("❌ Error al asignar el folio. Contacta a soporte técnico.")
+            logger.error(f"[Ana] Traceback:\n{traceback.format_exc()}")
+            await update.message.reply_text(
+                "❌ **Error al asignar el folio.**\n\n"
+                "Por favor, contacta a soporte técnico.\n\n"
+                f"Detalles: {str(e)}"
+            )
         
         # Limpiar contexto
         context.user_data.pop('ana_solicitud_id_actual', None)
