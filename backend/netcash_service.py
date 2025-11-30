@@ -190,31 +190,33 @@ class NetCashService:
             file_hash = self._calcular_hash_archivo(archivo_url)
             logger.info(f"[NetCash] Hash del archivo: {file_hash}")
             
-            # PASO 2: Verificar si ya existe este hash en la operación actual
+            # PASO 2: Obtener solicitud actual
             solicitud = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
             if not solicitud:
                 logger.error(f"[NetCash] Solicitud {solicitud_id} no encontrada")
                 return False, "solicitud_no_encontrada"
             
+            cliente_id = solicitud.get("cliente_id")
             comprobantes_existentes = solicitud.get("comprobantes", [])
             
-            # Buscar si este hash ya existe
+            # PASO 2A: Verificar duplicado LOCAL (dentro de la misma operación)
             for comp in comprobantes_existentes:
                 if comp.get("archivo_hash") == file_hash:
-                    logger.warning(f"[NetCash] ⚠️ COMPROBANTE DUPLICADO detectado: {nombre_archivo}")
+                    logger.warning(f"[NetCash] ⚠️ COMPROBANTE DUPLICADO LOCAL detectado: {nombre_archivo}")
                     logger.warning(f"[NetCash] Hash duplicado: {file_hash}")
                     logger.warning(f"[NetCash] Original: {comp.get('nombre_archivo')}")
                     
-                    # Agregar el comprobante pero marcado como duplicado
+                    # Agregar el comprobante pero marcado como duplicado local
                     comprobante_duplicado = {
                         "archivo_url": archivo_url,
                         "nombre_archivo": nombre_archivo,
                         "archivo_hash": file_hash,
                         "es_valido": False,
                         "es_duplicado": True,
+                        "tipo_duplicado": "local",
                         "duplicado_de": comp.get("nombre_archivo"),
                         "validacion_detalle": {
-                            "razon": f"Comprobante duplicado de '{comp.get('nombre_archivo')}'",
+                            "razon": f"Comprobante duplicado de '{comp.get('nombre_archivo')}' en esta operación",
                         },
                         "cuenta_detectada": None,
                         "monto_detectado": None
@@ -228,7 +230,67 @@ class NetCashService:
                         }
                     )
                     
-                    return False, "duplicado"
+                    return False, "duplicado_local"
+            
+            # PASO 2B: Verificar duplicado GLOBAL (en otras operaciones del mismo cliente)
+            # Buscar si este hash ya existe en otras solicitudes del cliente
+            # Excluir estados rechazados y la solicitud actual
+            estados_validos = ["lista_para_mbc", "en_proceso_mbc", "completada", "borrador"]
+            
+            otras_solicitudes = await db[COLLECTION_NAME].find(
+                {
+                    "cliente_id": cliente_id,
+                    "id": {"$ne": solicitud_id},  # Excluir la solicitud actual
+                    "estado": {"$in": estados_validos},
+                    "comprobantes.archivo_hash": file_hash  # Buscar por hash en array
+                },
+                {"_id": 0, "id": 1, "folio_mbco": 1, "comprobantes": 1}
+            ).to_list(10)
+            
+            if otras_solicitudes:
+                # Encontrado en otra operación
+                solicitud_original = otras_solicitudes[0]
+                folio_original = solicitud_original.get("folio_mbco", "Sin folio")
+                id_original = solicitud_original.get("id")
+                
+                # Buscar el comprobante específico con ese hash
+                nombre_original = None
+                for comp in solicitud_original.get("comprobantes", []):
+                    if comp.get("archivo_hash") == file_hash:
+                        nombre_original = comp.get("nombre_archivo")
+                        break
+                
+                logger.warning(f"[NetCash] ⚠️ COMPROBANTE DUPLICADO GLOBAL detectado: {nombre_archivo}")
+                logger.warning(f"[NetCash] Ya usado en operación: {folio_original} (ID: {id_original})")
+                logger.warning(f"[NetCash] Archivo original: {nombre_original}")
+                
+                # Agregar el comprobante pero marcado como duplicado global
+                comprobante_duplicado_global = {
+                    "archivo_url": archivo_url,
+                    "nombre_archivo": nombre_archivo,
+                    "archivo_hash": file_hash,
+                    "es_valido": False,
+                    "es_duplicado": True,
+                    "tipo_duplicado": "global",
+                    "operacion_original": folio_original,
+                    "id_solicitud_original": id_original,
+                    "duplicado_de": nombre_original,
+                    "validacion_detalle": {
+                        "razon": f"Comprobante ya utilizado en operación {folio_original}",
+                    },
+                    "cuenta_detectada": None,
+                    "monto_detectado": None
+                }
+                
+                await db[COLLECTION_NAME].update_one(
+                    {"id": solicitud_id},
+                    {
+                        "$push": {"comprobantes": comprobante_duplicado_global},
+                        "$set": {"updated_at": datetime.now(timezone.utc)}
+                    }
+                )
+                
+                return False, f"duplicado_global:{folio_original}"
             
             # PASO 3: No es duplicado, procesar normalmente
             logger.info(f"[NetCash] Comprobante único, procesando validación...")
