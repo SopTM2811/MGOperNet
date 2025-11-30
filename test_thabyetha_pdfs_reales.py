@@ -100,13 +100,12 @@ def main():
             
             print(f"   ✓ Texto extraído ({len(texto)} caracteres)")
             
-            # Validar comprobante
+            # Validar comprobante usando el método completo
             print(f"   Validando CLABE y beneficiario...")
             es_valido, razon = validador.validar_comprobante(
-                texto_comprobante=texto,
-                banco_activo=CUENTA_ACTIVA['banco'],
-                clabe_activa=CUENTA_ACTIVA['clabe'],
-                beneficiario_activo=CUENTA_ACTIVA['beneficiario']
+                ruta_archivo=pdf_path,
+                mime_type="application/pdf",
+                cuenta_activa=CUENTA_ACTIVA
             )
             
             if es_valido:
