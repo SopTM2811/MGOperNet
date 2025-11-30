@@ -392,14 +392,20 @@ class TelegramNetCashHandlers:
             todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
             validacion_comprobante = validaciones.get("comprobante", {})
             
-            # Contar comprobantes válidos
+            # Contar comprobantes válidos y duplicados
             comprobantes_validos = [c for c in comprobantes if c.get("es_valido", False)]
+            comprobantes_duplicados = [c for c in comprobantes if c.get("es_duplicado", False)]
             
             if len(comprobantes_validos) == 0:
                 # NO hay comprobantes válidos - mostrar error claro y mantener en Paso 1
                 razon = validacion_comprobante.get("razon", "Comprobantes no válidos")
                 
-                mensaje = f"❌ **Se recibieron {num_comprobantes} comprobante(s), pero ninguno coincide con la cuenta NetCash autorizada.**\n\n"
+                num_unicos = num_comprobantes - len(comprobantes_duplicados)
+                
+                mensaje = f"❌ **Se recibieron {num_comprobantes} comprobante(s)"
+                if len(comprobantes_duplicados) > 0:
+                    mensaje += f" ({len(comprobantes_duplicados)} duplicado(s))"
+                mensaje += f", pero ninguno coincide con la cuenta NetCash autorizada.**\n\n"
                 mensaje += f"**Detalle:** {razon}\n\n"
                 
                 # Obtener cuenta activa para mostrar
