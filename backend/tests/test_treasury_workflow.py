@@ -388,6 +388,112 @@ class TreasuryWorkflowTest:
         
         return True
     
+    async def verificar_layout_csv(self, layout_csv: str):
+        """Verifica que el layout CSV tenga el formato correcto y use cuentas de proveedor"""
+        logger.info("🔍 [Test] Verificando layout CSV...")
+        
+        # Parse CSV
+        lines = layout_csv.strip().split('\n')
+        
+        if len(lines) < 2:
+            logger.error(f"❌ [Test] Layout CSV tiene solo {len(lines)} líneas")
+            return False
+        
+        # Verificar header
+        header = lines[0]
+        expected_columns = [
+            'Clabe destinatario',
+            'Nombre o razon social destinatario',
+            'Monto',
+            'Concepto'
+        ]
+        
+        for col in expected_columns:
+            if col not in header:
+                logger.error(f"❌ [Test] Columna faltante en header: {col}")
+                return False
+        
+        # Verificar que hay al menos 6 filas (header + 4 capital + 2 comisión)
+        if len(lines) < 7:
+            logger.error(f"❌ [Test] Se esperaban al menos 7 líneas, se encontraron {len(lines)}")
+            return False
+        
+        # Verificar que las filas de datos tienen el formato correcto
+        import csv
+        from io import StringIO
+        
+        reader = csv.DictReader(StringIO(layout_csv))
+        rows = list(reader)
+        
+        capital_rows = 0
+        comision_rows = 0
+        
+        # CLABEs esperadas del proveedor
+        expected_capital_clabe = "012680001255709482"  # AFFORDABLE MEDICAL SERVICES SC
+        expected_comision_clabe = "058680000012912655"  # Comercializadora Uetacop SA de CV
+        expected_capital_beneficiario = "AFFORDABLE MEDICAL SERVICES SC"
+        expected_comision_beneficiario = "COMERCIALIZADORA UETACOP SA DE CV"
+        
+        for row in rows:
+            concepto = row.get('Concepto', '')
+            monto = row.get('Monto', '')
+            clabe = row.get('Clabe destinatario', '')
+            beneficiario = row.get('Nombre o razon social destinatario', '')
+            
+            # Verificar formato de concepto (MBco XXXxXXXxXxXX)
+            if not concepto.startswith('MBco '):
+                logger.error(f"❌ [Test] Concepto inválido: {concepto}")
+                return False
+            
+            # Verificar que el folio usa 'x' en lugar de '-'
+            if concepto.count('-') > 0:
+                logger.error(f"❌ [Test] Concepto usa guiones en lugar de 'x': {concepto}")
+                return False
+            
+            # Verificar que los destinatarios son SIEMPRE del proveedor
+            if 'COMISION' in concepto:
+                comision_rows += 1
+                # Verificar cuenta de comisión DNS
+                if clabe != expected_comision_clabe:
+                    logger.error(f"❌ [Test] CLABE de comisión incorrecta. Esperada: {expected_comision_clabe}, Encontrada: {clabe}")
+                    return False
+                if expected_comision_beneficiario not in beneficiario.upper():
+                    logger.error(f"❌ [Test] Beneficiario de comisión incorrecto. Esperado: {expected_comision_beneficiario}, Encontrado: {beneficiario}")
+                    return False
+            else:
+                capital_rows += 1
+                # Verificar cuenta de capital
+                if clabe != expected_capital_clabe:
+                    logger.error(f"❌ [Test] CLABE de capital incorrecta. Esperada: {expected_capital_clabe}, Encontrada: {clabe}")
+                    return False
+                if expected_capital_beneficiario not in beneficiario.upper():
+                    logger.error(f"❌ [Test] Beneficiario de capital incorrecto. Esperado: {expected_capital_beneficiario}, Encontrado: {beneficiario}")
+                    return False
+            
+            # Verificar que el monto es numérico
+            try:
+                float(monto)
+            except ValueError:
+                logger.error(f"❌ [Test] Monto no numérico: {monto}")
+                return False
+        
+        logger.info(f"   - Filas de capital (ligas): {capital_rows}")
+        logger.info(f"   - Filas de comisión: {comision_rows}")
+        logger.info(f"   - ✅ Todas las filas usan cuentas del PROVEEDOR (no del cliente)")
+        
+        # Verificar que hay 4 filas de capital (1 liga + 3 ligas = 4 total)
+        # y 2 filas de comisión (1 por solicitud)
+        if capital_rows != 4:
+            logger.error(f"❌ [Test] Se esperaban 4 filas de capital, se encontraron {capital_rows}")
+            return False
+        
+        if comision_rows != 2:
+            logger.error(f"❌ [Test] Se esperaban 2 filas de comisión, se encontraron {comision_rows}")
+            return False
+        
+        logger.info("✅ [Test] Layout CSV válido y usa cuentas de proveedor correctamente")
+        return True
+    
     async def verificar_no_regresion(self):
         """Verifica que ejecutar el proceso de nuevo NO procese solicitudes ya procesadas"""
         logger.info("🔍 [Test] Verificando que no hay regresión...")
