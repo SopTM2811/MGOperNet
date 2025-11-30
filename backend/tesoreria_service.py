@@ -303,6 +303,7 @@ class TesoreriaService:
         
         lote_info = {
             'id': lote_id,
+            'id_lote_mbco': lote_id_mbco,  # ID "humano" basado en folios MBco
             'fecha_corte': fecha_corte,
             'n_solicitudes': len(solicitudes),
             'total_depositos': float(total_depositos),
