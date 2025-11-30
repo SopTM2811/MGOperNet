@@ -308,13 +308,21 @@ class TelegramNetCashHandlers:
                     # Si falla (mensaje muy antiguo o ya editado), continuar sin problema
                     logger.warning(f"[NC Telegram] No se pudo editar mensaje anterior: {str(e)}")
             
-            # Mensaje de confirmación (diferenciar entre duplicado y único)
-            if razon == "duplicado":
-                # Comprobante duplicado
+            # Mensaje de confirmación (diferenciar entre duplicado local, global y único)
+            if razon and razon.startswith("duplicado_global:"):
+                # Comprobante duplicado GLOBAL (en otra operación)
+                folio_original = razon.split(":")[1]
+                mensaje = "⚠️ **Comprobante ya utilizado anteriormente**\n\n"
+                mensaje += f"Este comprobante ya fue utilizado en otra operación NetCash (folio **{folio_original}**).\n\n"
+                mensaje += f"No lo vamos a contar de nuevo en el total de depósitos.\n\n"
+                mensaje += f"Llevamos **{num_comprobantes}** archivo(s) en total.\n\n"
+                mensaje += "¿Quieres subir otro comprobante o continuar?"
+            elif razon == "duplicado_local":
+                # Comprobante duplicado LOCAL (en esta operación)
                 mensaje = "⚠️ **Comprobante duplicado detectado**\n\n"
                 mensaje += f"Este archivo parece ser el mismo que otro que ya subiste en esta operación.\n"
                 mensaje += f"No lo vamos a contar de nuevo en el total de depósitos.\n\n"
-                mensaje += f"Llevamos **{num_comprobantes}** archivo(s) en total ({num_comprobantes - 1} únicos).\n\n"
+                mensaje += f"Llevamos **{num_comprobantes}** archivo(s) en total.\n\n"
                 mensaje += "¿Quieres subir otro comprobante o continuar?"
             else:
                 # Comprobante único (válido o inválido)
