@@ -412,8 +412,37 @@ class TelegramNetCashHandlers:
                 await query.edit_message_text(mensaje, parse_mode="Markdown")
                 return NC_ESPERANDO_COMPROBANTE
             
-            # Hay al menos 1 comprobante válido - pasar al Paso 2 (Beneficiarios)
-            await query.edit_message_text("✅ Comprobantes validados. Pasando al siguiente paso...", parse_mode="Markdown")
+            # Hay al menos 1 comprobante válido - MOSTRAR RESUMEN INTERMEDIO
+            # Calcular suma de montos de comprobantes válidos
+            total_depositado = 0.0
+            resumen_comprobantes = []
+            
+            for comp in comprobantes_validos:
+                monto = comp.get("monto_detectado")
+                nombre = comp.get("nombre_archivo", "Sin nombre")
+                if monto and monto > 0:
+                    total_depositado += monto
+                    resumen_comprobantes.append(f"  • {nombre}: ${monto:,.2f}")
+                else:
+                    resumen_comprobantes.append(f"  • {nombre}: (Monto no detectado)")
+            
+            # Construir mensaje de resumen intermedio
+            mensaje_resumen = "✅ **Comprobantes validados correctamente**\n\n"
+            mensaje_resumen += f"📊 **Resumen de depósitos detectados:**\n\n"
+            
+            if len(resumen_comprobantes) > 0:
+                mensaje_resumen += "\n".join(resumen_comprobantes)
+                mensaje_resumen += f"\n\n💰 **Total de depósitos detectados:** ${total_depositado:,.2f}\n\n"
+            else:
+                mensaje_resumen += "No se pudo detectar monto en los comprobantes.\n\n"
+            
+            mensaje_resumen += "Continuaremos con el siguiente paso..."
+            
+            await query.edit_message_text(mensaje_resumen, parse_mode="Markdown")
+            
+            # Pequeña pausa para que el usuario vea el resumen
+            import asyncio
+            await asyncio.sleep(2)
             
             # Mostrar Paso 2: Beneficiarios frecuentes
             await self._mostrar_paso2_beneficiarios(query, context, solicitud_id)
@@ -729,6 +758,7 @@ class TelegramNetCashHandlers:
         Muestra el resumen 'Esto es lo que entendí' y botones de confirmación.
         
         Este método usa el motor para generar el resumen y lo presenta de forma amigable.
+        INCLUYE CÁLCULOS DE TOTALES Y COMISIONES.
         """
         try:
             # Obtener resumen del motor
@@ -736,6 +766,23 @@ class TelegramNetCashHandlers:
             
             if not resumen:
                 raise Exception("No se pudo generar resumen")
+            
+            # Obtener solicitud para calcular totales
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            comprobantes = solicitud.get("comprobantes", [])
+            comprobantes_validos_list = [c for c in comprobantes if c.get("es_valido", False)]
+            
+            # CALCULAR SUMA DE TODOS LOS COMPROBANTES VÁLIDOS
+            total_comprobantes_validos = 0.0
+            for comp in comprobantes_validos_list:
+                monto = comp.get("monto_detectado")
+                if monto and monto > 0:
+                    total_comprobantes_validos += monto
+            
+            # CALCULAR COMISIONES
+            porcentaje_comision = 1.00  # 1.00%
+            comision_cliente = total_comprobantes_validos * (porcentaje_comision / 100)
+            monto_ligas = total_comprobantes_validos - comision_cliente
             
             # Construir mensaje
             mensaje = "📋 **Esto es lo que entendí de tu operación NetCash:**\n\n"
@@ -761,12 +808,6 @@ class TelegramNetCashHandlers:
             
             # Comprobante - MEJORADO para diferenciar casos
             num_comprobantes = campos.get("comprobantes", 0)
-            comprobante_valido = "comprobante" in campos_validos
-            
-            # Obtener solicitud para analizar comprobantes
-            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
-            comprobantes = solicitud.get("comprobantes", [])
-            comprobantes_validos_list = [c for c in comprobantes if c.get("es_valido", False)]
             
             if num_comprobantes == 0:
                 # Caso A: Sin archivos
@@ -777,9 +818,15 @@ class TelegramNetCashHandlers:
                 icono_comp = "❌"
                 mensaje += f"• Comprobantes: {num_comprobantes} archivo(s) {icono_comp}\n"
             else:
-                # Caso C: Al menos uno válido
+                # Caso C: Al menos uno válido - MOSTRAR TOTALES
                 icono_comp = "✅"
                 mensaje += f"• Comprobantes: {num_comprobantes} archivo(s) ({len(comprobantes_validos_list)} válido(s)) {icono_comp}\n"
+                
+                # AGREGAR CÁLCULOS FINANCIEROS
+                mensaje += f"\n💰 **Resumen financiero:**\n"
+                mensaje += f"  • Total depósitos detectados: ${total_comprobantes_validos:,.2f}\n"
+                mensaje += f"  • Comisión NetCash ({porcentaje_comision:.2f}%): ${comision_cliente:,.2f}\n"
+                mensaje += f"  • Monto a enviar en ligas NetCash: ${monto_ligas:,.2f}\n"
             
             # Mostrar errores si hay - MEJORADO
             if resumen.campos_invalidos:
