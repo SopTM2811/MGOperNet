@@ -27,6 +27,14 @@ db_name = os.getenv('DB_NAME', 'netcash_mbco')
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
+# Configuración de tasas de comisión
+# IMPORTANTE: Estas son las fórmulas correctas del negocio
+# - Cliente paga: 1% del total de depósitos
+# - Proveedor DNS recibe: 0.375% del capital
+# - Margen MBco: diferencia entre ambas (NO se incluye en layout ni correo a Tesorería)
+NETCASH_COMISION_CLIENTE_PCT = Decimal('0.01')  # 1%
+NETCASH_COMISION_DNS_PCT = Decimal('0.00375')    # 0.375%
+
 # Configuración
 COLLECTION_NAME = 'solicitudes_netcash'
 LOTES_COLLECTION = 'lotes_tesoreria'
