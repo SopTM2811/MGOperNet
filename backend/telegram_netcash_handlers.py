@@ -451,9 +451,19 @@ class TelegramNetCashHandlers:
                 mensaje_resumen += "\n".join(resumen_comprobantes)
                 mensaje_resumen += f"\n\n💰 **Total de depósitos detectados:** ${total_depositado:,.2f}\n"
                 
-                # Mostrar información de duplicados si hay
+                # Mostrar información de duplicados si hay (diferenciar locales vs globales)
                 if len(comprobantes_duplicados) > 0:
-                    mensaje_resumen += f"\n⚠️ **Nota:** {len(comprobantes_duplicados)} comprobante(s) duplicado(s) no se incluyeron en el total.\n"
+                    duplicados_locales = [c for c in comprobantes_duplicados if c.get("tipo_duplicado") == "local"]
+                    duplicados_globales = [c for c in comprobantes_duplicados if c.get("tipo_duplicado") == "global"]
+                    
+                    mensaje_resumen += f"\n⚠️ **Nota:**"
+                    if len(duplicados_locales) > 0:
+                        mensaje_resumen += f" {len(duplicados_locales)} comprobante(s) duplicado(s) en esta operación"
+                    if len(duplicados_globales) > 0:
+                        if len(duplicados_locales) > 0:
+                            mensaje_resumen += " y"
+                        mensaje_resumen += f" {len(duplicados_globales)} ya utilizado(s) en otras operaciones NetCash"
+                    mensaje_resumen += " no se incluyeron en el total.\n"
                 
                 mensaje_resumen += "\n"
             else:
