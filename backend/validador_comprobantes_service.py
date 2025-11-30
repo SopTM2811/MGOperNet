@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple
 from pathlib import Path
 
 # VERSION DEL VALIDADOR - Para tracking de desincronizaciones
-VALIDADOR_THABYETHA_VERSION = "V3.5.1-fuzzy-beneficiario-proximidad"
+VALIDADOR_THABYETHA_VERSION = "V3.6.0-vault-panekneva-layout"
 
 logger = logging.getLogger(__name__)
 
