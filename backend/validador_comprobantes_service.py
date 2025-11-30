@@ -170,34 +170,40 @@ class ValidadorComprobantes:
         texto_upper = texto.upper()
         
         for clabe in clabes_completas:
-            # Buscar la CLABE en el texto original
-            idx = texto.find(clabe)
-            if idx == -1:
-                # Si no se encuentra directamente, puede estar separada por espacios/saltos
-                # Buscarla en texto normalizado
-                texto_norm = re.sub(r'[\s\n\r]+', '', texto)
-                idx_norm = texto_norm.find(clabe)
-                if idx_norm == -1:
-                    continue
-                # Aproximar la posición en el texto original
-                idx = idx_norm
+            # ESTRATEGIA MEJORADA: Buscar contexto por líneas, no por caracteres
+            # Esto maneja mejor casos donde la CLABE está en una línea separada del keyword
             
-            # Contexto AMPLIADO de ±200 caracteres (para capturar keywords que están en líneas anteriores)
-            contexto_inicio = max(0, idx - 200)
-            contexto_fin = min(len(texto), idx + len(clabe) + 200)
-            contexto = texto[contexto_inicio:contexto_fin].upper()
+            # Dividir texto en líneas
+            lineas = texto.split('\n')
+            linea_clabe = -1
             
-            # Ignorar si es ORIGEN o ASOCIADA (buscar solo ANTES de la CLABE)
+            # Buscar en qué línea está la CLABE
+            for i, linea in enumerate(lineas):
+                if clabe in linea.replace(' ', '').replace('\r', ''):
+                    linea_clabe = i
+                    break
+            
+            if linea_clabe == -1:
+                # No se encontró la CLABE
+                continue
+            
+            # Obtener contexto: 5 líneas antes y 3 líneas después
+            inicio_contexto = max(0, linea_clabe - 5)
+            fin_contexto = min(len(lineas), linea_clabe + 4)
+            lineas_contexto = lineas[inicio_contexto:fin_contexto]
+            contexto = '\n'.join(lineas_contexto).upper()
+            
+            # Ignorar si es ORIGEN o ASOCIADA (buscar solo ANTES de la línea de CLABE)
             keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]
-            # Buscar keywords de origen solo en el contexto ANTES de la CLABE
-            contexto_antes = contexto[:min(150, len(contexto)//2)]
-            es_origen = any(kw in contexto_antes for kw in keywords_origen)
+            lineas_antes = lineas[inicio_contexto:linea_clabe]
+            texto_antes = '\n'.join(lineas_antes).upper()
+            es_origen = any(kw in texto_antes for kw in keywords_origen)
             
             # Ignorar si es CLAVE DE RASTREO o REFERENCIA
             keywords_ignorar = ["RASTREO", "REFERENCIA", "AUTORIZACION", "FOLIO", "NUMERO DE"]
             es_rastreo = any(kw in contexto for kw in keywords_ignorar)
             
-            # Debe estar en contexto de DESTINO (buscar en contexto COMPLETO, especialmente ANTES)
+            # Debe estar en contexto de DESTINO (buscar en todas las líneas del contexto)
             keywords_destino = [
                 "DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO",
                 "CLABE RECEPTOR", "CUENTA RECEPTOR", "CLABE BENEFICIAR"
