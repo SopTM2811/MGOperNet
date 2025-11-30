@@ -251,6 +251,27 @@ class TesoreriaService:
         # Enviar correo con adjunto
         from gmail_service import gmail_service
         
+        # Verificar si gmail_service está disponible
+        if not gmail_service:
+            logger.warning(f"[Tesorería] Gmail service no disponible. No se puede enviar correo.")
+            logger.warning(f"[Tesorería] El layout CSV se guardará localmente.")
+            
+            # Guardar CSV en disco para referencia
+            import tempfile
+            csv_dir = Path("/app/backend/uploads/layouts_tesoreria")
+            csv_dir.mkdir(parents=True, exist_ok=True)
+            
+            lote_id = lote_info['id']
+            csv_filename = f"{lote_id}_layout.csv"
+            csv_path = csv_dir / csv_filename
+            
+            with open(csv_path, 'w', encoding='utf-8') as f:
+                f.write(layout_csv)
+            
+            logger.info(f"[Tesorería] Layout guardado en: {csv_path}")
+            logger.info(f"[Tesorería] ⚠️ IMPORTANTE: Enviar manualmente el layout a {self.tesoreria_email}")
+            return
+        
         # Guardar CSV temporalmente
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as f:
@@ -264,10 +285,24 @@ class TesoreriaService:
                 cuerpo=cuerpo,
                 adjuntos=[csv_path]
             )
-            logger.info(f"[Tesorería] Correo enviado exitosamente")
+            logger.info(f"[Tesorería] ✅ Correo enviado exitosamente a {self.tesoreria_email}")
         except Exception as e:
-            logger.error(f"[Tesorería] Error enviando correo: {str(e)}")
-            raise
+            logger.error(f"[Tesorería] ❌ Error enviando correo: {str(e)}")
+            logger.warning(f"[Tesorería] El proceso continuará, pero el correo no se envió")
+            
+            # Guardar CSV en disco para referencia
+            csv_dir = Path("/app/backend/uploads/layouts_tesoreria")
+            csv_dir.mkdir(parents=True, exist_ok=True)
+            
+            lote_id = lote_info['id']
+            csv_filename = f"{lote_id}_layout.csv"
+            csv_path_saved = csv_dir / csv_filename
+            
+            with open(csv_path_saved, 'w', encoding='utf-8') as f:
+                f.write(layout_csv)
+            
+            logger.info(f"[Tesorería] Layout guardado localmente en: {csv_path_saved}")
+            logger.info(f"[Tesorería] ⚠️ IMPORTANTE: Enviar manualmente el layout a {self.tesoreria_email}")
         finally:
             # Limpiar archivo temporal
             import os as os_module
