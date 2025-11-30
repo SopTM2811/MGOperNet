@@ -29,6 +29,7 @@ function App() {
           <Route path="/alta-cliente-telegram" element={<AltaClienteTelegram />} />
           <Route path="/config/cuenta-deposito" element={<ConfiguracionCuenta />} />
           <Route path="/mis-solicitudes-netcash" element={<MisSolicitudesNetCash />} />
+          <Route path="/usuarios-netcash" element={<UsuariosNetCash />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
