@@ -441,7 +441,13 @@ class TelegramNetCashHandlers:
             
             if len(resumen_comprobantes) > 0:
                 mensaje_resumen += "\n".join(resumen_comprobantes)
-                mensaje_resumen += f"\n\n💰 **Total de depósitos detectados:** ${total_depositado:,.2f}\n\n"
+                mensaje_resumen += f"\n\n💰 **Total de depósitos detectados:** ${total_depositado:,.2f}\n"
+                
+                # Mostrar información de duplicados si hay
+                if len(comprobantes_duplicados) > 0:
+                    mensaje_resumen += f"\n⚠️ **Nota:** {len(comprobantes_duplicados)} comprobante(s) duplicado(s) no se incluyeron en el total.\n"
+                
+                mensaje_resumen += "\n"
             else:
                 mensaje_resumen += "No se pudo detectar monto en los comprobantes.\n\n"
             
