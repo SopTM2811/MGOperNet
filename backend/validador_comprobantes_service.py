@@ -374,10 +374,12 @@ class ValidadorComprobantes:
                     continue
             
             # Verificar que esté en contexto de DESTINO
+            # MEJORADO V3.6: Soporte para layout Vault/Panekneva
             keywords_destino = [
                 "DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO",
                 "CUENTA DESTINO", "CUENTA ABONO", "CUENTA BENEFICIAR",
-                "CLABE DESTINO", "PARA", "DEPOSITO"
+                "CLABE DESTINO", "PARA", "DEPOSITO", "CUENTA DE DEPOSITO",
+                "BANCO DESTINO", "TITULAR DE LA CUENTA BENEFICIARIA"
             ]
             
             es_contexto_destino = any(kw in contexto_norm for kw in keywords_destino)
