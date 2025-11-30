@@ -960,7 +960,12 @@ class TelegramBotNetCash:
             await self.nc_handlers.ver_cuenta_depositos(update, context)
         elif data == "nc_ver_solicitudes":
             await self.nc_handlers.ver_solicitudes(update, context)
-        # Los callbacks nc_crear_operacion, nc_confirmar_, nc_corregir_, nc_cancelar
+        elif data == "nc_crear_operacion":
+            # Este callback es manejado principalmente por el ConversationHandler,
+            # pero agregamos un fallback aquí por si no está activo
+            await self.nc_handlers.iniciar_crear_operacion(update, context)
+            return
+        # Los callbacks nc_confirmar_, nc_corregir_, nc_cancelar
         # son manejados por el ConversationHandler de NetCash
         
         # Legacy callbacks
