@@ -1335,6 +1335,10 @@ class BackendTester:
                     if exitoso:
                         logger.info("   ✅ Solicitud procesada exitosamente")
                         
+                        # DEBUG: Imprimir respuesta completa
+                        logger.info(f"   🔍 DEBUG - Respuesta completa: {result}")
+                        logger.info(f"   🔍 DEBUG - Resumen completo: {resumen}")
+                        
                         # VERIFICAR CÁLCULOS FINALES (NUEVA FUNCIONALIDAD)
                         logger.info("   📊 PASO 7a: Verificando cálculos finales...")
                         
