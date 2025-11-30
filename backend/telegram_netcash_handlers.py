@@ -280,14 +280,82 @@ class TelegramNetCashHandlers:
             file_path = upload_dir / f"{solicitud_id}_{nombre_archivo}"
             await file.download_to_drive(file_path)
             
-            await update.message.reply_text("🔍 Procesando comprobante...")
+            # Detectar si es un archivo ZIP
+            es_zip = nombre_archivo.lower().endswith('.zip')
             
-            # Enviar al motor para agregar (retorna: agregado, razon)
-            agregado, razon = await netcash_service.agregar_comprobante(
-                solicitud_id,
-                str(file_path),
-                nombre_archivo
-            )
+            if es_zip:
+                # Procesar como archivo ZIP
+                await update.message.reply_text("📦 Procesando archivo ZIP...")
+                
+                # Procesar el ZIP usando el servicio
+                resultado_zip = await netcash_service.procesar_archivo_zip(
+                    solicitud_id,
+                    str(file_path),
+                    nombre_archivo
+                )
+                
+                # Construir mensaje de resultado
+                total = resultado_zip.get("total_archivos", 0)
+                validos = resultado_zip.get("validos", 0)
+                invalidos = resultado_zip.get("invalidos", 0)
+                duplicados = resultado_zip.get("duplicados", 0)
+                no_legibles = resultado_zip.get("no_legibles", 0)
+                
+                if total == 0:
+                    mensaje = "⚠️ **El archivo ZIP está vacío o no contiene archivos.**\n\n"
+                    mensaje += "Por favor, envía un ZIP con comprobantes (PDF/JPG/PNG)."
+                elif validos == 0:
+                    mensaje = "⚠️ **No se encontraron comprobantes válidos dentro del archivo ZIP.**\n\n"
+                    mensaje += f"• {total} archivo(s) encontrado(s) dentro\n"
+                    if no_legibles > 0:
+                        mensaje += f"• {no_legibles} archivo(s) no legible(s) o con formato no soportado\n"
+                    if invalidos > 0:
+                        mensaje += f"• {invalidos} comprobante(s) no coinciden con la cuenta NetCash activa\n"
+                    if duplicados > 0:
+                        mensaje += f"• {duplicados} comprobante(s) duplicado(s)\n"
+                    mensaje += "\nAsegúrate de que el ZIP contenga PDFs o imágenes de comprobantes para la cuenta NetCash autorizada."
+                else:
+                    mensaje = f"✅ **Se procesó tu archivo ZIP.**\n\n"
+                    mensaje += f"• {total} archivo(s) encontrado(s) dentro\n"
+                    mensaje += f"• {validos} comprobante(s) válido(s) ✅\n"
+                    if invalidos > 0:
+                        mensaje += f"• {invalidos} comprobante(s) inválido(s) (no se incluyeron)\n"
+                    if duplicados > 0:
+                        mensaje += f"• {duplicados} comprobante(s) duplicado(s) (no se incluyeron)\n"
+                    if no_legibles > 0:
+                        mensaje += f"• {no_legibles} archivo(s) no legible(s) o con formato no soportado (no se incluyeron)\n"
+                
+                # Obtener solicitud actualizada para mostrar total
+                solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+                comprobantes = solicitud.get("comprobantes", [])
+                
+                # Calcular total de depósitos válidos
+                total_depositos = 0.0
+                for comp in comprobantes:
+                    if comp.get("es_valido") and not comp.get("es_duplicado"):
+                        monto = comp.get("monto_detectado")
+                        if monto:
+                            total_depositos += monto
+                
+                if validos > 0:
+                    mensaje += f"\n💰 **Total de depósitos detectados hasta ahora: ${total_depositos:,.2f}**"
+                
+                await update.message.reply_text(mensaje, parse_mode='Markdown')
+                
+                # Continuar con el flujo normal (mostrar botones)
+                agregado = validos > 0  # Si hay al menos un válido, consideramos éxito
+                razon = None
+                
+            else:
+                # Procesar como comprobante individual (lógica existente)
+                await update.message.reply_text("🔍 Procesando comprobante...")
+                
+                # Enviar al motor para agregar (retorna: agregado, razon)
+                agregado, razon = await netcash_service.agregar_comprobante(
+                    solicitud_id,
+                    str(file_path),
+                    nombre_archivo
+                )
             
             # Obtener solicitud actualizada para contar comprobantes
             solicitud = await netcash_service.obtener_solicitud(solicitud_id)
