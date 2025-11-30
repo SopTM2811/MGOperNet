@@ -427,28 +427,28 @@ class ValidadorComprobantes:
             logger.info(f"[VALIDADOR_THABYETHA] Beneficiario_coincide={beneficiario_encontrado}")
             logger.info(f"[VALIDADOR_THABYETHA] ================================================")
         
-        # REGLA ESPECIAL: Si se usó sufijo_banamex, DEBE tener beneficiario
-        if metodo_clabe == "sufijo_banamex" and not beneficiario_encontrado:
-            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Sufijo CLABE-{clabe_activa[-3:]} encontrado pero beneficiario NO coincide")
-            return False, f"El comprobante tiene sufijo CLABE-{clabe_activa[-3:]} pero el beneficiario no coincide con {beneficiario_activo}"
+        # REGLA ESPECIAL: Si se usó sufijo enmascarado, DEBE tener beneficiario
+        if metodo_clabe == "sufijo_enmascarado" and not beneficiario_encontrado:
+            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Sufijo enmascarado encontrado pero beneficiario NO coincide")
+            return False, f"El comprobante tiene un sufijo de cuenta que coincide pero el beneficiario no corresponde a {beneficiario_activo}"
         
         # Resultado final
         if clabe_encontrada and beneficiario_encontrado:
             if metodo_clabe == "completa":
-                logger.info(f"[ValidadorComprobantes] ✅✅✅ VÁLIDO: CLABE completa encontrada y beneficiario coinciden")
-                return True, "CLABE encontrada completa y coincide con la cuenta NetCash autorizada"
-            elif metodo_clabe == "sufijo_banamex":
-                logger.info(f"[ValidadorComprobantes] ✅✅✅ VÁLIDO: CLABE-{clabe_activa[-3:]} (sufijo Banamex) y beneficiario coinciden")
-                return True, f"CLABE encontrada en formato Banamex (CLABE-{clabe_activa[-3:]}) y coincide con la cuenta NetCash autorizada"
+                logger.info(f"[ValidadorComprobantes] ✅✅✅ VÁLIDO: CLABE completa de destino y beneficiario coinciden")
+                return True, "CLABE completa encontrada y coincide con la cuenta NetCash autorizada"
+            elif metodo_clabe == "sufijo_enmascarado":
+                logger.info(f"[ValidadorComprobantes] ✅✅✅ VÁLIDO: Sufijo enmascarado y beneficiario coinciden")
+                return True, f"Cuenta enmascarada (sufijo {clabe_activa[-4:]}) encontrada en contexto de destino y beneficiario coincide"
             else:
                 logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE y beneficiario coinciden")
                 return True, "Comprobante válido"
         elif clabe_encontrada and not beneficiario_encontrado:
             logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: CLABE correcta pero beneficiario NO coincide")
-            return False, f"El comprobante tiene la CLABE correcta pero el beneficiario no coincide con {beneficiario_activo}"
+            return False, f"El comprobante tiene la CLABE/cuenta correcta pero el beneficiario no coincide con {beneficiario_activo}"
         elif not clabe_encontrada and beneficiario_encontrado:
             logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Beneficiario correcto pero CLABE NO coincide")
-            return False, f"El comprobante tiene el beneficiario correcto pero la CLABE no coincide con {clabe_activa}"
+            return False, f"El comprobante tiene el beneficiario correcto pero la CLABE/cuenta no coincide con {clabe_activa}"
         else:
             logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Ni CLABE ni beneficiario coinciden")
             return False, f"El comprobante no corresponde a la cuenta NetCash activa (Banco: {banco_activo}, CLABE: {clabe_activa}, Beneficiario: {beneficiario_activo})"
