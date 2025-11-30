@@ -476,12 +476,16 @@ class ValidadorComprobantes:
             min_len = max(10, int(longitud_benef * 0.7))  # Mínimo 70% de longitud
             max_len = int(longitud_benef * 1.3)  # Máximo 130% de longitud
             
-            # Dividir texto en líneas y buscar líneas que puedan contener el beneficiario
-            lineas = texto_norm.split('\n')
+            # IMPORTANTE: Dividir el texto ORIGINAL en líneas ANTES de normalizar
+            # para preservar la estructura de líneas
+            lineas_originales = texto.split('\n')
             mejores_candidatos = []
             
-            for linea in lineas:
+            for linea_original in lineas_originales:
+                # Normalizar cada línea individualmente
+                linea = normalizar_avanzado(linea_original)
                 linea = linea.strip()
+                
                 if len(linea) < min_len or len(linea) > max_len * 2:
                     continue
                 
