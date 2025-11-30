@@ -1278,6 +1278,22 @@ class NetCashService:
             await telegram_tesoreria_handlers.notificar_nueva_orden_interna(orden_interna)
         else:
             logger.warning(f"[NetCash] telegram_tesoreria_handlers no inicializado, notificación no enviada")
+    
+    async def _notificar_ana_solicitud_lista(self, solicitud: Dict):
+        """
+        Notifica a Ana cuando una solicitud queda lista para MBco
+        
+        Args:
+            solicitud: Dict con los datos de la solicitud
+        """
+        # Importar aquí para evitar dependencia circular
+        from telegram_ana_handlers import telegram_ana_handlers
+        
+        if telegram_ana_handlers:
+            await telegram_ana_handlers.notificar_nueva_solicitud_para_mbco(solicitud)
+            logger.info(f"[NetCash] Notificación enviada a Ana para solicitud {solicitud.get('folio_netcash')}")
+        else:
+            logger.warning(f"[NetCash] telegram_ana_handlers no inicializado, notificación no enviada")
 
 
 # Instancia global del servicio
