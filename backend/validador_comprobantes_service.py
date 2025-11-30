@@ -594,6 +594,11 @@ class ValidadorComprobantes:
         
         # Validar beneficiario (con fuzzy matching si CLABE completa fue encontrada)
         clabe_completa_encontrada = (clabe_encontrada and metodo_clabe == "completa")
+        
+        # LOG DETALLADO para debugging del fuzzy matching
+        logger.info(f"[VALIDADOR_NETCASH] clabe_objetivo={clabe_activa} clabe_encontrada={clabe_encontrada} metodo={metodo_clabe} clabe_completa_encontrada={clabe_completa_encontrada}")
+        logger.info(f"[VALIDADOR_NETCASH] Llamando a buscar_beneficiario_en_texto con clabe_completa_encontrada={clabe_completa_encontrada}")
+        
         beneficiario_encontrado = self.buscar_beneficiario_en_texto(
             texto_comprobante, 
             beneficiario_activo,
