@@ -365,6 +365,161 @@ class NetCashService:
             logger.error(f"[NetCash] Error agregando comprobante: {str(e)}")
             return False, "error"
     
+    async def procesar_archivo_zip(self, solicitud_id: str, archivo_zip_path: str, 
+                                   nombre_zip: str) -> Dict:
+        """
+        Procesa un archivo ZIP extrayendo y validando cada comprobante interno.
+        
+        Args:
+            solicitud_id: ID de la solicitud
+            archivo_zip_path: Ruta al archivo ZIP
+            nombre_zip: Nombre original del archivo ZIP
+        
+        Returns:
+            Dict con estadísticas del procesamiento:
+            {
+                "total_archivos": int,
+                "validos": int,
+                "invalidos": int,
+                "duplicados": int,
+                "no_legibles": int,
+                "archivos_procesados": List[str]
+            }
+        """
+        import zipfile
+        import tempfile
+        import shutil
+        from pathlib import Path
+        
+        logger.info(f"[NetCash ZIP] Procesando archivo ZIP: {nombre_zip}")
+        
+        resultado = {
+            "total_archivos": 0,
+            "validos": 0,
+            "invalidos": 0,
+            "duplicados": 0,
+            "no_legibles": 0,
+            "archivos_procesados": []
+        }
+        
+        # Crear directorio temporal para extraer el ZIP
+        temp_dir = None
+        
+        try:
+            # Verificar que el archivo ZIP es válido
+            if not zipfile.is_zipfile(archivo_zip_path):
+                logger.error(f"[NetCash ZIP] El archivo no es un ZIP válido: {archivo_zip_path}")
+                return resultado
+            
+            # Crear directorio temporal
+            temp_dir = tempfile.mkdtemp(prefix="netcash_zip_")
+            logger.info(f"[NetCash ZIP] Directorio temporal creado: {temp_dir}")
+            
+            # Extraer el ZIP
+            with zipfile.ZipFile(archivo_zip_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+                archivos_en_zip = zip_ref.namelist()
+                logger.info(f"[NetCash ZIP] {len(archivos_en_zip)} archivo(s) encontrado(s) en el ZIP")
+            
+            # Extensiones soportadas
+            extensiones_soportadas = {'.pdf', '.jpg', '.jpeg', '.png'}
+            
+            # Procesar cada archivo en el ZIP
+            for archivo_interno in Path(temp_dir).rglob('*'):
+                if archivo_interno.is_file():
+                    resultado["total_archivos"] += 1
+                    nombre_interno = archivo_interno.name
+                    extension = archivo_interno.suffix.lower()
+                    
+                    logger.info(f"[NetCash ZIP] Procesando archivo interno: {nombre_interno}")
+                    
+                    # Verificar si la extensión es soportada
+                    if extension not in extensiones_soportadas:
+                        logger.warning(f"[NetCash ZIP] Extensión no soportada: {nombre_interno} ({extension})")
+                        resultado["no_legibles"] += 1
+                        resultado["archivos_procesados"].append({
+                            "nombre": nombre_interno,
+                            "estado": "no_soportado",
+                            "razon": f"Extensión {extension} no soportada"
+                        })
+                        continue
+                    
+                    # Intentar agregar el comprobante usando la lógica existente
+                    try:
+                        agregado, razon = await self.agregar_comprobante(
+                            solicitud_id,
+                            str(archivo_interno),
+                            f"{nombre_zip}/{nombre_interno}"  # Prefijo con nombre del ZIP
+                        )
+                        
+                        if agregado:
+                            # Agregado exitosamente (puede ser válido o inválido)
+                            # Verificar si es válido consultando la solicitud
+                            solicitud = await db[COLLECTION_NAME].find_one(
+                                {"id": solicitud_id},
+                                {"_id": 0, "comprobantes": 1}
+                            )
+                            
+                            # Buscar el comprobante recién agregado
+                            comprobantes = solicitud.get("comprobantes", [])
+                            comprobante_agregado = None
+                            for comp in reversed(comprobantes):  # Buscar desde el final (más reciente)
+                                if comp.get("nombre_archivo") == f"{nombre_zip}/{nombre_interno}":
+                                    comprobante_agregado = comp
+                                    break
+                            
+                            if comprobante_agregado and comprobante_agregado.get("es_valido"):
+                                resultado["validos"] += 1
+                                resultado["archivos_procesados"].append({
+                                    "nombre": nombre_interno,
+                                    "estado": "valido",
+                                    "monto": comprobante_agregado.get("monto_detectado")
+                                })
+                            else:
+                                resultado["invalidos"] += 1
+                                razon_invalido = comprobante_agregado.get("validacion_detalle", {}).get("razon") if comprobante_agregado else "No se pudo validar"
+                                resultado["archivos_procesados"].append({
+                                    "nombre": nombre_interno,
+                                    "estado": "invalido",
+                                    "razon": razon_invalido
+                                })
+                        else:
+                            # No agregado (duplicado)
+                            resultado["duplicados"] += 1
+                            tipo_duplicado = "local" if razon == "duplicado_local" else "global"
+                            resultado["archivos_procesados"].append({
+                                "nombre": nombre_interno,
+                                "estado": "duplicado",
+                                "tipo": tipo_duplicado
+                            })
+                            
+                    except Exception as e:
+                        logger.error(f"[NetCash ZIP] Error procesando {nombre_interno}: {str(e)}")
+                        resultado["no_legibles"] += 1
+                        resultado["archivos_procesados"].append({
+                            "nombre": nombre_interno,
+                            "estado": "error",
+                            "razon": str(e)
+                        })
+            
+            logger.info(f"[NetCash ZIP] Procesamiento completado: {resultado}")
+            return resultado
+            
+        except Exception as e:
+            logger.error(f"[NetCash ZIP] Error procesando ZIP: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return resultado
+            
+        finally:
+            # Limpiar directorio temporal
+            if temp_dir and Path(temp_dir).exists():
+                try:
+                    shutil.rmtree(temp_dir)
+                    logger.info(f"[NetCash ZIP] Directorio temporal eliminado: {temp_dir}")
+                except Exception as e:
+                    logger.warning(f"[NetCash ZIP] No se pudo eliminar directorio temporal: {str(e)}")
+    
     def _calcular_hash_archivo(self, archivo_url: str) -> str:
         """
         Calcula hash SHA-256 del contenido de un archivo.
