@@ -170,24 +170,34 @@ class ValidadorComprobantes:
         texto_upper = texto.upper()
         
         for clabe in clabes_completas:
+            # Buscar la CLABE en el texto original
             idx = texto.find(clabe)
             if idx == -1:
-                continue
+                # Si no se encuentra directamente, puede estar separada por espacios/saltos
+                # Buscarla en texto normalizado
+                texto_norm = re.sub(r'[\s\n\r]+', '', texto)
+                idx_norm = texto_norm.find(clabe)
+                if idx_norm == -1:
+                    continue
+                # Aproximar la posición en el texto original
+                idx = idx_norm
             
-            # Contexto de ±100 caracteres
-            contexto_inicio = max(0, idx - 100)
-            contexto_fin = min(len(texto), idx + len(clabe) + 100)
+            # Contexto AMPLIADO de ±200 caracteres (para capturar keywords que están en líneas anteriores)
+            contexto_inicio = max(0, idx - 200)
+            contexto_fin = min(len(texto), idx + len(clabe) + 200)
             contexto = texto[contexto_inicio:contexto_fin].upper()
             
-            # Ignorar si es ORIGEN o ASOCIADA
+            # Ignorar si es ORIGEN o ASOCIADA (buscar solo ANTES de la CLABE)
             keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]
-            es_origen = any(kw in contexto[:idx-contexto_inicio+20] for kw in keywords_origen)
+            # Buscar keywords de origen solo en el contexto ANTES de la CLABE
+            contexto_antes = contexto[:min(150, len(contexto)//2)]
+            es_origen = any(kw in contexto_antes for kw in keywords_origen)
             
             # Ignorar si es CLAVE DE RASTREO o REFERENCIA
             keywords_ignorar = ["RASTREO", "REFERENCIA", "AUTORIZACION", "FOLIO", "NUMERO DE"]
             es_rastreo = any(kw in contexto for kw in keywords_ignorar)
             
-            # Debe estar en contexto de DESTINO
+            # Debe estar en contexto de DESTINO (buscar en contexto COMPLETO, especialmente ANTES)
             keywords_destino = [
                 "DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO",
                 "CLABE RECEPTOR", "CUENTA RECEPTOR", "CLABE BENEFICIAR"
