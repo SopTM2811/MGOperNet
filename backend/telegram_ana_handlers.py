@@ -86,6 +86,10 @@ class TelegramAnaHandlers:
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             # Enviar al usuario (Ana)
+            logger.info(f"[Ana Telegram] Enviando mensaje a Telegram...")
+            logger.info(f"[Ana Telegram] Chat ID: {telegram_id}")
+            logger.info(f"[Ana Telegram] Folio: {folio_netcash}")
+            
             await self.bot.bot.send_message(
                 chat_id=telegram_id,
                 text=mensaje,
@@ -93,7 +97,8 @@ class TelegramAnaHandlers:
                 reply_markup=reply_markup
             )
             
-            logger.info(f"[Ana Telegram] Notificación enviada para solicitud {folio_netcash}")
+            logger.info(f"[Ana Telegram] ✅ Mensaje enviado exitosamente a chat_id={telegram_id}")
+            logger.info(f"[Ana Telegram] Notificación completada para solicitud {folio_netcash}")
             
         except Exception as e:
             logger.error(f"[Ana Telegram] Error enviando notificación: {str(e)}")
