@@ -354,7 +354,11 @@ class TelegramNetCashHandlers:
         mensaje += "Tómate tu tiempo para buscar el siguiente comprobante y envíamelo cuando lo tengas listo.\n"
         mensaje += "No pasa nada si tardas unos minutos."
         
+        # Eliminar los botones del mensaje actual al editarlo
         await query.edit_message_text(mensaje, parse_mode="Markdown")
+        
+        # Limpiar el message_id guardado ya que este mensaje ya no tiene botones
+        context.user_data['nc_last_comprobante_message_id'] = None
         
         # Mantener en el estado NC_ESPERANDO_COMPROBANTE
         return NC_ESPERANDO_COMPROBANTE
