@@ -36,9 +36,14 @@ class TelegramAnaHandlers:
             usuario: Dict con datos del usuario (desde catálogo)
         """
         try:
+            folio_netcash = solicitud.get("folio_netcash", "N/A")
             telegram_id = usuario.get("telegram_id")
+            
+            logger.info(f"[Ana Telegram] Preparando notificación para {usuario.get('nombre')}")
+            logger.info(f"[Ana Telegram] Folio: {folio_netcash} | Chat ID: {telegram_id}")
+            
             if not telegram_id:
-                logger.warning(f"[Ana Telegram] Usuario {usuario.get('nombre')} no tiene telegram_id")
+                logger.error(f"[Ana Telegram] ERROR: Usuario {usuario.get('nombre')} no tiene telegram_id")
                 return
             folio_netcash = solicitud.get("folio_netcash", "N/A")
             solicitud_id = solicitud.get("id")
