@@ -35,14 +35,14 @@ class TesoreriaService:
     """Servicio para gestión de lotes y dispersiones de Tesorería"""
     
     def __init__(self):
-        self.capital_clabe = os.getenv('NETCASH_CAPITAL_CLABE_ORIGEN', '646180000000000000')
-        self.comision_clabe = os.getenv('NETCASH_COMISION_CLABE_ORIGEN', '646180000000000001')
         self.tesoreria_email = os.getenv('TESORERIA_TEST_EMAIL', 'dfgalezzo@hotmail.com')
         
+        # Las cuentas de proveedor se obtienen dinámicamente de la BD
+        # en lugar de env vars para facilitar cambios de proveedor
+        
         logger.info(f"[Tesorería] Servicio inicializado")
-        logger.info(f"[Tesorería] Capital CLABE: {self.capital_clabe}")
-        logger.info(f"[Tesorería] Comisión CLABE: {self.comision_clabe}")
         logger.info(f"[Tesorería] Email: {self.tesoreria_email}")
+        logger.info(f"[Tesorería] Cuentas de proveedor se cargan dinámicamente de BD")
     
     def convertir_folio_mbco_para_concepto(self, folio_mbco: str) -> str:
         """
