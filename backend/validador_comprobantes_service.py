@@ -150,12 +150,22 @@ class ValidadorComprobantes:
             
             # Ignorar si está cerca de "CLABE ASOCIADA" (cuenta de origen)
             if "CLABE ASOCIADA" in contexto or "ASOCIADA" in contexto:
-                logger.info(f"[ValidadorComprobantes] ❌ Ignorando CLABE {clabe} (etiquetada como 'CLABE asociada' - cuenta de origen)")
+                logger.info(f"[ValidadorComprobantes] ❌ Ignorando {clabe} (etiquetada como 'CLABE asociada' - cuenta de origen)")
                 continue
             
             # Ignorar si tiene asteriscos cerca (enmascarada)
             if "*" in contexto:
-                logger.info(f"[ValidadorComprobantes] ❌ Ignorando CLABE {clabe} (tiene asteriscos - enmascarada)")
+                logger.info(f"[ValidadorComprobantes] ❌ Ignorando {clabe} (tiene asteriscos - enmascarada)")
+                continue
+            
+            # Ignorar si está cerca de "CLAVE DE RASTREO" (no es CLABE, es número de transacción)
+            if "CLAVE DE RASTREO" in contexto or "RASTREO" in contexto:
+                logger.info(f"[ValidadorComprobantes] ❌ Ignorando {clabe} (es 'Clave de rastreo' - no es CLABE)")
+                continue
+            
+            # Ignorar si está cerca de "REFERENCIA" o "AUTORIZACION" (números de transacción)
+            if "REFERENCIA" in contexto or "AUTORIZACION" in contexto or "NUMERO DE" in contexto:
+                logger.info(f"[ValidadorComprobantes] ❌ Ignorando {clabe} (es número de referencia/autorización - no es CLABE)")
                 continue
             
             clabes_validas.append(clabe)
