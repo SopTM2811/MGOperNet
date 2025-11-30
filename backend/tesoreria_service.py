@@ -56,9 +56,12 @@ class TesoreriaService:
         """
         return folio_mbco.replace('-', 'x')
     
-    def generar_layout_fondeadora(self, solicitudes: List[Dict]) -> str:
+    async def generar_layout_fondeadora(self, solicitudes: List[Dict]) -> str:
         """
         Genera layout CSV formato Fondeadora para un lote de solicitudes
+        
+        IMPORTANTE: El layout SIEMPRE va dirigido al PROVEEDOR (quien genera las ligas),
+        NO al cliente final ni al beneficiario final.
         
         Layout Fondeadora:
         Clabe destinatario, Nombre o razon social destinatario, Monto, Concepto, Email (opcional), Tags (opcional), Comentario (opcional)
@@ -70,6 +73,27 @@ class TesoreriaService:
             String con contenido CSV
         """
         logger.info(f"[Tesorería] Generando layout Fondeadora para {len(solicitudes)} solicitudes")
+        
+        # Obtener cuentas activas del proveedor desde BD
+        from cuentas_proveedor_service import cuentas_proveedor_service
+        
+        cuenta_capital = await cuentas_proveedor_service.obtener_cuenta_activa("capital")
+        cuenta_comision = await cuentas_proveedor_service.obtener_cuenta_activa("comision_dns")
+        
+        if not cuenta_capital:
+            raise ValueError("No hay cuenta de capital activa configurada para el proveedor")
+        if not cuenta_comision:
+            raise ValueError("No hay cuenta de comisión DNS activa configurada para el proveedor")
+        
+        # Extraer datos de las cuentas
+        clabe_capital = cuenta_capital.get('clabe')
+        beneficiario_capital = cuenta_capital.get('beneficiario')
+        
+        clabe_comision = cuenta_comision.get('clabe')
+        beneficiario_comision = cuenta_comision.get('beneficiario')
+        
+        logger.info(f"[Tesorería] Cuenta capital: {beneficiario_capital} - {clabe_capital}")
+        logger.info(f"[Tesorería] Cuenta comisión DNS: {beneficiario_comision} - {clabe_comision}")
         
         output = StringIO()
         writer = csv.writer(output)
@@ -88,37 +112,36 @@ class TesoreriaService:
         for solicitud in solicitudes:
             folio_mbco = solicitud.get('folio_mbco', 'SIN-FOLIO')
             folio_concepto = self.convertir_folio_mbco_para_concepto(folio_mbco)
-            beneficiario = solicitud.get('beneficiario_reportado', 'BENEFICIARIO DESCONOCIDO')
             n_ligas = solicitud.get('cantidad_ligas_reportada', 1)
             monto_ligas = Decimal(str(solicitud.get('monto_ligas', 0)))
-            comision_cliente = Decimal(str(solicitud.get('comision_cliente', 0)))
+            comision_dns = Decimal(str(solicitud.get('comision_cliente', 0)))
             
-            # TODO: Por ahora usamos cuenta capital para todo
-            # En el futuro, obtener CLABE destino real del proveedor/beneficiario
-            clabe_destino_capital = self.capital_clabe
-            clabe_destino_comision = self.comision_clabe
+            # Datos para contexto interno (NO van como destinatario en el layout)
+            cliente = solicitud.get('cliente_nombre', 'N/A')
+            beneficiario_final = solicitud.get('beneficiario_reportado', 'N/A')
             
-            # Filas de CAPITAL (una por liga)
+            # FILAS DE CAPITAL (LIGAS) - Destinatario: PROVEEDOR
+            # El proveedor es quien genera las ligas, por eso se le paga el capital
             if n_ligas > 0 and monto_ligas > 0:
                 monto_por_liga = (monto_ligas / Decimal(str(n_ligas))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 
                 # Generar n-1 filas con monto_por_liga
                 for i in range(n_ligas - 1):
                     writer.writerow([
-                        clabe_destino_capital,
-                        beneficiario,
+                        clabe_capital,                    # CLABE del proveedor
+                        beneficiario_capital,             # Nombre del proveedor
                         f"{monto_por_liga:.2f}",
-                        f"MBco {folio_concepto}",
+                        f"MBco {folio_concepto}",        # Concepto con folio transformado
                         '',  # Email
                         '',  # Tags
-                        f"Liga {i+1}/{n_ligas}"
+                        f"Liga {i+1}/{n_ligas}"          # Comentario interno
                     ])
                 
                 # Última fila ajustada para que sume exacto
                 monto_ultima_liga = monto_ligas - (monto_por_liga * Decimal(str(n_ligas - 1)))
                 writer.writerow([
-                    clabe_destino_capital,
-                    beneficiario,
+                    clabe_capital,
+                    beneficiario_capital,
                     f"{monto_ultima_liga:.2f}",
                     f"MBco {folio_concepto}",
                     '',
@@ -126,22 +149,24 @@ class TesoreriaService:
                     f"Liga {n_ligas}/{n_ligas}"
                 ])
             
-            # Fila de COMISIÓN (una por solicitud)
-            if comision_cliente > 0:
+            # FILA DE COMISIÓN DNS - Destinatario: PROVEEDOR (cuenta de comisión)
+            # Esta es la comisión que se le paga al proveedor por el servicio
+            if comision_dns > 0:
                 writer.writerow([
-                    clabe_destino_comision,
-                    'COMERCIALIZADORA THABYETHA',  # TODO: Hacer configurable
-                    f"{comision_cliente:.2f}",
-                    f"MBco {folio_concepto} COMISION",
+                    clabe_comision,                      # CLABE de comisión del proveedor
+                    beneficiario_comision,               # Nombre del proveedor (cuenta comisión)
+                    f"{comision_dns:.2f}",
+                    f"MBco {folio_concepto} COMISION",   # Concepto con COMISION
                     '',
                     '',
-                    f"Comisión NetCash 1%"
+                    f"Comisión proveedor"                # Comentario
                 ])
         
         csv_content = output.getvalue()
         output.close()
         
         logger.info(f"[Tesorería] Layout CSV generado: {len(csv_content)} caracteres")
+        logger.info(f"[Tesorería] Destinatarios: Capital={beneficiario_capital}, Comisión={beneficiario_comision}")
         return csv_content
     
     async def procesar_lote_tesoreria(self) -> Optional[Dict]:
