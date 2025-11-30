@@ -31,20 +31,30 @@ def test_fuzzy_matching_solver_jardineria():
     print("="*80)
     
     # Texto OCR real extraído del PDF (estructura de formulario Banregio)
+    # Con suficiente separación entre origen y destino
     texto_ocr = """banregio
-Recibo de la solicitud
-Cuenta Origen: SOLVER BASKET CO S.A. DE C.V. - *0015
-Cuenta Destino: ARDINERIA Y COMERCIO THABYETHA SA DE CV - 646180139409481462
+Recibo de la solicitud de transferencia
+
+Datos de la operación:
+
+Cuenta de Cargo (Origen)
+SOLVER BASKET CO S.A. DE C.V.
+Número de cuenta: *0015
+
+------ INFORMACIÓN DE DESTINO ------
+
+Cuenta Destino
+ARDINERIA Y COMERCIO THABYETHA SA DE CV
+CLABE: 646180139409481462
+
 Cantidad a Transferir: $168,765.40
-Banco: STP
+Banco Destino: STP
 Tipo de Transferencia: Mismo día hábil (SPEI)
 Concepto de pago: Transferencia de SOLVER BASKET CO SA D
 Número de referencia: 951303
 Quien solicita: FERNANDO AGUIAR HERNANDEZ (Firma A)
 Fecha solicita: 26 noviembre 2025 - 05:00 p. m.
-Quien autoriza: FERNANDO AGUIAR HERNANDEZ (Firma A)
-Datos de tu operación: fJAXdacpBL - 26 noviembre 2025 - 05:00:18 p. m.
-Verificador: 3075003115193215321222121512511672771572621652731442401552571682683315473265473325531222"""
+Quien autoriza: FERNANDO AGUIAR HERNANDEZ (Firma A)"""
     
     # Datos de la cuenta activa
     cuenta_activa = {
