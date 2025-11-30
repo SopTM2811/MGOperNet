@@ -477,13 +477,23 @@ class NetCashService:
                                     "monto": comprobante_agregado.get("monto_detectado")
                                 })
                             else:
-                                resultado["invalidos"] += 1
+                                # Clasificar por tipo de error
                                 razon_invalido = comprobante_agregado.get("validacion_detalle", {}).get("razon") if comprobante_agregado else "No se pudo validar"
-                                resultado["archivos_procesados"].append({
-                                    "nombre": nombre_interno,
-                                    "estado": "invalido",
-                                    "razon": razon_invalido
-                                })
+                                
+                                if razon_invalido == "pdf_sin_texto_legible":
+                                    resultado["sin_texto_legible"] += 1
+                                    resultado["archivos_procesados"].append({
+                                        "nombre": nombre_interno,
+                                        "estado": "sin_texto_legible",
+                                        "razon": "PDF/imagen sin texto seleccionable"
+                                    })
+                                else:
+                                    resultado["invalidos"] += 1
+                                    resultado["archivos_procesados"].append({
+                                        "nombre": nombre_interno,
+                                        "estado": "invalido",
+                                        "razon": razon_invalido
+                                    })
                         else:
                             # No agregado (duplicado)
                             resultado["duplicados"] += 1
