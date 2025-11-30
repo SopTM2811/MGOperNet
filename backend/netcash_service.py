@@ -858,6 +858,11 @@ class NetCashService:
                 EstadoSolicitud.LISTA_PARA_MBC,
                 "Todas las validaciones pasaron"
             )
+            
+            # Notificar a Ana que hay una nueva solicitud lista para MBco
+            solicitud_actualizada = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+            await self._notificar_ana_solicitud_lista(solicitud_actualizada)
+            
             return True, "Solicitud válida y lista para proceso MBco"
         else:
             # Hay errores -> RECHAZADA
