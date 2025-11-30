@@ -589,15 +589,22 @@ class TesoreriaService:
         
         # Construir mensaje
         fecha_str = lote_info['fecha_corte'].strftime('%Y-%m-%d %H:%M UTC')
+        lote_id_interno = lote_info.get('id', 'N/A')
+        lote_id_mbco = lote_info.get('id_lote_mbco', 'N/A')
         
-        mensaje = "🧾 **Nuevo lote NetCash para Tesorería**\n\n"
-        mensaje += f"⏱ **Corte:** {fecha_str}\n"
-        mensaje += f"📦 **Solicitudes incluidas:** {lote_info['n_solicitudes']}\n"
-        mensaje += f"💰 **Total depósitos:** ${lote_info['total_depositos']:,.2f}\n"
-        mensaje += f"💸 **Capital a dispersar:** ${lote_info['total_capital']:,.2f}\n"
-        mensaje += f"🧮 **Comisión DNS (0.375%):** ${lote_info['total_comision_dns']:,.2f}\n"
-        mensaje += f"📊 **Total a proveedor:** ${lote_info['total_capital'] + lote_info['total_comision_dns']:,.2f}\n\n"
-        mensaje += "**Detalle:**\n"
+        mensaje = "📬 **Lote de Tesorería NetCash listo**\n\n"
+        mensaje += f"🆔 **ID Lote interno:** {lote_id_interno}\n"
+        mensaje += f"🏷️ **ID Lote MBco:** {lote_id_mbco}\n\n"
+        mensaje += f"📦 **Solicitudes incluidas en este lote:** {lote_info['n_solicitudes']}\n"
+        mensaje += f"💰 **Total depósitos del lote:** ${lote_info['total_depositos']:,.2f}\n"
+        mensaje += f"💸 **Total capital a dispersar (ligas):** ${lote_info['total_capital']:,.2f}\n"
+        mensaje += f"🧮 **Total comisión DNS (0.375% capital):** ${lote_info['total_comision_dns']:,.2f}\n\n"
+        mensaje += "🔎 **Revisa tu correo de Tesorería:**\n"
+        mensaje += "• Ahí encontrarás el detalle folio por folio,\n"
+        mensaje += "• El layout CSV listo para dispersión,\n"
+        mensaje += "• Y los comprobantes de pago enviados por el cliente.\n\n"
+        mensaje += "_(Todas las transferencias del layout van a cuentas del proveedor.)_\n\n"
+        mensaje += "**Solicitudes en este lote:**\n"
         
         for solicitud in solicitudes[:10]:  # Mostrar máximo 10 en Telegram
             folio_mbco = solicitud.get('folio_mbco', 'N/A')
