@@ -220,9 +220,9 @@ class TelegramAnaHandlers:
                 solicitud = resultado.get("solicitud")
                 
                 # Mensaje de confirmación
-                mensaje = "✅ **Folio MBco registrado exitosamente**\n\n"
-                mensaje += f"📋 **Folio NetCash:** {solicitud.get('folio_mbco')}\n"
-                mensaje += f"🏢 **Folio MBco:** {folio_mbco}\n"
+                mensaje = "✅ **Folio MBco asignado correctamente.**\n\n"
+                mensaje += f"📋 **Solicitud:** {solicitud.get('id')}\n"
+                mensaje += f"🧾 **Folio MBco:** {folio_mbco}\n"
                 mensaje += f"👤 **Beneficiario:** {solicitud.get('beneficiario_reportado')}\n"
                 
                 # Calcular total
@@ -233,11 +233,10 @@ class TelegramAnaHandlers:
                     if c.get("es_valido") and not c.get("es_duplicado")
                 )
                 mensaje += f"💰 **Total depósitos:** ${total_depositos:,.2f}\n\n"
-                mensaje += "📦 La orden interna para Tesorería ha sido generada.\n"
-                mensaje += "📧 Se envió correo a Tesorería con el layout y comprobantes.\n"
-                mensaje += "📱 Tesorería fue notificada por Telegram."
+                mensaje += "📦 **Se generó la orden interna para Tesorería.**"
                 
                 await update.message.reply_text(mensaje, parse_mode='Markdown')
+                logger.info(f"[Ana] Folio {folio_mbco} asignado exitosamente a solicitud {solicitud_id}")
                 
             else:
                 error = resultado.get("error", "Error desconocido")
