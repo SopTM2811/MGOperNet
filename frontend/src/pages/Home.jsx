@@ -76,6 +76,17 @@ const Home = () => {
               Alta Telegram
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
+            
+            <Button
+              data-testid="solicitudes-netcash-btn"
+              onClick={() => navigate('/mis-solicitudes-netcash')}
+              size="lg"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
+            >
+              <FileText className="mr-2 h-5 w-5" />
+              Mis Solicitudes
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
 
