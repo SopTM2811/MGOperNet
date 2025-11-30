@@ -421,15 +421,17 @@ class TesoreriaService:
             # Resumen financiero (solo lo que Tesorería necesita)
             # NO se debe mostrar el margen/utilidad MBco
             total_dep = solicitud.get('total_comprobantes_validos', 0)
-            comision_dns = solicitud.get('comision_cliente', 0)  # Es comisión DNS (al proveedor), no al cliente
             monto_ligas = solicitud.get('monto_ligas', 0)
             n_ligas = solicitud.get('cantidad_ligas_reportada', 0)
+            
+            # IMPORTANTE: Usar la comisión DNS calculada (0.375% del capital)
+            comision_dns = solicitud.get('comision_dns_calculada', 0)
             
             cuerpo += "<p><strong>Resumen financiero para Tesorería:</strong></p>"
             cuerpo += "<ul>"
             cuerpo += f"<li>Total depósitos recibidos: ${total_dep:,.2f}</li>"
             cuerpo += f"<li>Monto a enviar en ligas (capital a proveedor): ${monto_ligas:,.2f}</li>"
-            cuerpo += f"<li>Comisión DNS (a proveedor): ${comision_dns:,.2f}</li>"
+            cuerpo += f"<li>Comisión DNS (0.375% capital, a proveedor): ${comision_dns:,.2f}</li>"
             cuerpo += "</ul>"
             
             # Resumen layout - SOLO información de proveedor
@@ -438,7 +440,7 @@ class TesoreriaService:
             cuerpo += f"<li>Transferencias de capital (ligas): {n_ligas}</li>"
             cuerpo += f"<li>Monto total capital: ${monto_ligas:,.2f}</li>"
             cuerpo += f"<li>Transferencias de comisión DNS: 1</li>"
-            cuerpo += f"<li>Monto comisión DNS: ${comision_dns:,.2f}</li>"
+            cuerpo += f"<li>Monto comisión DNS (0.375% capital): ${comision_dns:,.2f}</li>"
             cuerpo += f"<li><strong>Total a dispersar al proveedor: ${monto_ligas + comision_dns:,.2f}</strong></li>"
             cuerpo += "</ul>"
             cuerpo += "<p><em>Nota: Los destinatarios de todas las transferencias son cuentas del proveedor (ver CSV adjunto).</em></p>"
