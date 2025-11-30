@@ -165,8 +165,8 @@ class ValidadorComprobantes:
         clabes_completas = self.extraer_clabes_del_texto(texto)
         logger.info(f"[ValidadorComprobantes] CLABEs de 18 dígitos encontradas: {clabes_completas}")
         
-        if es_thabyetha:
-            logger.info(f"[THABYETHA_DEBUG] CLABEs extraídas (18 dígitos): {clabes_completas}")
+        if es_vault_thabyetha:
+            logger.info(f"[VAULT_DEBUG] CLABEs extraídas (18 dígitos): {clabes_completas}")
         
         # Filtrar solo las CLABEs que están en contexto de DESTINO/BENEFICIARIA
         clabes_destino = []
