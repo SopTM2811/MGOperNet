@@ -166,6 +166,8 @@ class UsuariosRepository:
                     "activo": True,
                     "permisos": {
                         "puede_asignar_folio_mbco": True,
+                        "puede_ver_usuarios": True,
+                        "puede_usar_alta_telegram": True,
                         "recibe_alertas_tesoreria": True,
                         "recibe_alertas_proveedor": True,
                         "recibe_reporte_diario": True,
