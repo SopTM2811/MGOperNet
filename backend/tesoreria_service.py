@@ -224,7 +224,7 @@ class TesoreriaService:
         logger.info(f"[Tesorería] Total comisión: ${total_comision:,.2f}")
         
         # 3. Generar layout CSV
-        layout_csv = self.generar_layout_fondeadora(solicitudes)
+        layout_csv = await self.generar_layout_fondeadora(solicitudes)
         
         # 4. Enviar correo a Tesorería
         await self._enviar_correo_tesoreria(lote_info, solicitudes, layout_csv)
