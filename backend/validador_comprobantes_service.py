@@ -588,8 +588,13 @@ class ValidadorComprobantes:
         clabe_encontrada, metodo_clabe = self.buscar_clabe_en_texto(texto_comprobante, clabe_activa)
         logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada: {clabe_encontrada} (método: {metodo_clabe})")
         
-        # Validar beneficiario
-        beneficiario_encontrado = self.buscar_beneficiario_en_texto(texto_comprobante, beneficiario_activo)
+        # Validar beneficiario (con fuzzy matching si CLABE completa fue encontrada)
+        clabe_completa_encontrada = (clabe_encontrada and metodo_clabe == "completa")
+        beneficiario_encontrado = self.buscar_beneficiario_en_texto(
+            texto_comprobante, 
+            beneficiario_activo,
+            clabe_completa_encontrada=clabe_completa_encontrada
+        )
         logger.info(f"[ValidadorComprobantes] Beneficiario activo ({beneficiario_activo}) encontrado: {beneficiario_encontrado}")
         
         # LOGS DETALLADOS SOLO PARA THABYETHA (resultados)
