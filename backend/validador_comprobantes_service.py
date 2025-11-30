@@ -249,9 +249,11 @@ class ValidadorComprobantes:
             es_rastreo = any(kw in contexto_inmediato for kw in keywords_ignorar)
             
             # Debe estar en contexto de DESTINO (buscar en todas las líneas del contexto)
+            # MEJORADO V3.6: Soporte para layout Vault/Panekneva
             keywords_destino = [
                 "DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO",
-                "CLABE RECEPTOR", "CUENTA RECEPTOR", "CLABE BENEFICIAR"
+                "CLABE RECEPTOR", "CUENTA RECEPTOR", "CLABE BENEFICIAR",
+                "DEPOSITO", "CUENTA DE DEPOSITO", "BANCO DESTINO", "TITULAR DE LA CUENTA BENEFICIARIA"
             ]
             es_destino = any(kw in contexto for kw in keywords_destino)
             
