@@ -337,20 +337,25 @@ class ValidadorComprobantes:
         
         # Validar CLABE
         clabe_encontrada, metodo_clabe = self.buscar_clabe_en_texto(texto_comprobante, clabe_activa)
-        logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada en comprobante: {clabe_encontrada} (método: {metodo_clabe})")
+        logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada: {clabe_encontrada} (método: {metodo_clabe})")
         
         # Validar beneficiario
         beneficiario_encontrado = self.buscar_beneficiario_en_texto(texto_comprobante, beneficiario_activo)
-        logger.info(f"[ValidadorComprobantes] Beneficiario activo ({beneficiario_activo}) encontrado en comprobante: {beneficiario_encontrado}")
+        logger.info(f"[ValidadorComprobantes] Beneficiario activo ({beneficiario_activo}) encontrado: {beneficiario_encontrado}")
         
-        # Resultado
+        # REGLA ESPECIAL: Si se usó sufijo_banamex, DEBE tener beneficiario
+        if metodo_clabe == "sufijo_banamex" and not beneficiario_encontrado:
+            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Sufijo CLABE-{clabe_activa[-3:]} encontrado pero beneficiario NO coincide")
+            return False, f"El comprobante tiene sufijo CLABE-{clabe_activa[-3:]} pero el beneficiario no coincide con {beneficiario_activo}"
+        
+        # Resultado final
         if clabe_encontrada and beneficiario_encontrado:
             if metodo_clabe == "completa":
-                logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE completa y beneficiario coinciden con cuenta activa")
-                return True, "Comprobante válido: CLABE y beneficiario coinciden"
-            elif metodo_clabe == "sufijo_3":
-                logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: Beneficiario coincide y CLABE termina en {clabe_activa[-3:]} (formato Banamex sin CLABE completa)")
-                return True, f"Comprobante válido: beneficiario coincide y la CLABE termina en {clabe_activa[-3:]} (formato Banamex)"
+                logger.info(f"[ValidadorComprobantes] ✅✅✅ VÁLIDO: CLABE completa encontrada y beneficiario coinciden")
+                return True, "CLABE encontrada completa y coincide con la cuenta NetCash autorizada"
+            elif metodo_clabe == "sufijo_banamex":
+                logger.info(f"[ValidadorComprobantes] ✅✅✅ VÁLIDO: CLABE-{clabe_activa[-3:]} (sufijo Banamex) y beneficiario coinciden")
+                return True, f"CLABE encontrada en formato Banamex (CLABE-{clabe_activa[-3:]}) y coincide con la cuenta NetCash autorizada"
             else:
                 logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE y beneficiario coinciden")
                 return True, "Comprobante válido"
@@ -361,7 +366,7 @@ class ValidadorComprobantes:
             logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Beneficiario correcto pero CLABE NO coincide")
             return False, f"El comprobante tiene el beneficiario correcto pero la CLABE no coincide con {clabe_activa}"
         else:
-            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Ni CLABE ni beneficiario coinciden con cuenta activa")
+            logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: Ni CLABE ni beneficiario coinciden")
             return False, f"El comprobante no corresponde a la cuenta NetCash activa (Banco: {banco_activo}, CLABE: {clabe_activa}, Beneficiario: {beneficiario_activo})"
     
     def validar_todos_comprobantes(self, 
