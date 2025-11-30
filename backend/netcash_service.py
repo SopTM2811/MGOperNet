@@ -241,10 +241,10 @@ class NetCashService:
                 {
                     "cliente_id": cliente_id,
                     "id": {"$ne": solicitud_id},  # Excluir la solicitud actual
-                    "estado": {"$in": estados_validos},
+                    "estado": {"$in": estados_que_bloquean_duplicados},
                     "comprobantes.archivo_hash": file_hash  # Buscar por hash en array
                 },
-                {"_id": 0, "id": 1, "folio_mbco": 1, "comprobantes": 1}
+                {"_id": 0, "id": 1, "folio_mbco": 1, "estado": 1, "comprobantes": 1}
             ).to_list(10)
             
             if otras_solicitudes:
