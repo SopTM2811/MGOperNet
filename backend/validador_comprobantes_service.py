@@ -672,11 +672,11 @@ class ValidadorComprobantes:
         )
         logger.info(f"[ValidadorComprobantes] Beneficiario activo ({beneficiario_activo}) encontrado: {beneficiario_encontrado}")
         
-        # LOGS DETALLADOS SOLO PARA THABYETHA (resultados)
-        if beneficiario_activo == "JARDINERIA Y COMERCIO THABYETHA SA DE CV":
-            logger.info(f"[VALIDADOR_THABYETHA] Resultado buscar_clabe_en_texto: encontrado={clabe_encontrada} metodo={metodo_clabe}")
-            logger.info(f"[VALIDADOR_THABYETHA] Beneficiario_coincide={beneficiario_encontrado}")
-            logger.info(f"[VALIDADOR_THABYETHA] ================================================")
+        # LOGS DETALLADOS PARA VAULT/THABYETHA (resultados)
+        if es_vault_case:
+            logger.info(f"[VAULT_VALIDADOR] Resultado CLABE: encontrada={clabe_encontrada}, método={metodo_clabe}")
+            logger.info(f"[VAULT_VALIDADOR] Resultado Beneficiario: encontrado={beneficiario_encontrado}")
+            logger.info(f"[VAULT_VALIDADOR] ==========================================")
         
         # REGLA ESPECIAL: Si se usó sufijo enmascarado, DEBE tener beneficiario
         if metodo_clabe == "sufijo_enmascarado" and not beneficiario_encontrado:
