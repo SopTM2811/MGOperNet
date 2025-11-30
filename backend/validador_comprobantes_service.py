@@ -199,6 +199,8 @@ class ValidadorComprobantes:
                 logger.info(f"[ValidadorComprobantes] ✓ CLABE {clabe} identificada como DESTINO")
             else:
                 logger.info(f"[ValidadorComprobantes] ✗ CLABE {clabe} ignorada (origen={es_origen}, rastreo={es_rastreo}, destino={es_destino})")
+                if es_thabyetha:
+                    logger.info(f"[THABYETHA_DEBUG] Contexto de CLABE {clabe}: {contexto[:200]}")
         
         if es_thabyetha:
             logger.info(f"[THABYETHA_DEBUG] CLABEs válidas después de filtros (destino): {clabes_destino}")
