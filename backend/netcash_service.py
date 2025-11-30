@@ -1307,27 +1307,50 @@ class NetCashService:
         Args:
             solicitud: Dict con los datos de la solicitud
         """
+        folio_netcash = solicitud.get('folio_netcash', 'N/A')
+        
+        logger.info(f"[NOTIF_ANA] ========== INICIO NOTIFICACIÓN A ANA ==========")
+        logger.info(f"[NOTIF_ANA] Solicitud: {folio_netcash}")
+        
         # Obtener usuario Ana desde el catálogo
         from usuarios_repo import usuarios_repo
         
+        logger.info(f"[NOTIF_ANA] Consultando usuario con rol 'admin_netcash' en catálogo...")
         ana = await usuarios_repo.obtener_usuario_por_rol("admin_netcash")
         
         if not ana:
-            logger.warning(f"[NetCash] No se encontró usuario con rol 'admin_netcash' en el catálogo")
+            logger.error(f"[NOTIF_ANA] ERROR: No se encontró usuario con rol 'admin_netcash' en el catálogo")
+            logger.error(f"[NOTIF_ANA] Verificar que existe usuario con rol_negocio='admin_netcash' y activo=true")
             return
         
+        logger.info(f"[NOTIF_ANA] Usuario encontrado: {ana.get('nombre')}")
+        logger.info(f"[NOTIF_ANA] Activo: {ana.get('activo')}")
+        logger.info(f"[NOTIF_ANA] Telegram ID: {ana.get('telegram_id')}")
+        
         if not ana.get("telegram_id"):
-            logger.warning(f"[NetCash] Usuario {ana.get('nombre')} (admin_netcash) no tiene telegram_id configurado")
+            logger.error(f"[NOTIF_ANA] ERROR: Usuario {ana.get('nombre')} (admin_netcash) no tiene telegram_id configurado")
+            logger.error(f"[NOTIF_ANA] Actualizar campo telegram_id en la colección usuarios_netcash")
             return
+        
+        telegram_id = ana.get("telegram_id")
+        logger.info(f"[NOTIF_ANA] Intentando notificar a Ana | folio_netcash={folio_netcash} | chat_id={telegram_id}")
         
         # Importar handlers y enviar notificación
         from telegram_ana_handlers import telegram_ana_handlers
         
-        if telegram_ana_handlers:
+        if not telegram_ana_handlers:
+            logger.error(f"[NOTIF_ANA] ERROR: telegram_ana_handlers no inicializado, notificación no enviada")
+            return
+        
+        try:
             await telegram_ana_handlers.notificar_nueva_solicitud_para_mbco(solicitud, ana)
-            logger.info(f"[NetCash] Notificación enviada a {ana.get('nombre')} (admin_netcash) para solicitud {solicitud.get('folio_netcash')}")
-        else:
-            logger.warning(f"[NetCash] telegram_ana_handlers no inicializado, notificación no enviada")
+            logger.info(f"[NOTIF_ANA] ✅ Notificación enviada exitosamente a {ana.get('nombre')} (chat_id={telegram_id})")
+            logger.info(f"[NOTIF_ANA] ========== FIN NOTIFICACIÓN A ANA ==========")
+        except Exception as e:
+            logger.error(f"[NOTIF_ANA] ERROR enviando notificación: {str(e)}")
+            import traceback
+            logger.error(f"[NOTIF_ANA] Traceback: {traceback.format_exc()}")
+            logger.error(f"[NOTIF_ANA] ========== FIN NOTIFICACIÓN A ANA (CON ERROR) ==========")
 
 
 # Instancia global del servicio
