@@ -168,11 +168,17 @@ class TelegramAnaHandlers:
             await update.message.reply_text("❌ Error: No se encontró la solicitud. Por favor inicia el proceso de nuevo.")
             return ConversationHandler.END
         
-        # Validaciones básicas
-        if not folio_mbco or len(folio_mbco) < 3:
+        # Validación de formato: ^\d{4}-\d{3}-[DSRM]-\d{2}$
+        import re
+        patron_folio = r'^\d{4}-\d{3}-[DSRM]-\d{2}$'
+        
+        if not re.match(patron_folio, folio_mbco):
             await update.message.reply_text(
-                "❌ El folio MBco no es válido. Debe tener al menos 3 caracteres.\n\n"
-                "Por favor, escribe un folio válido (ejemplo: MB-2025-0007):"
+                "❌ **El folio no tiene el formato correcto.**\n\n"
+                "Recuerda: 4 dígitos – 3 dígitos – 1 letra (D, S, R o M) – 2 dígitos.\n"
+                "**Ejemplo:** `1234-209-M-11`\n\n"
+                "Por favor, escribe un folio válido:",
+                parse_mode='Markdown'
             )
             return ANA_ESPERANDO_FOLIO_MBCO
         
