@@ -4,6 +4,10 @@ Script de prueba para ejecutar manualmente el proceso de Tesorería
 import asyncio
 import sys
 import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv('/app/backend/.env')
 
 # Agregar el path del backend
 sys.path.insert(0, '/app/backend')
