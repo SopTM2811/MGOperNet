@@ -1183,19 +1183,23 @@ class TelegramBotNetCash:
             fallbacks=[CommandHandler("cancelar", self.cancelar_registro)]
         )
         
-        # Conversation handler for NetCash V1 (nuevo)
+        # Conversation handler for NetCash V1 (REORDENADO)
+        # Nuevo orden: Comprobantes → Beneficiario+IDMEX → Ligas → Confirmación
         conv_handler_netcash = ConversationHandler(
             entry_points=[CallbackQueryHandler(self.nc_handlers.iniciar_crear_operacion, pattern="^nc_crear_operacion$")],
             states={
-                NC_ESPERANDO_BENEFICIARIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_beneficiario)],
-                NC_ESPERANDO_IDMEX: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_idmex)],
-                NC_ESPERANDO_LIGAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_ligas)],
                 NC_ESPERANDO_COMPROBANTE: [
                     MessageHandler(filters.Document.ALL, self.nc_handlers.recibir_comprobante),
                     MessageHandler(filters.PHOTO, self.nc_handlers.recibir_comprobante),
                     CallbackQueryHandler(self.nc_handlers.agregar_otro_comprobante, pattern="^nc_mas_comprobantes_"),
-                    CallbackQueryHandler(self.nc_handlers.continuar_con_comprobantes, pattern="^nc_continuar_comprobantes_")
+                    CallbackQueryHandler(self.nc_handlers.continuar_desde_paso1, pattern="^nc_continuar_paso1_")
                 ],
+                NC_ESPERANDO_BENEFICIARIO: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_beneficiario),
+                    CallbackQueryHandler(self.nc_handlers.seleccionar_beneficiario_frecuente, pattern="^nc_benef_freq_")
+                ],
+                NC_ESPERANDO_IDMEX: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_idmex)],
+                NC_ESPERANDO_LIGAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_ligas)],
                 NC_ESPERANDO_CONFIRMACION: [
                     CallbackQueryHandler(self.nc_handlers.confirmar_operacion, pattern="^nc_confirmar_"),
                     CallbackQueryHandler(self.nc_handlers.corregir_datos, pattern="^nc_corregir_")
