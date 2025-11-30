@@ -313,8 +313,8 @@ class ValidadorComprobantes:
                     logger.info(f"[VAULT_DEBUG]   - es_destino: {es_destino}")
                     logger.info(f"[VAULT_DEBUG]   - Contexto (primeros 300 chars): {contexto[:300]}")
         
-        if es_thabyetha:
-            logger.info(f"[THABYETHA_DEBUG] CLABEs válidas después de filtros (destino): {clabes_destino}")
+        if es_vault_thabyetha:
+            logger.info(f"[VAULT_DEBUG] CLABEs válidas después de filtros (destino): {clabes_destino}")
         
         # Verificar si alguna CLABE de destino coincide
         for clabe_encontrada in clabes_destino:
