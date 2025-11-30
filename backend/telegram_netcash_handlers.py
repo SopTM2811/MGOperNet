@@ -899,15 +899,25 @@ class TelegramNetCashHandlers:
                 solicitud = await netcash_service.obtener_solicitud(solicitud_id)
                 folio = solicitud.get("folio_mbco", "N/A")
                 
+                # Calcular totales de comprobantes válidos
+                comprobantes = solicitud.get("comprobantes", [])
+                comprobantes_validos = [c for c in comprobantes if c.get("es_valido", False)]
+                total_comprobantes_validos = sum(c.get("monto_detectado", 0) for c in comprobantes_validos if c.get("monto_detectado"))
+                
+                # Obtener comisiones calculadas
+                comision_cliente = solicitud.get("comision_cliente", 0)
+                monto_ligas = solicitud.get("monto_ligas", 0)
+                
                 mensaje = "🎉 **¡Tu operación NetCash fue registrada correctamente!**\n\n"
                 mensaje += f"📋 **Folio:** {folio}\n"
                 mensaje += f"👤 **Beneficiario:** {solicitud.get('beneficiario_reportado')}\n"
                 mensaje += f"🆔 **IDMEX:** {solicitud.get('idmex_reportado')}\n"
-                mensaje += f"🎫 **Ligas NetCash:** {solicitud.get('cantidad_ligas_reportada')}\n"
+                mensaje += f"🎫 **Ligas NetCash:** {solicitud.get('cantidad_ligas_reportada')}\n\n"
                 
-                monto = solicitud.get("monto_depositado_cliente")
-                if monto:
-                    mensaje += f"💵 **Monto detectado:** ${monto:,.2f}\n"
+                mensaje += f"💰 **Resumen financiero:**\n"
+                mensaje += f"  • Total depósitos detectados: ${total_comprobantes_validos:,.2f}\n"
+                mensaje += f"  • Comisión NetCash (1.00%): ${comision_cliente:,.2f}\n"
+                mensaje += f"  • Monto a enviar en ligas: ${monto_ligas:,.2f}\n"
                 
                 mensaje += f"\n✅ **Estado:** Lista para proceso interno MBco\n\n"
                 mensaje += "Te avisaremos cuando tus ligas NetCash estén listas. 🚀"
