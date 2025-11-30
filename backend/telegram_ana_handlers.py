@@ -111,10 +111,35 @@ class TelegramAnaHandlers:
         query = update.callback_query
         await query.answer()
         
-        # Verificar que es Ana
-        if not es_usuario_admin_mbco(query.from_user.id):
+        telegram_id = query.from_user.id
+        
+        # Verificar permisos usando catálogo usuarios_netcash
+        logger.info(f"[ANA_PERMISOS] Callback AsignarFolio desde chat_id={telegram_id}")
+        
+        from usuarios_repo import usuarios_repo
+        usuario = await usuarios_repo.obtener_usuario_por_telegram_id(telegram_id)
+        
+        logger.info(f"[ANA_PERMISOS] Usuario encontrado en catálogo: {usuario.get('nombre') if usuario else None}")
+        
+        if not usuario:
+            logger.warning(f"[ANA_PERMISOS] Acceso denegado: Usuario con telegram_id={telegram_id} NO encontrado en catálogo")
             await query.edit_message_text("❌ No tienes permisos para esta acción.")
             return ConversationHandler.END
+        
+        if not usuario.get("activo"):
+            logger.warning(f"[ANA_PERMISOS] Acceso denegado: Usuario {usuario.get('nombre')} NO está activo")
+            await query.edit_message_text("❌ No tienes permisos para esta acción.")
+            return ConversationHandler.END
+        
+        puede_asignar = usuario.get("permisos", {}).get("puede_asignar_folio_mbco", False)
+        logger.info(f"[ANA_PERMISOS] Permiso puede_asignar_folio_mbco={puede_asignar}")
+        
+        if not puede_asignar:
+            logger.warning(f"[ANA_PERMISOS] Acceso denegado: Usuario {usuario.get('nombre')} NO tiene permiso 'puede_asignar_folio_mbco'")
+            await query.edit_message_text("❌ No tienes permisos para esta acción.")
+            return ConversationHandler.END
+        
+        logger.info(f"[ANA_PERMISOS] ✅ Acceso concedido a {usuario.get('nombre')} ({usuario.get('rol_negocio')})")
         
         # Extraer solicitud_id del callback_data
         solicitud_id = query.data.replace("ana_asignar_folio_", "")
