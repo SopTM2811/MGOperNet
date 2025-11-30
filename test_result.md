@@ -476,6 +476,70 @@ metadata:
   test_sequence: 0
   run_ui: true
 
+  - task: "NetCash V1 - Flujo completo end-to-end con nuevas funcionalidades"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/netcash_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: |
+          Necesidad de testing end-to-end del flujo completo de NetCash en Telegram con las nuevas funcionalidades:
+          1. Resumen intermedio después de validar comprobantes (Paso 1) - muestra lista de montos y total
+          2. Cálculos correctos en resumen final usando suma de TODOS los comprobantes válidos
+          3. Persistencia completa en BD con campos: total_comprobantes_validos, comision_cliente, monto_ligas, etc.
+          4. Visualización en web en /mis-solicitudes-netcash
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO EXITOSAMENTE: Flujo NetCash V1 end-to-end funcionando correctamente.
+          
+          ESCENARIO PROBADO:
+          • Usuario de prueba: telegram_id "19440987", cliente_id "d9115936-733e-4598-a23c-2ae7633216f9"
+          • Cliente: JAVIER TELEGAM (estado activo)
+          • Comprobantes: 2 comprobantes válidos de THABYETHA ($179,800.00 cada uno)
+          • Total depósitos: $359,600.00
+          
+          FLUJO COMPLETO VERIFICADO:
+          1. ✅ Creación de solicitud NetCash (ID: nc-1764482809896)
+          2. ✅ Subida de múltiples comprobantes válidos (2 PDFs de THABYETHA)
+          3. ✅ RESUMEN INTERMEDIO implementado correctamente:
+             - Lista individual de comprobantes con montos
+             - Total de depósitos detectados: $359,600.00
+             - Suma correcta de TODOS los comprobantes
+          4. ✅ Captura de beneficiario: "JUAN CARLOS PEREZ GOMEZ"
+          5. ✅ Captura de IDMEX: "1234567890"
+          6. ✅ Captura de cantidad de ligas: 5
+          7. ✅ Validación y procesamiento automático exitoso
+          8. ✅ Folio generado: NC-000004
+          
+          CÁLCULOS FINALES VERIFICADOS:
+          • Total comprobantes válidos: $359,600.00 ✓
+          • Número comprobantes válidos: 2 ✓
+          • Porcentaje comisión cliente: 1.0% ✓
+          • Comisión cliente: $3,596.00 ✓ (Total * 0.01)
+          • Monto ligas: $356,004.00 ✓ (Total - Comisión)
+          • Cuenta NetCash usada: STP/646180139409481462/THABYETHA ✓
+          
+          PERSISTENCIA EN BD VERIFICADA:
+          • Todos los campos nuevos presentes en solicitudes_netcash
+          • Estado: lista_para_mbc
+          • Cálculos correctos guardados
+          
+          VISUALIZACIÓN WEB VERIFICADA:
+          • Endpoint /api/netcash/solicitudes/cliente/{cliente_id} funcional
+          • Solicitud visible con datos correctos
+          • Total: $359,600.00 mostrado correctamente
+          
+          NUEVAS FUNCIONALIDADES CONFIRMADAS:
+          ✅ Resumen intermedio después de Paso 1 (validar comprobantes)
+          ✅ Cálculos usando suma de TODOS los comprobantes válidos (no solo el último)
+          ✅ Persistencia completa con campos: total_comprobantes_validos, comision_cliente, monto_ligas
+          ✅ Visualización en web funcionando correctamente
+
 test_plan:
   current_focus: []
   stuck_tasks: []
