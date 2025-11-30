@@ -364,15 +364,30 @@ class TesoreriaService:
         return lote_info
     
     async def _enviar_correo_tesoreria(self, lote_info: Dict, solicitudes: List[Dict], layout_csv: str):
-        """Envía correo a Tesorería con detalle y layout adjunto"""
+        """
+        Envía correo a Tesorería con detalle, layout CSV y comprobantes del cliente adjuntos
+        """
         logger.info(f"[Tesorería] Preparando correo para {self.tesoreria_email}")
         
-        # Construir asunto
+        # Construir asunto con ambos IDs
         fecha_str = lote_info['fecha_corte'].strftime('%Y-%m-%d %H:%M')
-        asunto = f"NetCash – Lote Tesorería – {fecha_str} – {lote_info['n_solicitudes']} solicitudes"
+        lote_id_mbco = lote_info.get('id_lote_mbco', 'N/A')
+        asunto = f"NetCash – Lote {lote_id_mbco} – {fecha_str} – {lote_info['n_solicitudes']} solicitudes"
         
         # Construir cuerpo
         cuerpo = self._generar_cuerpo_correo(lote_info, solicitudes)
+        
+        # Recopilar comprobantes del cliente para adjuntar
+        comprobantes_paths = []
+        for solicitud in solicitudes:
+            comprobantes = solicitud.get('comprobantes', [])
+            for comp in comprobantes:
+                if comp.get('es_valido') and not comp.get('es_duplicado'):
+                    ruta_archivo = comp.get('ruta_archivo')
+                    if ruta_archivo and Path(ruta_archivo).exists():
+                        comprobantes_paths.append(ruta_archivo)
+        
+        logger.info(f"[Tesorería] Comprobantes a adjuntar: {len(comprobantes_paths)}")
         
         # Enviar correo con adjunto
         from gmail_service import gmail_service
