@@ -259,51 +259,102 @@ class ValidadorComprobantes:
         return False, "no_encontrada"
     
     def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str) -> bool:
-        """Busca el beneficiario objetivo en el texto (tolerante a separaciones)"""
+        """
+        Busca el beneficiario objetivo en el texto (V3.0 - Multi-layout)
+        
+        Tolerante a:
+        - Separaciones por líneas/saltos
+        - Variaciones de "SA DE CV", "S.A. DE C.V.", etc.
+        - Abreviaciones en apps móviles
+        - Mayúsculas/minúsculas
+        - Acentos
+        """
         if not beneficiario_objetivo:
             return False
         
-        # Normalizar
-        texto_normalizado = self.normalizar_texto(texto)
-        beneficiario_normalizado = self.normalizar_texto(beneficiario_objetivo)
+        import unicodedata
         
-        # Buscar beneficiario completo
-        if beneficiario_normalizado in texto_normalizado:
-            logger.info(f"[ValidadorComprobantes] ✅ Beneficiario completo encontrado")
+        # Normalizar texto (quitar acentos, mayúsculas, espacios extra)
+        def normalizar_avanzado(texto):
+            # Quitar acentos
+            texto = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('ASCII')
+            # Mayúsculas
+            texto = texto.upper()
+            # Quitar puntuación
+            texto = texto.replace('.', ' ').replace(',', ' ').replace('-', ' ').replace('/', ' ')
+            # Normalizar "SA DE CV" y variaciones
+            texto = texto.replace('S A DE C V', 'SA DE CV')
+            texto = texto.replace('SADE CV', 'SA DE CV')
+            texto = texto.replace('SA DECV', 'SA DE CV')
+            texto = texto.replace('SADECV', 'SA DE CV')
+            texto = texto.replace('S DE RL DE CV', 'SA DE CV')  # Incluir S DE RL
+            # Quitar espacios múltiples
+            texto = re.sub(r'\s+', ' ', texto)
+            return texto.strip()
+        
+        texto_norm = normalizar_avanzado(texto)
+        beneficiario_norm = normalizar_avanzado(beneficiario_objetivo)
+        
+        logger.info(f"[ValidadorComprobantes] Buscando beneficiario normalizado: {beneficiario_norm}")
+        
+        # Intento 1: Match completo
+        if beneficiario_norm in texto_norm:
+            logger.info(f"[ValidadorComprobantes] ✅ Beneficiario completo encontrado (match exacto)")
             return True
         
-        # Para "JARDINERIA Y COMERCIO THABYETHA SA DE CV"
-        # Buscar partes clave que suelen aparecer separadas
-        partes_clave = []
+        # Intento 2: Buscar sin "SA DE CV" al final (muchas veces se omite en apps móviles)
+        beneficiario_sin_sadecv = beneficiario_norm.replace('SA DE CV', '').replace('S DE RL', '').strip()
+        if len(beneficiario_sin_sadecv) >= 10 and beneficiario_sin_sadecv in texto_norm:
+            logger.info(f"[ValidadorComprobantes] ✅ Beneficiario encontrado sin SA DE CV")
+            return True
         
-        # Extraer palabras significativas (ignorar conectores)
-        palabras = beneficiario_normalizado.split()
-        for palabra in palabras:
-            if palabra not in ['Y', 'DE', 'SA', 'CV', 'LA', 'EL', 'LOS', 'LAS']:
-                if len(palabra) >= 4:  # Solo palabras significativas
-                    partes_clave.append(palabra)
+        # Intento 3: Extraer palabras clave (≥4 caracteres, no conectores)
+        conectores = {'Y', 'DE', 'SA', 'CV', 'LA', 'EL', 'LOS', 'LAS', 'DEL', 'CON', 'POR', 'PARA'}
         
-        # Contar cuántas partes clave aparecen
-        encontradas = sum(1 for parte in partes_clave if parte in texto_normalizado)
+        palabras_benef = [p for p in beneficiario_norm.split() if len(p) >= 4 and p not in conectores]
         
-        if len(partes_clave) > 0:
-            porcentaje = encontradas / len(partes_clave)
+        if len(palabras_benef) == 0:
+            # Si no hay palabras clave suficientes, usar todas
+            palabras_benef = [p for p in beneficiario_norm.split() if len(p) >= 3]
+        
+        logger.info(f"[ValidadorComprobantes] Palabras clave a buscar: {palabras_benef}")
+        
+        palabras_encontradas = [p for p in palabras_benef if p in texto_norm]
+        
+        if len(palabras_benef) > 0:
+            porcentaje = len(palabras_encontradas) / len(palabras_benef)
             
+            logger.info(f"[ValidadorComprobantes] Palabras encontradas: {palabras_encontradas} ({int(porcentaje*100)}%)")
+            
+            # Criterio: al menos 70% de palabras clave encontradas
             if porcentaje >= 0.7:
-                logger.info(f"[ValidadorComprobantes] ✅ {int(porcentaje*100)}% de partes clave encontradas: {encontradas}/{len(partes_clave)}")
+                logger.info(f"[ValidadorComprobantes] ✅ Beneficiario encontrado (70%+ de palabras clave)")
                 return True
         
-        # Fallback: buscar al menos 70% de TODAS las palabras
-        todas_palabras = beneficiario_normalizado.split()
-        if len(todas_palabras) >= 2:
-            palabras_encontradas = sum(1 for palabra in todas_palabras if palabra in texto_normalizado)
-            porcentaje_total = palabras_encontradas / len(todas_palabras)
-            
-            if porcentaje_total >= 0.7:
-                logger.info(f"[ValidadorComprobantes] ✅ {int(porcentaje_total*100)}% del beneficiario encontrado")
-                return True
+        # Intento 4: Buscar contexto de beneficiario/destinatario cerca de palabras clave
+        # Esto maneja casos donde el beneficiario aparece en una línea tipo:
+        # "Beneficiario: JARDINERIA Y COMERCIO..."
+        # "Destinatario: UNION AGROINDUSTRIAL..."
+        keywords_contexto = ["BENEFICIAR", "DESTINATARIO", "TITULAR", "PARA", "NOMBRE"]
         
-        logger.warning(f"[ValidadorComprobantes] ❌ Beneficiario NO encontrado suficientemente")
+        for keyword in keywords_contexto:
+            if keyword in texto_norm:
+                # Buscar posición del keyword
+                idx = texto_norm.find(keyword)
+                # Extraer 200 caracteres después del keyword
+                fragmento = texto_norm[idx:idx+250]
+                
+                # Contar cuántas palabras clave del beneficiario aparecen en este fragmento
+                palabras_en_fragmento = [p for p in palabras_benef if p in fragmento]
+                
+                if len(palabras_benef) > 0:
+                    porcentaje_frag = len(palabras_en_fragmento) / len(palabras_benef)
+                    
+                    if porcentaje_frag >= 0.7:
+                        logger.info(f"[ValidadorComprobantes] ✅ Beneficiario encontrado cerca de '{keyword}' ({int(porcentaje_frag*100)}%)")
+                        return True
+        
+        logger.warning(f"[ValidadorComprobantes] ❌ Beneficiario NO encontrado suficientemente en el texto")
         return False
     
     def validar_comprobante(self, 
