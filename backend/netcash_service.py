@@ -397,6 +397,7 @@ class NetCashService:
             "total_archivos": 0,
             "validos": 0,
             "invalidos": 0,
+            "sin_texto_legible": 0,  # PDFs/imágenes sin texto extraíble
             "duplicados": 0,
             "no_legibles": 0,
             "archivos_procesados": []
