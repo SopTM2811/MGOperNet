@@ -389,7 +389,6 @@ class TesoreriaService:
         mensaje += "**Detalle:**\n"
         
         for solicitud in solicitudes[:10]:  # Mostrar máximo 10 en Telegram
-            folio_nc = solicitud.get('folio_netcash', 'N/A')
             folio_mbco = solicitud.get('folio_mbco', 'N/A')
             cliente = solicitud.get('cliente_nombre', 'N/A')
             beneficiario = solicitud.get('beneficiario_reportado', 'N/A')
@@ -399,8 +398,7 @@ class TesoreriaService:
             cliente_short = cliente[:20] + "..." if len(cliente) > 20 else cliente
             beneficiario_short = beneficiario[:20] + "..." if len(beneficiario) > 20 else beneficiario
             
-            mensaje += f"• Folio NC: {folio_nc}\n"
-            mensaje += f"  MBco: {folio_mbco}\n"
+            mensaje += f"• MBco: {folio_mbco}\n"
             mensaje += f"  Cliente: {cliente_short}\n"
             mensaje += f"  Beneficiario: {beneficiario_short}\n"
             mensaje += f"  Depósitos: ${total_dep:,.2f}\n\n"
