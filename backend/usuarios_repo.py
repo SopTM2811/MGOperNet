@@ -56,6 +56,36 @@ class UsuariosRepository:
         
         return bool(usuario.get("permisos", {}).get("puede_ver_usuarios", False))
     
+    async def obtener_usuario_por_telegram_id(self, telegram_id: int) -> Optional[Dict]:
+        """
+        Obtiene un usuario por su Telegram ID
+        
+        Args:
+            telegram_id: ID de Telegram del usuario
+            
+        Returns:
+            Dict con datos del usuario o None si no existe
+        """
+        try:
+            usuario = await db[COLLECTION_NAME].find_one(
+                {
+                    "telegram_id": telegram_id,
+                    "activo": True
+                },
+                {"_id": 0}
+            )
+            
+            if usuario:
+                logger.info(f"[UsuariosRepo] Usuario encontrado para telegram_id {telegram_id}: {usuario.get('nombre')} ({usuario.get('rol_negocio')})")
+            else:
+                logger.warning(f"[UsuariosRepo] No se encontró usuario activo con telegram_id {telegram_id}")
+            
+            return usuario
+            
+        except Exception as e:
+            logger.error(f"[UsuariosRepo] Error obteniendo usuario por telegram_id: {str(e)}")
+            return None
+    
     async def obtener_usuario_por_rol(self, rol_negocio: str) -> Optional[Dict]:
         """
         Obtiene el primer usuario activo con el rol especificado
