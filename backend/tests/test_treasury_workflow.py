@@ -42,14 +42,15 @@ class TreasuryWorkflowTest:
         self.test_solicitudes_ids = []
         self.test_lote_id = None
         
-        # Variables de entorno requeridas
-        self.capital_clabe = os.getenv('NETCASH_CAPITAL_CLABE_ORIGEN', '646180000000000000')
-        self.comision_clabe = os.getenv('NETCASH_COMISION_CLABE_ORIGEN', '646180000000000001')
+        # CLABEs esperadas del PROVEEDOR (no del cliente)
+        # Estas son las cuentas configuradas en cuentas_proveedor_netcash
+        self.capital_clabe = '012680001255709482'  # AFFORDABLE MEDICAL SERVICES SC
+        self.comision_clabe = '058680000012912655'  # Comercializadora Uetacop SA de CV
         self.tesoreria_email = os.getenv('TESORERIA_TEST_EMAIL', 'dfgalezzo@hotmail.com')
         
-        logger.info(f"[Test] Variables de entorno:")
-        logger.info(f"[Test] Capital CLABE: {self.capital_clabe}")
-        logger.info(f"[Test] Comisión CLABE: {self.comision_clabe}")
+        logger.info(f"[Test] Cuentas de proveedor esperadas:")
+        logger.info(f"[Test] Capital CLABE (AFFORDABLE): {self.capital_clabe}")
+        logger.info(f"[Test] Comisión CLABE (Comercializadora Uetacop): {self.comision_clabe}")
         logger.info(f"[Test] Email Tesorería: {self.tesoreria_email}")
     
     async def setup(self):
