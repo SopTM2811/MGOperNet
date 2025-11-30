@@ -125,7 +125,15 @@ class TesoreriaService:
             
             # IMPORTANTE: Usar la comisión DNS calculada (0.375% del capital)
             # NO usar comision_cliente (que es 1% del total)
-            comision_dns = Decimal(str(solicitud.get('comision_dns_calculada', 0)))
+            comision_dns_value = solicitud.get('comision_dns_calculada')
+            
+            if comision_dns_value is None:
+                # Si no está calculada, calcular aquí
+                comision_dns = (monto_ligas * NETCASH_COMISION_DNS_PCT).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                logger.warning(f"[Tesorería] Comisión DNS no pre-calculada para {folio_mbco}, calculando: ${comision_dns:.2f}")
+            else:
+                comision_dns = Decimal(str(comision_dns_value))
+                logger.info(f"[Tesorería] Folio {folio_mbco}: Capital=${monto_ligas:.2f}, Comisión DNS=${comision_dns:.2f}")
             
             # Datos para contexto interno (NO van como destinatario en el layout)
             cliente = solicitud.get('cliente_nombre', 'N/A')
