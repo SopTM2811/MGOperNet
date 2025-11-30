@@ -290,14 +290,12 @@ class TesoreriaService:
             cuerpo += "<div style='margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9;'>"
             cuerpo += f"<h3>Solicitud {i} de {len(solicitudes)}</h3>"
             
-            folio_nc = solicitud.get('folio_mbco', 'N/A')
-            folio_mbco = solicitud.get('folio_mbco', 'N/A')  # TODO: Revisar si hay campo separado
+            folio_mbco = solicitud.get('folio_mbco', 'N/A')
             cliente = solicitud.get('cliente_nombre', 'N/A')
             beneficiario = solicitud.get('beneficiario_reportado', 'N/A')
             idmex = solicitud.get('idmex_reportado', 'N/A')
             estado = solicitud.get('estado', 'N/A')
             
-            cuerpo += f"<p><strong>Folio NetCash:</strong> {folio_nc}</p>"
             cuerpo += f"<p><strong>Folio MBco:</strong> {folio_mbco}</p>"
             cuerpo += f"<p><strong>Cliente:</strong> {cliente}</p>"
             cuerpo += f"<p><strong>Beneficiario:</strong> {beneficiario}</p>"
