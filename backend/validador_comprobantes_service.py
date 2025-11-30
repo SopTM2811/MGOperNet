@@ -200,15 +200,24 @@ class ValidadorComprobantes:
             else:
                 logger.info(f"[ValidadorComprobantes] ✗ CLABE {clabe} ignorada (origen={es_origen}, rastreo={es_rastreo}, destino={es_destino})")
         
+        if es_thabyetha:
+            logger.info(f"[THABYETHA_DEBUG] CLABEs válidas después de filtros (destino): {clabes_destino}")
+        
         # Verificar si alguna CLABE de destino coincide
         for clabe_encontrada in clabes_destino:
             if clabe_encontrada == clabe_objetivo:
                 logger.info(f"[ValidadorComprobantes] ✅✅✅ CLABE COMPLETA ENCONTRADA: {clabe_encontrada}")
+                if es_thabyetha:
+                    logger.info(f"[THABYETHA_DEBUG] Resultado final: clabe_encontrada=True metodo=completa")
+                    logger.info(f"[THABYETHA_DEBUG] ========== FIN DEBUG THABYETHA ==========")
                 return True, "completa"
         
         # Si hay CLABEs de destino pero no coinciden, comprobante inválido
         if len(clabes_destino) > 0:
             logger.warning(f"[ValidadorComprobantes] ❌ Hay CLABEs de destino pero NINGUNA coincide con {clabe_objetivo}")
+            if es_thabyetha:
+                logger.info(f"[THABYETHA_DEBUG] Resultado final: clabe_encontrada=False metodo=no_encontrada (hay CLABEs pero no coinciden)")
+                logger.info(f"[THABYETHA_DEBUG] ========== FIN DEBUG THABYETHA ==========")
             return False, "no_encontrada"
         
         # PASO B: Buscar sufijos enmascarados en múltiples formatos
