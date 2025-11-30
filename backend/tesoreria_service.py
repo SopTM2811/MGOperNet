@@ -485,8 +485,9 @@ class TesoreriaService:
         mensaje += f"⏱ **Corte:** {fecha_str}\n"
         mensaje += f"📦 **Solicitudes incluidas:** {lote_info['n_solicitudes']}\n"
         mensaje += f"💰 **Total depósitos:** ${lote_info['total_depositos']:,.2f}\n"
-        mensaje += f"💸 **Total capital a dispersar:** ${lote_info['total_capital']:,.2f}\n"
-        mensaje += f"🧮 **Total comisión:** ${lote_info['total_comision']:,.2f}\n\n"
+        mensaje += f"💸 **Capital a dispersar:** ${lote_info['total_capital']:,.2f}\n"
+        mensaje += f"🧮 **Comisión DNS (0.375%):** ${lote_info['total_comision_dns']:,.2f}\n"
+        mensaje += f"📊 **Total a proveedor:** ${lote_info['total_capital'] + lote_info['total_comision_dns']:,.2f}\n\n"
         mensaje += "**Detalle:**\n"
         
         for solicitud in solicitudes[:10]:  # Mostrar máximo 10 en Telegram
