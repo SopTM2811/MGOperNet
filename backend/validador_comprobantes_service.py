@@ -296,8 +296,8 @@ class ValidadorComprobantes:
         logger.info(f"[ValidadorComprobantes] Primeros 500 caracteres: {texto_comprobante[:500]}")
         
         # Validar CLABE
-        clabe_encontrada = self.buscar_clabe_en_texto(texto_comprobante, clabe_activa)
-        logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada en comprobante: {clabe_encontrada}")
+        clabe_encontrada, metodo_clabe = self.buscar_clabe_en_texto(texto_comprobante, clabe_activa)
+        logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada en comprobante: {clabe_encontrada} (método: {metodo_clabe})")
         
         # Validar beneficiario
         beneficiario_encontrado = self.buscar_beneficiario_en_texto(texto_comprobante, beneficiario_activo)
@@ -305,8 +305,15 @@ class ValidadorComprobantes:
         
         # Resultado
         if clabe_encontrada and beneficiario_encontrado:
-            logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE y beneficiario coinciden con cuenta activa")
-            return True, "Comprobante válido: CLABE y beneficiario coinciden"
+            if metodo_clabe == "completa":
+                logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE completa y beneficiario coinciden con cuenta activa")
+                return True, "Comprobante válido: CLABE y beneficiario coinciden"
+            elif metodo_clabe == "sufijo_3":
+                logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: Beneficiario coincide y CLABE termina en {clabe_activa[-3:]} (formato Banamex sin CLABE completa)")
+                return True, f"Comprobante válido: beneficiario coincide y la CLABE termina en {clabe_activa[-3:]} (formato Banamex)"
+            else:
+                logger.info(f"[ValidadorComprobantes] ✅ VÁLIDO: CLABE y beneficiario coinciden")
+                return True, "Comprobante válido"
         elif clabe_encontrada and not beneficiario_encontrado:
             logger.warning(f"[ValidadorComprobantes] ❌ INVÁLIDO: CLABE correcta pero beneficiario NO coincide")
             return False, f"El comprobante tiene la CLABE correcta pero el beneficiario no coincide con {beneficiario_activo}"
