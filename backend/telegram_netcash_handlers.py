@@ -510,30 +510,47 @@ class TelegramNetCashHandlers:
             client = AsyncIOMotorClient(mongo_url)
             db = client[db_name]
             
-            solicitudes_exitosas = await db.solicitudes_netcash.find(
+            # Buscar beneficiarios en operaciones válidas (no rechazadas ni canceladas)
+            estados_validos = ["lista_para_mbc", "en_proceso_mbc", "completada"]
+            
+            solicitudes_historicas = await db.solicitudes_netcash.find(
                 {
                     "cliente_id": cliente_id,
-                    "estado": "lista_para_mbc",
-                    "beneficiario_reportado": {"$exists": True, "$ne": None},
-                    "idmex_reportado": {"$exists": True, "$ne": None}
+                    "estado": {"$in": estados_validos},
+                    "beneficiario_reportado": {"$exists": True, "$ne": None, "$ne": ""},
+                    "idmex_reportado": {"$exists": True, "$ne": None, "$ne": ""}
                 },
-                {"_id": 0, "beneficiario_reportado": 1, "idmex_reportado": 1}
-            ).sort("created_at", -1).limit(5).to_list(5)
+                {"_id": 0, "beneficiario_reportado": 1, "idmex_reportado": 1, "created_at": 1}
+            ).sort("created_at", -1).limit(20).to_list(20)  # Buscar más para asegurar variedad
             
-            # Deduplicar beneficiarios (mismo beneficiario + idmex)
+            # Deduplicar beneficiarios (mismo beneficiario + idmex) manteniendo orden cronológico
             beneficiarios_frecuentes = {}
-            for sol in solicitudes_exitosas:
+            for sol in solicitudes_historicas:
                 benef = sol.get("beneficiario_reportado")
                 idmex = sol.get("idmex_reportado")
+                
+                # Validar que tenga valores válidos
+                if not benef or not idmex:
+                    continue
+                
                 key = f"{benef}_{idmex}"
                 if key not in beneficiarios_frecuentes:
                     beneficiarios_frecuentes[key] = {
                         "beneficiario": benef,
-                        "idmex": idmex
+                        "idmex": idmex,
+                        "created_at": sol.get("created_at")
                     }
             
-            # Tomar los 3 más frecuentes
-            frecuentes = list(beneficiarios_frecuentes.values())[:3]
+            # Tomar los 3 más recientes únicos
+            frecuentes_list = list(beneficiarios_frecuentes.values())
+            # Ordenar por fecha más reciente
+            frecuentes_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+            # Tomar hasta 3
+            frecuentes = frecuentes_list[:3]
+            
+            logger.info(f"[NC Telegram] Beneficiarios frecuentes encontrados: {len(frecuentes)}")
+            for idx, freq in enumerate(frecuentes, 1):
+                logger.info(f"  {idx}. {freq['beneficiario']} - IDMEX: {freq['idmex']}")
             
             mensaje = "👤 **Paso 2 de 3: Beneficiario + IDMEX**\n\n"
             
