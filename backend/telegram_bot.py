@@ -1223,8 +1223,25 @@ class TelegramBotNetCash:
             ]
         )
         
+        # Conversation handler para Ana (asignación de folio MBco)
+        conv_handler_ana = ConversationHandler(
+            entry_points=[CallbackQueryHandler(self.ana_handlers.iniciar_asignacion_folio, pattern="^ana_asignar_folio_")],
+            states={
+                ANA_ESPERANDO_FOLIO_MBCO: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.ana_handlers.recibir_folio_mbco)
+                ]
+            },
+            fallbacks=[
+                CommandHandler("cancelar", self.ana_handlers.cancelar)
+            ]
+        )
+        
+        # Handler para botones de Tesorería
+        self.app.add_handler(CallbackQueryHandler(self.tesoreria_handlers.ver_detalles_orden, pattern="^tesor_ver_orden_"))
+        
         self.app.add_handler(conv_handler_registro)
         self.app.add_handler(conv_handler_netcash)
+        self.app.add_handler(conv_handler_ana)
         self.app.add_handler(CallbackQueryHandler(self.handle_callback))
         self.app.add_handler(MessageHandler(filters.CONTACT, self.handle_contact))
         self.app.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
