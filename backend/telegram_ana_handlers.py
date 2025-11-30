@@ -89,7 +89,7 @@ class TelegramAnaHandlers:
             logger.info(f"[Ana Telegram] Chat ID: {telegram_id}")
             logger.info(f"[Ana Telegram] Folio: {folio_mbco}")
             
-            await self.bot.bot.send_message(
+            await self.bot.app.bot.send_message(
                 chat_id=telegram_id,
                 text=mensaje,
                 parse_mode='Markdown',
