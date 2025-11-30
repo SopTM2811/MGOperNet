@@ -191,6 +191,10 @@ class NetCashService:
             # Determinar MIME type
             mime_type = "application/pdf" if archivo_url.endswith(".pdf") else "image/jpeg"
             
+            # LOG EXPLÍCITO - Para correlacionar con logs del validador
+            logger.info(f"[NC TELEGRAM] Llamando a validar_comprobante() para archivo={nombre_archivo}")
+            logger.info(f"[NC TELEGRAM] Cuenta activa: banco={cuenta_activa.get('banco')} clabe={cuenta_activa.get('clabe')} beneficiario={cuenta_activa.get('beneficiario')}")
+            
             # Validar comprobante
             es_valido, razon = self.validador_comprobantes.validar_comprobante(
                 archivo_url, mime_type, cuenta_activa
