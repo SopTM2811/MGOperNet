@@ -87,6 +87,19 @@ const Home = () => {
               Mis Solicitudes
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
+            
+            {/* TODO: cuando tengamos usuario logueado, mostrar este botón solo si 
+                usuario.permisos.puede_ver_usuarios === true */}
+            <Button
+              data-testid="usuarios-netcash-btn"
+              onClick={() => navigate('/usuarios-netcash')}
+              size="lg"
+              className="bg-gray-700 hover:bg-gray-800 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Usuarios
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
 
