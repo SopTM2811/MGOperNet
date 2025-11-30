@@ -610,9 +610,13 @@ class ValidadorComprobantes:
         # Extraer texto del comprobante
         texto_comprobante = self.extraer_texto_comprobante(ruta_archivo, mime_type)
         
-        if not texto_comprobante or len(texto_comprobante) < 20:
-            logger.warning(f"[ValidadorComprobantes] ❌ No se pudo extraer texto suficiente del comprobante (len={len(texto_comprobante) if texto_comprobante else 0})")
-            return False, "No se pudo leer el comprobante o está vacío"
+        # DETECCIÓN ESPECÍFICA: PDF sin texto legible (imagen escaneada)
+        if not texto_comprobante or len(texto_comprobante.strip()) < 20:
+            logger.warning(f"[ValidadorComprobantes] ❌ PDF sin texto legible (len={len(texto_comprobante) if texto_comprobante else 0})")
+            logger.warning(f"[ValidadorComprobantes] Posible causa: Imagen escaneada o captura de pantalla sin texto seleccionable")
+            
+            # Razón específica para distinguir de otros errores
+            return False, "pdf_sin_texto_legible"
         
         logger.info(f"[ValidadorComprobantes] Texto extraído del comprobante ({len(texto_comprobante)} caracteres)")
         logger.info(f"[ValidadorComprobantes] Primeros 500 caracteres: {texto_comprobante[:500]}")
