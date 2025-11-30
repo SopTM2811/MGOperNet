@@ -325,6 +325,10 @@ class ValidadorComprobantes:
         Returns:
             Tuple (es_valido: bool, razon: str)
         """
+        # LOG DE VERSION - Para tracking
+        import os
+        nombre_archivo = os.path.basename(ruta_archivo)
+        logger.info(f"[VALIDADOR_NETCASH] Version={VALIDADOR_THABYETHA_VERSION} archivo={nombre_archivo}")
         logger.info(f"[ValidadorComprobantes] ========== INICIO VALIDACIÓN ==========")
         logger.info(f"[ValidadorComprobantes] Archivo: {ruta_archivo}")
         
