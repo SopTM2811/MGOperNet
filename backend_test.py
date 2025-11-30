@@ -1312,7 +1312,7 @@ class BackendTester:
             cantidad_ligas = 5
             
             update_data = {
-                "cantidad_ligas": cantidad_ligas
+                "cantidad_ligas_reportada": cantidad_ligas
             }
             
             async with self.session.put(f"{BACKEND_URL}/netcash/solicitudes/{solicitud_id}", json=update_data) as response:
