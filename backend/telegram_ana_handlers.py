@@ -80,9 +80,9 @@ class TelegramAnaHandlers:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            # Enviar a Ana
+            # Enviar al usuario (Ana)
             await self.bot.bot.send_message(
-                chat_id=TELEGRAM_ID_ANA,
+                chat_id=telegram_id,
                 text=mensaje,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
