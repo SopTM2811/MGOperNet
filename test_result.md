@@ -428,6 +428,59 @@ backend:
           RESULTADO: Las correcciones implementadas resuelven completamente el problema anterior.
           Ana ahora recibe notificaciones correctamente cuando nuevos usuarios comparten contacto.
 
+  - task: "Validador de comprobantes V3.5 - Fuzzy matching de beneficiarios"
+    implemented: true
+    working: true
+    file: "/app/backend/validador_comprobantes_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implementado fuzzy matching para nombres de beneficiarios en el validador de comprobantes NetCash.
+          El fuzzy matching solo se aplica cuando se detectó una CLABE completa de 18 dígitos exacta.
+          VERSION actualizada a "V3.5-fuzzy-beneficiario" con función buscar_beneficiario_en_texto()
+          que incluye parámetro clabe_completa_encontrada y logs de auditoría con etiqueta [VALIDADOR_FUZZY_BENEFICIARIO].
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Validador de comprobantes V3.5 con fuzzy matching funcionando correctamente.
+          
+          PRUEBAS EJECUTADAS:
+          • ✅ Test 1: Comprobante SOLVER/JARDINERIA con error OCR pequeño (ARDINERIA vs JARDINERIA) 
+            - CLABE completa exacta: 646180139409481462 ✓
+            - Fuzzy matching aplicado correctamente ✓
+            - Resultado: VÁLIDO (como esperado) ✓
+          
+          • ✅ Test 2: Comprobante sin CLABE completa (solo enmascarada ****1462)
+            - Fuzzy matching NO aplicado ✓
+            - Beneficiario con error OCR rechazado ✓
+            - Resultado: INVÁLIDO (como esperado) ✓
+          
+          • ✅ Test 3: Beneficiario muy diferente aunque haya CLABE exacta
+            - CLABE completa detectada ✓
+            - Score de similitud < 85% (umbral) ✓
+            - Resultado: INVÁLIDO (como esperado) ✓
+          
+          VALIDACIONES TÉCNICAS:
+          • ✅ VERSION actualizada a "V3.5-fuzzy-beneficiario"
+          • ✅ Función buscar_beneficiario_en_texto() con parámetro clabe_completa_encontrada
+          • ✅ Logs de auditoría con etiqueta [VALIDADOR_FUZZY_BENEFICIARIO]
+          • ✅ Fuzzy matching solo se aplica cuando metodo_clabe == "completa"
+          • ✅ Umbral de similitud configurado en 0.85 (85%)
+          • ✅ Librería difflib (Python estándar) funcionando correctamente
+          • ✅ No hay errores de sintaxis o imports faltantes
+          
+          SUITE DE TESTS: 3/3 tests pasaron exitosamente
+          - Test fuzzy matching con error OCR pequeño: PASS
+          - Test sin CLABE completa (no fuzzy): PASS  
+          - Test beneficiario muy diferente: PASS
+          
+          El validador V3.5 está listo para producción con tolerancia a errores pequeños de OCR
+          cuando la CLABE de 18 dígitos es detectada exactamente.
+
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
     implemented: true
