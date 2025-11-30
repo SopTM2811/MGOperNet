@@ -498,16 +498,46 @@ class TelegramNetCashHandlers:
             comprobantes_duplicados = [c for c in comprobantes if c.get("es_duplicado", False)]
             
             if len(comprobantes_validos) == 0:
-                # NO hay comprobantes válidos - mostrar error claro y mantener en Paso 1
+                # NO hay comprobantes válidos - analizar razones para mensaje claro
                 razon = validacion_comprobante.get("razon", "Comprobantes no válidos")
                 
                 num_unicos = num_comprobantes - len(comprobantes_duplicados)
                 
+                # Contar comprobantes por tipo de error
+                comprobantes_sin_texto = 0
+                comprobantes_no_coinciden = 0
+                
+                for comp in comprobantes:
+                    if comp.get("es_duplicado"):
+                        continue  # Ya contados aparte
+                    
+                    detalle = comp.get("validacion_detalle", {})
+                    razon_comp = detalle.get("razon", "")
+                    
+                    if razon_comp == "pdf_sin_texto_legible":
+                        comprobantes_sin_texto += 1
+                    elif not comp.get("es_valido"):
+                        comprobantes_no_coinciden += 1
+                
+                # Construir mensaje según el tipo de error predominante
                 mensaje = f"❌ **Se recibieron {num_comprobantes} comprobante(s)"
                 if len(comprobantes_duplicados) > 0:
                     mensaje += f" ({len(comprobantes_duplicados)} duplicado(s))"
-                mensaje += f", pero ninguno coincide con la cuenta NetCash autorizada.**\n\n"
-                mensaje += f"**Detalle:** {razon}\n\n"
+                mensaje += f", pero ninguno es válido.**\n\n"
+                
+                # Detalle específico según el tipo de error
+                if comprobantes_sin_texto > 0:
+                    mensaje += f"**Detalle:**\n"
+                    mensaje += f"• {comprobantes_sin_texto} comprobante(s) sin texto legible (imagen escaneada o captura)\n"
+                    if comprobantes_no_coinciden > 0:
+                        mensaje += f"• {comprobantes_no_coinciden} comprobante(s) no coinciden con la cuenta NetCash autorizada\n"
+                    mensaje += f"\n"
+                    mensaje += f"⚠️ **Los comprobantes deben ser documentos originales** donde se pueda seleccionar el texto "
+                    mensaje += f"(beneficiario y CLABE). Las capturas de pantalla o PDFs escaneados sin texto no son válidos.\n\n"
+                elif comprobantes_no_coinciden > 0:
+                    mensaje += f"**Detalle:** Ningún comprobante coincide con la cuenta NetCash autorizada.\n\n"
+                else:
+                    mensaje += f"**Detalle:** {razon}\n\n"
                 
                 # Obtener cuenta activa para mostrar
                 cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
