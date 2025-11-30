@@ -359,6 +359,13 @@ class ValidadorComprobantes:
         logger.info(f"[ValidadorComprobantes] Texto extraído del comprobante ({len(texto_comprobante)} caracteres)")
         logger.info(f"[ValidadorComprobantes] Primeros 500 caracteres: {texto_comprobante[:500]}")
         
+        # LOGS DETALLADOS SOLO PARA THABYETHA (tracking de bug)
+        if beneficiario_activo == "JARDINERIA Y COMERCIO THABYETHA SA DE CV":
+            logger.info(f"[VALIDADOR_THABYETHA] ========== CASO ESPECIAL THABYETHA ==========")
+            logger.info(f"[VALIDADOR_THABYETHA] Texto OCR (primeros 800 chars): {texto_comprobante[:800]}")
+            logger.info(f"[VALIDADOR_THABYETHA] CLABE objetivo: {clabe_activa}")
+            logger.info(f"[VALIDADOR_THABYETHA] Sufijo esperado: {clabe_activa[-3:]}")
+        
         # Validar CLABE
         clabe_encontrada, metodo_clabe = self.buscar_clabe_en_texto(texto_comprobante, clabe_activa)
         logger.info(f"[ValidadorComprobantes] CLABE activa ({clabe_activa}) encontrada: {clabe_encontrada} (método: {metodo_clabe})")
@@ -366,6 +373,12 @@ class ValidadorComprobantes:
         # Validar beneficiario
         beneficiario_encontrado = self.buscar_beneficiario_en_texto(texto_comprobante, beneficiario_activo)
         logger.info(f"[ValidadorComprobantes] Beneficiario activo ({beneficiario_activo}) encontrado: {beneficiario_encontrado}")
+        
+        # LOGS DETALLADOS SOLO PARA THABYETHA (resultados)
+        if beneficiario_activo == "JARDINERIA Y COMERCIO THABYETHA SA DE CV":
+            logger.info(f"[VALIDADOR_THABYETHA] Resultado buscar_clabe_en_texto: encontrado={clabe_encontrada} metodo={metodo_clabe}")
+            logger.info(f"[VALIDADOR_THABYETHA] Beneficiario_coincide={beneficiario_encontrado}")
+            logger.info(f"[VALIDADOR_THABYETHA] ================================================")
         
         # REGLA ESPECIAL: Si se usó sufijo_banamex, DEBE tener beneficiario
         if metodo_clabe == "sufijo_banamex" and not beneficiario_encontrado:
