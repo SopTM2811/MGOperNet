@@ -606,26 +606,19 @@ class TesoreriaService:
         mensaje += "_(Todas las transferencias del layout van a cuentas del proveedor.)_\n\n"
         mensaje += "**Solicitudes en este lote:**\n"
         
-        for solicitud in solicitudes[:10]:  # Mostrar máximo 10 en Telegram
+        # Mostrar hasta 5 solicitudes en Telegram (el detalle completo está en el correo)
+        for solicitud in solicitudes[:5]:
             folio_mbco = solicitud.get('folio_mbco', 'N/A')
             cliente = solicitud.get('cliente_nombre', 'N/A')
-            beneficiario = solicitud.get('beneficiario_reportado', 'N/A')
             total_dep = solicitud.get('total_comprobantes_validos', 0)
             
-            # Truncar nombres si son muy largos
-            cliente_short = cliente[:20] + "..." if len(cliente) > 20 else cliente
-            beneficiario_short = beneficiario[:20] + "..." if len(beneficiario) > 20 else beneficiario
+            # Truncar nombre si es muy largo
+            cliente_short = cliente[:25] + "..." if len(cliente) > 25 else cliente
             
-            mensaje += f"• MBco: {folio_mbco}\n"
-            mensaje += f"  Cliente: {cliente_short}\n"
-            mensaje += f"  Beneficiario: {beneficiario_short}\n"
-            mensaje += f"  Depósitos: ${total_dep:,.2f}\n\n"
+            mensaje += f"• {folio_mbco} – {cliente_short} – ${total_dep:,.2f}\n"
         
-        if len(solicitudes) > 10:
-            mensaje += f"... y {len(solicitudes) - 10} operación(es) más\n\n"
-        
-        mensaje += f"✅ Se envió correo a Tesorería con layout CSV adjunto.\n"
-        mensaje += f"📧 Revisa tu correo para el archivo de dispersión completo."
+        if len(solicitudes) > 5:
+            mensaje += f"• ... y {len(solicitudes) - 5} solicitud(es) más\n"
         
         # Enviar a cada usuario
         errores_envio = 0
