@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 load_dotenv('/app/backend/.env')
 
 # URLs y configuración
-BACKEND_URL = "https://payment-validator-10.preview.emergentagent.com/api"
+BACKEND_URL = "https://batch-notify-2.preview.emergentagent.com/api"
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'netcash_mbco')
 
