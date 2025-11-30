@@ -182,10 +182,18 @@ class ValidadorComprobantes:
         else:
             logger.info(f"[ValidadorComprobantes] No se encontró ninguna CLABE completa válida (18 dígitos)")
         
+        # LOG DETALLADO PARA THABYETHA
+        if clabe_objetivo == "646180139409481462":
+            ignoradas_rastreo = [c for c in clabes_completas if c not in clabes_validas]
+            logger.info(f"[VALIDADOR_THABYETHA] CLABEs ignoradas (rastreo/asociada/etc): {ignoradas_rastreo}")
+            logger.info(f"[VALIDADOR_THABYETHA] CLABEs válidas para comparar: {clabes_validas}")
+        
         # Verificar si alguna CLABE válida coincide EXACTAMENTE con la objetivo
         for clabe_encontrada in clabes_validas:
             if clabe_encontrada == clabe_objetivo:
                 logger.info(f"[ValidadorComprobantes] ✅✅✅ CLABE COMPLETA ENCONTRADA: {clabe_encontrada} coincide con objetivo")
+                if clabe_objetivo == "646180139409481462":
+                    logger.info(f"[VALIDADOR_THABYETHA] USANDO METODO: completa")
                 return True, "completa"
             else:
                 logger.info(f"[ValidadorComprobantes] CLABE {clabe_encontrada} NO coincide con objetivo {clabe_objetivo}")
@@ -193,6 +201,8 @@ class ValidadorComprobantes:
         # Si hay CLABEs completas pero ninguna coincide, el comprobante NO es válido
         if len(clabes_validas) > 0:
             logger.warning(f"[ValidadorComprobantes] ❌ Hay CLABEs completas pero NINGUNA coincide con la objetivo. NO aplica validación por sufijo.")
+            if clabe_objetivo == "646180139409481462":
+                logger.info(f"[VALIDADOR_THABYETHA] USANDO METODO: no_encontrada (hay CLABEs pero no coinciden)")
             return False, "no_encontrada"
         
         # PASO B: Si NO hay CLABEs completas, activar regla de sufijo Banamex
