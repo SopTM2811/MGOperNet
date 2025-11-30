@@ -1165,6 +1165,10 @@ async def startup_event():
     from usuarios_repo import usuarios_repo
     await usuarios_repo.sembrar_usuarios_iniciales()
     
+    # Sembrar cuentas de proveedor iniciales si no existen
+    from cuentas_proveedor_service import cuentas_proveedor_service
+    await cuentas_proveedor_service.sembrar_cuentas_iniciales()
+    
     # Iniciar scheduler de Tesorería (lotes cada 15 minutos)
     from scheduler_tesoreria import scheduler_tesoreria
     scheduler_tesoreria.start()
