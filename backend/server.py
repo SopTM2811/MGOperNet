@@ -1158,6 +1158,14 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Inicialización al arrancar el servidor"""
+    # Sembrar usuarios iniciales si no existen
+    from usuarios_repo import usuarios_repo
+    await usuarios_repo.sembrar_usuarios_iniciales()
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
