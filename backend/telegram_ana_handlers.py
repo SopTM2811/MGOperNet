@@ -65,10 +65,12 @@ class TelegramAnaHandlers:
             fecha_str = created_at.strftime("%d/%m/%Y %H:%M") if created_at else "N/A"
             
             # Construir mensaje
+            cliente_nombre = solicitud.get("cliente_nombre", "N/A")
+            
             mensaje = "🧾 **Nueva solicitud NetCash lista para MBco**\n\n"
             mensaje += f"📋 **Folio NetCash:** {folio_mbco}\n"
-            mensaje += f"👤 **Cliente ID:** {cliente_id}\n"
-            mensaje += f"🏢 **Beneficiario:** {beneficiario}\n"
+            mensaje += f"🧑‍💼 **Cliente:** {cliente_nombre}\n"
+            mensaje += f"👤 **Beneficiario:** {beneficiario}\n"
             mensaje += f"🆔 **IDMEX:** {idmex}\n"
             mensaje += f"💰 **Total depósitos:** ${total_depositos:,.2f}\n"
             mensaje += f"📊 **Comisión NetCash (1%):** ${comision_netcash:,.2f}\n"
