@@ -298,6 +298,7 @@ class TelegramNetCashHandlers:
                 total = resultado_zip.get("total_archivos", 0)
                 validos = resultado_zip.get("validos", 0)
                 invalidos = resultado_zip.get("invalidos", 0)
+                sin_texto = resultado_zip.get("sin_texto_legible", 0)
                 duplicados = resultado_zip.get("duplicados", 0)
                 no_legibles = resultado_zip.get("no_legibles", 0)
                 
@@ -307,17 +308,26 @@ class TelegramNetCashHandlers:
                 elif validos == 0:
                     mensaje = "⚠️ **No se encontraron comprobantes válidos dentro del archivo ZIP.**\n\n"
                     mensaje += f"• {total} archivo(s) encontrado(s) dentro\n"
-                    if no_legibles > 0:
-                        mensaje += f"• {no_legibles} archivo(s) no legible(s) o con formato no soportado\n"
+                    if sin_texto > 0:
+                        mensaje += f"• {sin_texto} comprobante(s) sin texto legible (imagen escaneada) ⚠️\n"
                     if invalidos > 0:
                         mensaje += f"• {invalidos} comprobante(s) no coinciden con la cuenta NetCash activa\n"
                     if duplicados > 0:
                         mensaje += f"• {duplicados} comprobante(s) duplicado(s)\n"
+                    if no_legibles > 0:
+                        mensaje += f"• {no_legibles} archivo(s) no legible(s) o con formato no soportado\n"
+                    
+                    if sin_texto > 0:
+                        mensaje += "\n⚠️ **Nota importante:** Los comprobantes deben ser documentos originales donde se pueda seleccionar el texto. "
+                        mensaje += "Las capturas de pantalla o PDFs escaneados sin texto no son válidos.\n"
+                    
                     mensaje += "\nAsegúrate de que el ZIP contenga PDFs o imágenes de comprobantes para la cuenta NetCash autorizada."
                 else:
                     mensaje = f"✅ **Se procesó tu archivo ZIP.**\n\n"
                     mensaje += f"• {total} archivo(s) encontrado(s) dentro\n"
                     mensaje += f"• {validos} comprobante(s) válido(s) ✅\n"
+                    if sin_texto > 0:
+                        mensaje += f"• {sin_texto} comprobante(s) sin texto legible (no se incluyeron) ⚠️\n"
                     if invalidos > 0:
                         mensaje += f"• {invalidos} comprobante(s) inválido(s) (no se incluyeron)\n"
                     if duplicados > 0:
