@@ -156,7 +156,8 @@ class TesoreriaScheduler:
         self.scheduler.start()
         self.is_running = True
         
-        logger.info("[Scheduler Tesorería] Iniciado - Ejecutará cada 15 minutos")
+        logger.info("[Scheduler Tesorería] Iniciado - Enviará recordatorios cada 15 minutos")
+        logger.info("[Scheduler Tesorería] NOTA: Layouts se generan automáticamente cuando Ana asigna folio")
     
     def stop(self):
         """Detiene el scheduler"""
