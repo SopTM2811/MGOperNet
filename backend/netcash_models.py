@@ -26,6 +26,7 @@ class EstadoSolicitud(str, Enum):
     CANCELADA = "cancelada"  # Operación cancelada (permite reutilizar comprobantes)
     LISTA_PARA_MBC = "lista_para_mbc"  # Válida y lista para proceso
     ORDEN_INTERNA_GENERADA = "orden_interna_generada"  # Ana asignó folio, orden creada
+    ENVIADO_A_TESORERIA = "enviado_a_tesoreria"  # Incluido en lote enviado a Tesorería
     EN_PROCESO_MBC = "en_proceso_mbc"  # MBco procesando la operación
     # Futuros estados (Etapa 2+)
     LAYOUT_GENERADO = "layout_generado"
