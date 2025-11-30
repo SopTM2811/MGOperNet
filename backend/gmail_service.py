@@ -314,6 +314,79 @@ class GmailService:
         except HttpError as error:
             logger.error(f"[Gmail] Error gestionando etiqueta: {error}")
             return None
+    
+    async def enviar_correo_con_adjuntos(self, destinatario: str, asunto: str, cuerpo: str, adjuntos: List[str] = None) -> bool:
+        """
+        Envía un correo con adjuntos
+        
+        Args:
+            destinatario: Email del destinatario
+            asunto: Asunto del correo
+            cuerpo: Cuerpo HTML del correo
+            adjuntos: Lista de rutas de archivos a adjuntar
+            
+        Returns:
+            True si se envió correctamente
+        """
+        try:
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.base import MIMEBase
+            from email import encoders
+            import os as os_module
+            
+            # Crear mensaje multipart
+            message = MIMEMultipart()
+            message['to'] = destinatario
+            message['from'] = self.gmail_user
+            message['subject'] = asunto
+            
+            # Agregar cuerpo HTML
+            from email.mime.text import MIMEText
+            message.attach(MIMEText(cuerpo, 'html'))
+            
+            # Agregar adjuntos
+            if adjuntos:
+                for archivo_path in adjuntos:
+                    if not os_module.path.exists(archivo_path):
+                        logger.warning(f"[Gmail] Archivo no encontrado: {archivo_path}")
+                        continue
+                    
+                    # Leer archivo
+                    with open(archivo_path, 'rb') as f:
+                        archivo_data = f.read()
+                    
+                    # Crear adjunto
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(archivo_data)
+                    encoders.encode_base64(part)
+                    
+                    # Agregar header
+                    filename = os_module.path.basename(archivo_path)
+                    part.add_header('Content-Disposition', f'attachment; filename= {filename}')
+                    
+                    message.attach(part)
+                    logger.info(f"[Gmail] Adjunto agregado: {filename}")
+            
+            # Codificar mensaje
+            raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+            
+            # Enviar
+            self.service.users().messages().send(
+                userId='me',
+                body={'raw': raw_message}
+            ).execute()
+            
+            logger.info(f"[Gmail] Correo enviado exitosamente a {destinatario} con {len(adjuntos) if adjuntos else 0} adjuntos")
+            return True
+            
+        except HttpError as error:
+            logger.error(f"[Gmail] Error enviando correo: {error}")
+            return False
+        except Exception as e:
+            logger.error(f"[Gmail] Error inesperado enviando correo: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
 
 
 # Instancia global del servicio
