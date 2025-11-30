@@ -15,7 +15,9 @@ const MisSolicitudesNetCash = () => {
   const [loading, setLoading] = useState(true);
   
   // Por ahora usamos un cliente de prueba - esto debería venir de autenticación
-  const clienteId = "d9115936-733e-4598-a23c-2ae7633216f9"; // Cliente de prueba
+  // TODO: Obtener cliente_id del contexto de autenticación
+  // Por ahora usamos el cliente_id del usuario de Telegram (daniel G)
+  const clienteId = "adb0a59b-9083-4433-81db-2193fda4bc36";
 
   useEffect(() => {
     cargarSolicitudes();
