@@ -300,7 +300,7 @@ class TreasuryWorkflowTest:
             return False
         
         # Generar CSV
-        csv_content = tesoreria_service.generar_layout_fondeadora(solicitudes)
+        csv_content = await tesoreria_service.generar_layout_fondeadora(solicitudes)
         
         if not csv_content:
             logger.error("❌ [Test] No se generó contenido CSV")
