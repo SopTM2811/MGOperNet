@@ -860,8 +860,11 @@ class NetCashService:
             )
             
             # Notificar a Ana que hay una nueva solicitud lista para MBco
+            logger.info(f"[NetCash] Obteniendo solicitud actualizada para notificar a Ana...")
             solicitud_actualizada = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+            logger.info(f"[NetCash] Llamando a _notificar_ana_solicitud_lista() para solicitud {solicitud_id}")
             await self._notificar_ana_solicitud_lista(solicitud_actualizada)
+            logger.info(f"[NetCash] Notificación a Ana completada (o fallida, ver logs [NOTIF_ANA])")
             
             return True, "Solicitud válida y lista para proceso MBco"
         else:
