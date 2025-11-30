@@ -152,11 +152,14 @@ class ValidadorComprobantes:
         
         logger.info(f"[ValidadorComprobantes] Buscando CLABE objetivo: {clabe_objetivo}")
         
-        # LOG ESPECIAL PARA THABYETHA (debugging)
-        es_thabyetha = (clabe_objetivo == "646180139409481462")
-        if es_thabyetha:
-            logger.info(f"[THABYETHA_DEBUG] ========== INICIO DEBUG THABYETHA ==========")
-            logger.info(f"[THABYETHA_DEBUG] Texto normalizado (primeros 600 chars): {texto[:600]}")
+        # LOG ESPECIAL PARA VAULT/THABYETHA (debugging)
+        es_vault_thabyetha = (clabe_objetivo == "646180139409481462")
+        if es_vault_thabyetha:
+            logger.info(f"[VAULT_DEBUG] ========== INICIO DEBUG VAULT/THABYETHA ==========")
+            logger.info(f"[VAULT_DEBUG] CLABE objetivo: {clabe_objetivo}")
+            logger.info(f"[VAULT_DEBUG] Texto completo extraído:")
+            logger.info(f"[VAULT_DEBUG] {texto}")
+            logger.info(f"[VAULT_DEBUG] Longitud texto: {len(texto)} caracteres")
         
         # PASO A: Buscar CLABEs completas (18 dígitos) en contexto de DESTINO
         clabes_completas = self.extraer_clabes_del_texto(texto)
