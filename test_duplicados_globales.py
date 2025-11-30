@@ -55,9 +55,10 @@ async def test_duplicados_globales():
         return False
     
     # Cambiar estado para simular que es una operación válida
+    from netcash_models import EstadoSolicitud
     await netcash_service.cambiar_estado(
         solicitud1_id,
-        "lista_para_mbc",
+        EstadoSolicitud.LISTA_PARA_MBC,
         "Operación 1 procesada"
     )
     
