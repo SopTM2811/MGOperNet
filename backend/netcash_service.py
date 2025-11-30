@@ -1286,12 +1286,25 @@ class NetCashService:
         Args:
             solicitud: Dict con los datos de la solicitud
         """
-        # Importar aquí para evitar dependencia circular
+        # Obtener usuario Ana desde el catálogo
+        from usuarios_repo import usuarios_repo
+        
+        ana = await usuarios_repo.obtener_usuario_por_rol("admin_netcash")
+        
+        if not ana:
+            logger.warning(f"[NetCash] No se encontró usuario con rol 'admin_netcash' en el catálogo")
+            return
+        
+        if not ana.get("telegram_id"):
+            logger.warning(f"[NetCash] Usuario {ana.get('nombre')} (admin_netcash) no tiene telegram_id configurado")
+            return
+        
+        # Importar handlers y enviar notificación
         from telegram_ana_handlers import telegram_ana_handlers
         
         if telegram_ana_handlers:
-            await telegram_ana_handlers.notificar_nueva_solicitud_para_mbco(solicitud)
-            logger.info(f"[NetCash] Notificación enviada a Ana para solicitud {solicitud.get('folio_netcash')}")
+            await telegram_ana_handlers.notificar_nueva_solicitud_para_mbco(solicitud, ana)
+            logger.info(f"[NetCash] Notificación enviada a {ana.get('nombre')} (admin_netcash) para solicitud {solicitud.get('folio_netcash')}")
         else:
             logger.warning(f"[NetCash] telegram_ana_handlers no inicializado, notificación no enviada")
 
