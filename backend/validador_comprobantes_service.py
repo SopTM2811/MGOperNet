@@ -271,9 +271,13 @@ class ValidadorComprobantes:
                 # pero ese parámetro no está disponible aquí. Lo dejamos para validar_comprobante)
                 
                 logger.info(f"[ValidadorComprobantes] ✅✅✅ SUFIJO BANAMEX VÁLIDO: CLABE-{sufijo_3} encontrado en contexto de depósito")
+                if clabe_objetivo == "646180139409481462":
+                    logger.info(f"[VALIDADOR_THABYETHA] USANDO METODO: sufijo_banamex")
                 return True, "sufijo_banamex"
         
         logger.warning(f"[ValidadorComprobantes] ❌ CLABE objetivo NO encontrada (ni completa ni por sufijo Banamex)")
+        if clabe_objetivo == "646180139409481462":
+            logger.info(f"[VALIDADOR_THABYETHA] USANDO METODO: no_encontrada (no se encontró ni CLABE completa ni sufijo)")
         return False, "no_encontrada"
     
     def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str) -> bool:
