@@ -5,7 +5,14 @@ Bug reportado: CLABE completa 646180139409481462 no se detecta en PDFs con "Clab
 """
 
 import sys
+import logging
 sys.path.insert(0, '/app/backend')
+
+# Configurar logging para ver los mensajes de debug
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s:%(name)s:%(message)s'
+)
 
 from validador_comprobantes_service import ValidadorComprobantes
 
