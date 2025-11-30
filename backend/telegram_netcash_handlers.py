@@ -342,9 +342,34 @@ class TelegramNetCashHandlers:
                 
                 await update.message.reply_text(mensaje, parse_mode='Markdown')
                 
-                # Continuar con el flujo normal (mostrar botones)
-                agregado = validos > 0  # Si hay al menos un válido, consideramos éxito
-                razon = None
+                # Para ZIPs, mostrar botones solo si hay comprobantes válidos
+                if validos > 0:
+                    # Mostrar botones de continuar/finalizar
+                    keyboard = [
+                        [
+                            InlineKeyboardButton("📎 Subir otro", callback_data=f"nc_otro_{solicitud_id}"),
+                            InlineKeyboardButton("✅ Continuar", callback_data=f"nc_continuar_{solicitud_id}")
+                        ]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    sent_msg = await update.message.reply_text(
+                        "¿Quieres subir otro comprobante o continuar?",
+                        reply_markup=reply_markup
+                    )
+                    context.user_data['nc_last_comprobante_message_id'] = sent_msg.message_id
+                else:
+                    # ZIP sin comprobantes válidos, permitir reintentar
+                    keyboard = [
+                        [InlineKeyboardButton("📎 Intentar otro archivo", callback_data=f"nc_otro_{solicitud_id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    await update.message.reply_text(
+                        "Puedes intentar con otro archivo:",
+                        reply_markup=reply_markup
+                    )
+                
+                return NC_ESPERANDO_COMPROBANTE
                 
             else:
                 # Procesar como comprobante individual (lógica existente)
@@ -357,10 +382,10 @@ class TelegramNetCashHandlers:
                     nombre_archivo
                 )
             
-            # Obtener solicitud actualizada para contar comprobantes
-            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
-            comprobantes = solicitud.get("comprobantes", [])
-            num_comprobantes = len(comprobantes)
+                # Obtener solicitud actualizada para contar comprobantes
+                solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+                comprobantes = solicitud.get("comprobantes", [])
+                num_comprobantes = len(comprobantes)
             
             # UX MEJORADA: Eliminar botones del mensaje anterior (si existe)
             last_message_id = context.user_data.get('nc_last_comprobante_message_id')
