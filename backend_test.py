@@ -1389,8 +1389,8 @@ class BackendTester:
                     logger.error(f"   ❌ Error validando solicitud: {response.status} - {error_text}")
                     return False
             
-            # PASO 8: Verificar persistencia en BD
-            logger.info("   💾 PASO 8: Verificando persistencia en BD...")
+            # PASO 8: Verificar persistencia en BD y cálculos finales
+            logger.info("   💾 PASO 8: Verificando persistencia en BD y cálculos finales...")
             
             solicitud_bd = await self.db.solicitudes_netcash.find_one({"id": solicitud_id}, {"_id": 0})
             
@@ -1399,12 +1399,43 @@ class BackendTester:
                 logger.info(f"      - ID: {solicitud_bd.get('id')}")
                 logger.info(f"      - Estado: {solicitud_bd.get('estado')}")
                 logger.info(f"      - Cliente: {solicitud_bd.get('cliente_nombre')}")
-                logger.info(f"      - Total comprobantes válidos: {solicitud_bd.get('total_comprobantes_validos')}")
-                logger.info(f"      - Número comprobantes válidos: {solicitud_bd.get('num_comprobantes_validos')}")
-                logger.info(f"      - Porcentaje comisión cliente: {solicitud_bd.get('porcentaje_comision_cliente')}")
-                logger.info(f"      - Comisión cliente: {solicitud_bd.get('comision_cliente')}")
-                logger.info(f"      - Monto ligas: {solicitud_bd.get('monto_ligas')}")
-                logger.info(f"      - Cuenta NetCash usada: {solicitud_bd.get('cuenta_netcash_usada')}")
+                logger.info(f"      - Folio: {solicitud_bd.get('folio_mbco')}")
+                
+                # Verificar cálculos finales desde BD
+                total_bd = solicitud_bd.get('total_comprobantes_validos', 0)
+                comision_bd = solicitud_bd.get('comision_cliente', 0)
+                monto_ligas_bd = solicitud_bd.get('monto_ligas', 0)
+                porcentaje_bd = solicitud_bd.get('porcentaje_comision_cliente', 0)
+                
+                logger.info(f"      📊 CÁLCULOS FINALES DESDE BD:")
+                logger.info(f"         - Total comprobantes válidos: ${total_bd:,.2f}")
+                logger.info(f"         - Número comprobantes válidos: {solicitud_bd.get('num_comprobantes_validos')}")
+                logger.info(f"         - Porcentaje comisión cliente: {porcentaje_bd}%")
+                logger.info(f"         - Comisión cliente: ${comision_bd:,.2f}")
+                logger.info(f"         - Monto ligas: ${monto_ligas_bd:,.2f}")
+                logger.info(f"         - Cuenta NetCash usada: {solicitud_bd.get('cuenta_netcash_usada')}")
+                
+                # Verificar cálculos correctos
+                comision_esperada = total_bd * 0.01  # 1.00%
+                monto_ligas_esperado = total_bd - comision_esperada
+                
+                if abs(total_bd - suma_comprobantes) < 0.01:
+                    logger.info("      ✅ Total depósitos = suma de TODOS los comprobantes ✓")
+                else:
+                    logger.error(f"      ❌ Total depósitos incorrecto. Esperado: ${suma_comprobantes:,.2f}, BD: ${total_bd:,.2f}")
+                    return False
+                
+                if abs(comision_bd - comision_esperada) < 0.01:
+                    logger.info("      ✅ Comisión NetCash calculada correctamente ✓")
+                else:
+                    logger.error(f"      ❌ Comisión incorrecta. Esperado: ${comision_esperada:,.2f}, BD: ${comision_bd:,.2f}")
+                    return False
+                
+                if abs(monto_ligas_bd - monto_ligas_esperado) < 0.01:
+                    logger.info("      ✅ Monto ligas calculado correctamente ✓")
+                else:
+                    logger.error(f"      ❌ Monto ligas incorrecto. Esperado: ${monto_ligas_esperado:,.2f}, BD: ${monto_ligas_bd:,.2f}")
+                    return False
                 
                 # Verificar campos nuevos
                 campos_requeridos = [
