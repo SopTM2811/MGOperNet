@@ -199,9 +199,16 @@ class ValidadorComprobantes:
             texto_antes = '\n'.join(lineas_antes).upper()
             es_origen = any(kw in texto_antes for kw in keywords_origen)
             
-            # Ignorar si es CLAVE DE RASTREO o REFERENCIA
+            # Ignorar si la CLABE MISMA es CLAVE DE RASTREO o REFERENCIA
+            # No ignorar si estas palabras aparecen en otras líneas del contexto
             keywords_ignorar = ["RASTREO", "REFERENCIA", "AUTORIZACION", "FOLIO", "NUMERO DE"]
-            es_rastreo = any(kw in contexto for kw in keywords_ignorar)
+            
+            # Buscar solo en la línea de la CLABE y la inmediatamente anterior
+            linea_clabe_texto = lineas[linea_clabe] if linea_clabe < len(lineas) else ""
+            linea_anterior = lineas[linea_clabe - 1] if linea_clabe > 0 else ""
+            contexto_inmediato = (linea_anterior + "\n" + linea_clabe_texto).upper()
+            
+            es_rastreo = any(kw in contexto_inmediato for kw in keywords_ignorar)
             
             # Debe estar en contexto de DESTINO (buscar en todas las líneas del contexto)
             keywords_destino = [
