@@ -6,6 +6,9 @@ import logging
 from typing import Dict, Optional, Tuple
 from pathlib import Path
 
+# VERSION DEL VALIDADOR - Para tracking de desincronizaciones
+VALIDADOR_THABYETHA_VERSION = "V2.1-sufijo-banamex"
+
 logger = logging.getLogger(__name__)
 
 # Intentar importar librerías de OCR/extracción
