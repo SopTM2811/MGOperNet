@@ -218,9 +218,17 @@ class ValidadorComprobantes:
                 
                 logger.info(f"[ValidadorComprobantes] Contexto alrededor del patrón: {contexto[:100]}...")
                 
-                # Validación 1: NO debe estar dentro de "CLABE asociada"
-                if "CLABE ASOCIADA" in contexto_upper or "ASOCIADA" in contexto_upper:
-                    logger.warning(f"[ValidadorComprobantes] ❌ Patrón {patron} está dentro de 'CLABE asociada' (origen). NO válido.")
+                # Validación 1: NO debe estar en la MISMA LÍNEA que "CLABE asociada"
+                # (El contexto puede contener "CLABE asociada" en líneas anteriores, eso está bien)
+                lineas = contexto.split('\n')
+                linea_con_patron = None
+                for linea in lineas:
+                    if patron in linea.upper():
+                        linea_con_patron = linea
+                        break
+                
+                if linea_con_patron and ("ASOCIADA" in linea_con_patron.upper() or "*" in linea_con_patron):
+                    logger.warning(f"[ValidadorComprobantes] ❌ Patrón {patron} está en la MISMA LÍNEA que 'ASOCIADA' o asteriscos. NO válido.")
                     continue
                 
                 # Validación 2: NO debe tener asteriscos cerca
