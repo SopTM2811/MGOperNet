@@ -22,6 +22,8 @@ class EstadoSolicitud(str, Enum):
     BORRADOR = "borrador"  # Info recibida pero incompleta
     PENDIENTE_VALIDACION = "pendiente_validacion"  # Listo para validar
     RECHAZADA = "rechazada"  # No pasó alguna regla dura
+    DEMO = "demo"  # Operación de prueba/demo (permite reutilizar comprobantes)
+    CANCELADA = "cancelada"  # Operación cancelada (permite reutilizar comprobantes)
     LISTA_PARA_MBC = "lista_para_mbc"  # Válida y lista para proceso
     # Futuros estados (Etapa 2+)
     LAYOUT_GENERADO = "layout_generado"
