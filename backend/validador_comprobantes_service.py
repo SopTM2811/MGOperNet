@@ -187,9 +187,11 @@ class ValidadorComprobantes:
                 # No se encontró la CLABE
                 continue
             
-            # Obtener contexto: 5 líneas antes y 3 líneas después
-            inicio_contexto = max(0, linea_clabe - 5)
-            fin_contexto = min(len(lineas), linea_clabe + 4)
+            # Obtener contexto: 15 líneas antes y 5 líneas después
+            # MEJORADO V3.6: Ventana más grande para layouts tipo Vault/Panekneva
+            # donde los headers están muy separados de los valores
+            inicio_contexto = max(0, linea_clabe - 15)
+            fin_contexto = min(len(lineas), linea_clabe + 6)
             lineas_contexto = lineas[inicio_contexto:fin_contexto]
             contexto = '\n'.join(lineas_contexto).upper()
             
