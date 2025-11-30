@@ -1266,18 +1266,39 @@ class NetCashService:
         """
         Notifica a Tesorería por Telegram sobre nueva orden interna
         
+        Notifica a todos los usuarios con permiso "recibe_alertas_tesoreria"
+        
         Args:
             solicitud_id: ID de la solicitud
             orden_interna: Dict con la orden interna generada
         """
-        # Importar aquí para evitar dependencia circular
-        from telegram_config import TELEGRAM_ID_TESORERIA
+        # Obtener usuarios de tesorería desde el catálogo
+        from usuarios_repo import usuarios_repo
+        
+        usuarios_tesoreria = await usuarios_repo.obtener_usuarios_por_permiso("recibe_alertas_tesoreria", True)
+        
+        if not usuarios_tesoreria:
+            logger.warning(f"[NetCash] No se encontraron usuarios con permiso 'recibe_alertas_tesoreria'")
+            return
+        
+        # Importar handlers
         from telegram_tesoreria_handlers import telegram_tesoreria_handlers
         
-        if telegram_tesoreria_handlers:
-            await telegram_tesoreria_handlers.notificar_nueva_orden_interna(orden_interna)
-        else:
+        if not telegram_tesoreria_handlers:
             logger.warning(f"[NetCash] telegram_tesoreria_handlers no inicializado, notificación no enviada")
+            return
+        
+        # Enviar notificación a cada usuario de tesorería
+        for usuario in usuarios_tesoreria:
+            if not usuario.get("telegram_id"):
+                logger.warning(f"[NetCash] Usuario {usuario.get('nombre')} ({usuario.get('rol_negocio')}) no tiene telegram_id configurado")
+                continue
+            
+            try:
+                await telegram_tesoreria_handlers.notificar_nueva_orden_interna(orden_interna, usuario)
+                logger.info(f"[NetCash] Notificación enviada a {usuario.get('nombre')} (Tesorería)")
+            except Exception as e:
+                logger.error(f"[NetCash] Error enviando notificación a {usuario.get('nombre')}: {str(e)}")
     
     async def _notificar_ana_solicitud_lista(self, solicitud: Dict):
         """
