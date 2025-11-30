@@ -1,5 +1,4 @@
-"""
-Handlers de Telegram para Ana (Administradora MBco)
+"""Handlers de Telegram para Ana (Administradora MBco)
 
 Flujo:
 1. Ana recibe notificación de solicitud lista para MBco
@@ -36,20 +35,20 @@ class TelegramAnaHandlers:
             usuario: Dict con datos del usuario (desde catálogo)
         """
         try:
-            folio_netcash = solicitud.get("folio_netcash", "N/A")
+            folio_mbco = solicitud.get("folio_mbco", "N/A")
             telegram_id = usuario.get("telegram_id")
             
             logger.info(f"[Ana Telegram] Preparando notificación para {usuario.get('nombre')}")
-            logger.info(f"[Ana Telegram] Folio: {folio_netcash} | Chat ID: {telegram_id}")
+            logger.info(f"[Ana Telegram] Folio: {folio_mbco} | Chat ID: {telegram_id}")
             
             if not telegram_id:
                 logger.error(f"[Ana Telegram] ERROR: Usuario {usuario.get('nombre')} no tiene telegram_id")
                 return
-            folio_netcash = solicitud.get("folio_netcash", "N/A")
+            
             solicitud_id = solicitud.get("id")
             cliente_id = solicitud.get("cliente_id")
-            beneficiario = solicitud.get("beneficiario", "N/A")
-            idmex = solicitud.get("idmex", "N/A")
+            beneficiario = solicitud.get("beneficiario_reportado", "N/A")
+            idmex = solicitud.get("idmex_reportado", "N/A")
             
             # Calcular totales
             comprobantes = solicitud.get("comprobantes", [])
@@ -61,14 +60,14 @@ class TelegramAnaHandlers:
             
             comision_netcash = solicitud.get("comision_cliente", total_depositos * 0.01)
             monto_ligas = total_depositos - comision_netcash
-            num_ligas = solicitud.get("num_ligas", 0)
+            num_ligas = solicitud.get("cantidad_ligas_reportada", 0)
             
             created_at = solicitud.get("created_at")
             fecha_str = created_at.strftime("%d/%m/%Y %H:%M") if created_at else "N/A"
             
             # Construir mensaje
             mensaje = "🧾 **Nueva solicitud NetCash lista para MBco**\n\n"
-            mensaje += f"📋 **Folio NetCash:** {folio_netcash}\n"
+            mensaje += f"📋 **Folio NetCash:** {folio_mbco}\n"
             mensaje += f"👤 **Cliente ID:** {cliente_id}\n"
             mensaje += f"🏢 **Beneficiario:** {beneficiario}\n"
             mensaje += f"🆔 **IDMEX:** {idmex}\n"
@@ -88,7 +87,7 @@ class TelegramAnaHandlers:
             # Enviar al usuario (Ana)
             logger.info(f"[Ana Telegram] Enviando mensaje a Telegram...")
             logger.info(f"[Ana Telegram] Chat ID: {telegram_id}")
-            logger.info(f"[Ana Telegram] Folio: {folio_netcash}")
+            logger.info(f"[Ana Telegram] Folio: {folio_mbco}")
             
             await self.bot.bot.send_message(
                 chat_id=telegram_id,
@@ -98,7 +97,7 @@ class TelegramAnaHandlers:
             )
             
             logger.info(f"[Ana Telegram] ✅ Mensaje enviado exitosamente a chat_id={telegram_id}")
-            logger.info(f"[Ana Telegram] Notificación completada para solicitud {folio_netcash}")
+            logger.info(f"[Ana Telegram] Notificación completada para solicitud {folio_mbco}")
             
         except Exception as e:
             logger.error(f"[Ana Telegram] Error enviando notificación: {str(e)}")
@@ -183,9 +182,9 @@ class TelegramAnaHandlers:
                 
                 # Mensaje de confirmación
                 mensaje = "✅ **Folio MBco registrado exitosamente**\n\n"
-                mensaje += f"📋 **Folio NetCash:** {solicitud.get('folio_netcash')}\n"
+                mensaje += f"📋 **Folio NetCash:** {solicitud.get('folio_mbco')}\n"
                 mensaje += f"🏢 **Folio MBco:** {folio_mbco}\n"
-                mensaje += f"👤 **Beneficiario:** {solicitud.get('beneficiario')}\n"
+                mensaje += f"👤 **Beneficiario:** {solicitud.get('beneficiario_reportado')}\n"
                 
                 # Calcular total
                 comprobantes = solicitud.get("comprobantes", [])

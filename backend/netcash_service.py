@@ -353,7 +353,7 @@ class NetCashService:
                     "$push": {"comprobantes": comprobante_detalle},
                     "$set": {
                         "updated_at": datetime.now(timezone.utc),
-                        "monto_depositado_cliente": monto_detectado  # Actualizar monto si se detect\u00f3
+                        "monto_depositado_cliente": monto_detectado  # Actualizar monto si se detectó
                     }
                 }
             )
@@ -1209,7 +1209,6 @@ class NetCashService:
         from uuid import uuid4
         orden_interna = {
             "id": f"OI-{uuid4().hex[:8]}",
-            "folio_netcash": solicitud.get("folio_netcash"),
             "folio_mbco": folio_mbco,
             "solicitud_id": solicitud_id,
             "estado": "pendiente_envio_ligas",  # Estados: pendiente_envio_ligas, ligas_enviadas, completada
@@ -1307,10 +1306,10 @@ class NetCashService:
         Args:
             solicitud: Dict con los datos de la solicitud
         """
-        folio_netcash = solicitud.get('folio_netcash', 'N/A')
+        folio_mbco = solicitud.get('folio_mbco', 'N/A')
         
         logger.info(f"[NOTIF_ANA] ========== INICIO NOTIFICACIÓN A ANA ==========")
-        logger.info(f"[NOTIF_ANA] Solicitud: {folio_netcash}")
+        logger.info(f"[NOTIF_ANA] Solicitud: {folio_mbco}")
         
         # Obtener usuario Ana desde el catálogo
         from usuarios_repo import usuarios_repo
@@ -1333,7 +1332,7 @@ class NetCashService:
             return
         
         telegram_id = ana.get("telegram_id")
-        logger.info(f"[NOTIF_ANA] Intentando notificar a Ana | folio_netcash={folio_netcash} | chat_id={telegram_id}")
+        logger.info(f"[NOTIF_ANA] Intentando notificar a Ana | folio_mbco={folio_mbco} | chat_id={telegram_id}")
         
         # Importar handlers y enviar notificación
         from telegram_ana_handlers import telegram_ana_handlers
