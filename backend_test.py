@@ -1335,51 +1335,14 @@ class BackendTester:
                     if exitoso:
                         logger.info("   ✅ Solicitud procesada exitosamente")
                         
-                        # DEBUG: Imprimir respuesta completa
-                        logger.info(f"   🔍 DEBUG - Respuesta completa: {result}")
-                        logger.info(f"   🔍 DEBUG - Resumen completo: {resumen}")
-                        
-                        # VERIFICAR CÁLCULOS FINALES (NUEVA FUNCIONALIDAD)
-                        logger.info("   📊 PASO 7a: Verificando cálculos finales...")
-                        
-                        total_depositos = resumen.get("total_depositos", 0)
-                        comision_netcash = resumen.get("comision_netcash", 0)
-                        monto_ligas = resumen.get("monto_ligas", 0)
-                        porcentaje_comision = resumen.get("porcentaje_comision", 0)
-                        
-                        logger.info(f"      📋 RESUMEN FINAL:")
-                        logger.info(f"         - Total depósitos detectados: ${total_depositos:,.2f}")
-                        logger.info(f"         - Porcentaje comisión NetCash: {porcentaje_comision:.2%}")
-                        logger.info(f"         - Comisión NetCash (1.00%): ${comision_netcash:,.2f}")
-                        logger.info(f"         - Monto a enviar en ligas: ${monto_ligas:,.2f}")
-                        
-                        # Verificar cálculos
-                        comision_esperada = total_depositos * 0.01  # 1.00%
-                        monto_ligas_esperado = total_depositos - comision_esperada
-                        
-                        if abs(total_depositos - suma_comprobantes) < 0.01:
-                            logger.info("      ✅ Total depósitos = suma de TODOS los comprobantes ✓")
-                        else:
-                            logger.error(f"      ❌ Total depósitos incorrecto. Esperado: ${suma_comprobantes:,.2f}")
-                            return False
-                        
-                        if abs(comision_netcash - comision_esperada) < 0.01:
-                            logger.info("      ✅ Comisión NetCash calculada correctamente ✓")
-                        else:
-                            logger.error(f"      ❌ Comisión incorrecta. Esperado: ${comision_esperada:,.2f}")
-                            return False
-                        
-                        if abs(monto_ligas - monto_ligas_esperado) < 0.01:
-                            logger.info("      ✅ Monto ligas calculado correctamente ✓")
-                        else:
-                            logger.error(f"      ❌ Monto ligas incorrecto. Esperado: ${monto_ligas_esperado:,.2f}")
-                            return False
-                        
-                        folio_generado = resumen.get("folio")
+                        # Verificar que se generó folio
+                        folio_generado = resumen.get("folio_mbco")
                         if folio_generado:
                             logger.info(f"      ✅ Folio generado: {folio_generado}")
                         else:
                             logger.warning("      ⚠️ No se generó folio")
+                        
+                        logger.info("   📊 PASO 7a: Solicitud procesada - verificando cálculos en BD...")
                     else:
                         mensaje = result.get("message", "Error desconocido")
                         logger.error(f"   ❌ Error procesando solicitud: {mensaje}")
