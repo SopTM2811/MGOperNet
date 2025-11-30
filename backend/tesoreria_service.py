@@ -36,7 +36,7 @@ class TesoreriaService:
     def __init__(self):
         self.capital_clabe = os.getenv('NETCASH_CAPITAL_CLABE_ORIGEN', '646180000000000000')
         self.comision_clabe = os.getenv('NETCASH_COMISION_CLABE_ORIGEN', '646180000000000001')
-        self.tesoreria_email = os.getenv('TESORERIA_EMAIL', 'dfgalezzo@hotmail.com')
+        self.tesoreria_email = os.getenv('TESORERIA_TEST_EMAIL', 'dfgalezzo@hotmail.com')
         
         logger.info(f"[Tesorería] Servicio inicializado")
         logger.info(f"[Tesorería] Capital CLABE: {self.capital_clabe}")
