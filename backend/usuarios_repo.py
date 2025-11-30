@@ -26,6 +26,36 @@ COLLECTION_NAME = 'usuarios_netcash'
 class UsuariosRepository:
     """Repositorio para gestión de usuarios NetCash"""
     
+    async def usuario_puede_usar_alta_telegram(self, usuario: Optional[Dict]) -> bool:
+        """
+        Verifica si un usuario tiene permiso para usar el módulo Alta Telegram
+        
+        Args:
+            usuario: Dict con datos del usuario (puede ser None)
+            
+        Returns:
+            True si el usuario tiene el permiso, False si no
+        """
+        if not usuario:
+            return False
+        
+        return bool(usuario.get("permisos", {}).get("puede_usar_alta_telegram", False))
+    
+    async def usuario_puede_ver_usuarios(self, usuario: Optional[Dict]) -> bool:
+        """
+        Verifica si un usuario tiene permiso para ver el catálogo de usuarios
+        
+        Args:
+            usuario: Dict con datos del usuario (puede ser None)
+            
+        Returns:
+            True si el usuario tiene el permiso, False si no
+        """
+        if not usuario:
+            return False
+        
+        return bool(usuario.get("permisos", {}).get("puede_ver_usuarios", False))
+    
     async def obtener_usuario_por_rol(self, rol_negocio: str) -> Optional[Dict]:
         """
         Obtiene el primer usuario activo con el rol especificado
