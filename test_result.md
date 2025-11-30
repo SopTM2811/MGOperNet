@@ -554,6 +554,42 @@ agent_communication:
       Todos los servicios corriendo en Supervisor. Pendiente testing completo de todos los flujos.
   - agent: "testing"
     message: |
+      ✅ TESTING NETCASH V1 COMPLETADO EXITOSAMENTE - NUEVAS FUNCIONALIDADES VERIFICADAS
+      
+      🎯 FLUJO END-TO-END PROBADO COMPLETAMENTE:
+      
+      📊 USUARIO DE PRUEBA:
+      • telegram_id: "19440987" 
+      • cliente_id: "d9115936-733e-4598-a23c-2ae7633216f9"
+      • Cliente: JAVIER TELEGAM (estado activo)
+      
+      🔍 PRUEBAS REALIZADAS (9 PASOS):
+      1. ✅ Verificación usuario y cliente activo
+      2. ✅ Creación solicitud NetCash (nc-1764482809896)
+      3. ✅ Subida múltiples comprobantes THABYETHA (2 PDFs válidos)
+      4. ✅ RESUMEN INTERMEDIO - NUEVA FUNCIONALIDAD VERIFICADA
+      5. ✅ Captura beneficiario + IDMEX
+      6. ✅ Captura cantidad ligas
+      7. ✅ Validación y procesamiento automático
+      8. ✅ Persistencia BD con campos nuevos
+      9. ✅ Visualización web funcionando
+      
+      💰 CÁLCULOS VERIFICADOS (NUEVA FUNCIONALIDAD):
+      • Total depósitos: $359,600.00 (suma de TODOS los comprobantes)
+      • Comisión NetCash (1.00%): $3,596.00
+      • Monto ligas: $356,004.00
+      • Folio generado: NC-000004
+      
+      🆕 NUEVAS FUNCIONALIDADES CONFIRMADAS:
+      ✅ Resumen intermedio después de validar comprobantes (Paso 1)
+      ✅ Cálculos correctos usando suma de TODOS los comprobantes válidos
+      ✅ Persistencia completa en BD con campos nuevos
+      ✅ Visualización en web /mis-solicitudes-netcash
+      
+      🎉 RESULTADO: TODAS LAS NUEVAS FUNCIONALIDADES FUNCIONANDO CORRECTAMENTE
+      El flujo NetCash V1 está listo para producción con las mejoras implementadas.
+  - agent: "testing"
+    message: |
       🔍 TESTING ESPECÍFICO USUARIO 1570668456 (daniel G) - COMANDO /start
       
       📋 ESCENARIO REPORTADO:
