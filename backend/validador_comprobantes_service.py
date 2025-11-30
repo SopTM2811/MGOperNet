@@ -465,8 +465,11 @@ class ValidadorComprobantes:
                         return True
         
         # V3.5: FUZZY MATCHING (solo si CLABE completa de 18 dígitos fue encontrada exacta)
+        logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] clabe_completa_encontrada={clabe_completa_encontrada}")
+        
         if clabe_completa_encontrada:
             logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] CLABE completa detectada. Aplicando fuzzy matching...")
+            logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] nombre_objetivo_normalizado={beneficiario_norm}")
             
             from difflib import SequenceMatcher
             
