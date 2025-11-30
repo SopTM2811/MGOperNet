@@ -229,7 +229,11 @@ class ValidadorComprobantes:
                     continue
                 
                 # Validación 3: Debe estar en contexto de "Cuenta de depósito" o similar
-                es_contexto_deposito = any(keyword in contexto_upper for keyword in [
+                # Normalizar para ignorar acentos
+                import unicodedata
+                contexto_normalizado = unicodedata.normalize('NFKD', contexto_upper).encode('ASCII', 'ignore').decode('ASCII')
+                
+                es_contexto_deposito = any(keyword in contexto_normalizado for keyword in [
                     "CUENTA DE DEPOSITO",
                     "CUENTA DEPOSITO",
                     "DEPOSITO",
