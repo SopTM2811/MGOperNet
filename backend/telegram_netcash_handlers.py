@@ -282,23 +282,17 @@ class TelegramNetCashHandlers:
             
             await update.message.reply_text("🔍 Procesando comprobante...")
             
-            # Enviar al motor para agregar
-            agregado = await netcash_service.agregar_comprobante(
+            # Enviar al motor para agregar (retorna: agregado, razon)
+            agregado, razon = await netcash_service.agregar_comprobante(
                 solicitud_id,
                 str(file_path),
                 nombre_archivo
             )
             
-            if not agregado:
-                raise Exception("No se pudo agregar el comprobante")
-            
             # Obtener solicitud actualizada para contar comprobantes
             solicitud = await netcash_service.obtener_solicitud(solicitud_id)
             comprobantes = solicitud.get("comprobantes", [])
             num_comprobantes = len(comprobantes)
-            
-            if num_comprobantes == 0:
-                raise Exception("No se encontró el comprobante procesado")
             
             # UX MEJORADA: Eliminar botones del mensaje anterior (si existe)
             last_message_id = context.user_data.get('nc_last_comprobante_message_id')
@@ -314,10 +308,19 @@ class TelegramNetCashHandlers:
                     # Si falla (mensaje muy antiguo o ya editado), continuar sin problema
                     logger.warning(f"[NC Telegram] No se pudo editar mensaje anterior: {str(e)}")
             
-            # Mensaje de confirmación
-            mensaje = f"✅ Comprobante recibido.\n"
-            mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) adjunto(s) a esta operación.\n\n"
-            mensaje += "¿Quieres subir otro comprobante o continuar al siguiente paso?"
+            # Mensaje de confirmación (diferenciar entre duplicado y único)
+            if razon == "duplicado":
+                # Comprobante duplicado
+                mensaje = "⚠️ **Comprobante duplicado detectado**\n\n"
+                mensaje += f"Este archivo parece ser el mismo que otro que ya subiste en esta operación.\n"
+                mensaje += f"No lo vamos a contar de nuevo en el total de depósitos.\n\n"
+                mensaje += f"Llevamos **{num_comprobantes}** archivo(s) en total ({num_comprobantes - 1} únicos).\n\n"
+                mensaje += "¿Quieres subir otro comprobante o continuar?"
+            else:
+                # Comprobante único (válido o inválido)
+                mensaje = f"✅ Comprobante recibido.\n"
+                mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) adjunto(s) a esta operación.\n\n"
+                mensaje += "¿Quieres subir otro comprobante o continuar al siguiente paso?"
             
             # Botones inline
             keyboard = [
