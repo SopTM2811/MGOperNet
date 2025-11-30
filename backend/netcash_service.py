@@ -166,9 +166,10 @@ class NetCashService:
             return False
     
     async def agregar_comprobante(self, solicitud_id: str, archivo_url: str, 
-                                 nombre_archivo: str) -> bool:
+                                 nombre_archivo: str) -> Tuple[bool, Optional[str]]:
         """
         Agrega un comprobante a una solicitud y lo valida.
+        Detecta duplicados usando hash SHA-256 del contenido.
         
         Args:
             solicitud_id: ID de la solicitud
@@ -176,17 +177,68 @@ class NetCashService:
             nombre_archivo: Nombre original del archivo
         
         Returns:
-            True si se agregó correctamente
+            Tupla (agregado: bool, razon: str o None)
+            - Si es duplicado: (False, "duplicado")
+            - Si es válido: (True, None)
+            - Si es inválido: (True, None) (se agrega pero marcado como inválido)
         """
         try:
-            logger.info(f"[NetCash] Agregando comprobante a {solicitud_id}")
+            logger.info(f"[NetCash] Agregando comprobante a {solicitud_id}: {nombre_archivo}")
+            
+            # PASO 1: Calcular hash SHA-256 del archivo
+            import hashlib
+            file_hash = self._calcular_hash_archivo(archivo_url)
+            logger.info(f"[NetCash] Hash del archivo: {file_hash}")
+            
+            # PASO 2: Verificar si ya existe este hash en la operación actual
+            solicitud = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+            if not solicitud:
+                logger.error(f"[NetCash] Solicitud {solicitud_id} no encontrada")
+                return False, "solicitud_no_encontrada"
+            
+            comprobantes_existentes = solicitud.get("comprobantes", [])
+            
+            # Buscar si este hash ya existe
+            for comp in comprobantes_existentes:
+                if comp.get("archivo_hash") == file_hash:
+                    logger.warning(f"[NetCash] ⚠️ COMPROBANTE DUPLICADO detectado: {nombre_archivo}")
+                    logger.warning(f"[NetCash] Hash duplicado: {file_hash}")
+                    logger.warning(f"[NetCash] Original: {comp.get('nombre_archivo')}")
+                    
+                    # Agregar el comprobante pero marcado como duplicado
+                    comprobante_duplicado = {
+                        "archivo_url": archivo_url,
+                        "nombre_archivo": nombre_archivo,
+                        "archivo_hash": file_hash,
+                        "es_valido": False,
+                        "es_duplicado": True,
+                        "duplicado_de": comp.get("nombre_archivo"),
+                        "validacion_detalle": {
+                            "razon": f"Comprobante duplicado de '{comp.get('nombre_archivo')}'",
+                        },
+                        "cuenta_detectada": None,
+                        "monto_detectado": None
+                    }
+                    
+                    await db[COLLECTION_NAME].update_one(
+                        {"id": solicitud_id},
+                        {
+                            "$push": {"comprobantes": comprobante_duplicado},
+                            "$set": {"updated_at": datetime.now(timezone.utc)}
+                        }
+                    )
+                    
+                    return False, "duplicado"
+            
+            # PASO 3: No es duplicado, procesar normalmente
+            logger.info(f"[NetCash] Comprobante único, procesando validación...")
             
             # Validar comprobante contra cuenta concertadora activa
             cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
             
             if not cuenta_activa:
                 logger.error(f"[NetCash] No hay cuenta concertadora activa")
-                return False
+                return False, "sin_cuenta_activa"
             
             # Determinar MIME type
             mime_type = "application/pdf" if archivo_url.endswith(".pdf") else "image/jpeg"
