@@ -525,6 +525,7 @@ class ValidadorComprobantes:
             logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] Beneficiario objetivo: '{beneficiario_norm}'")
             
             if mejor_score >= UMBRAL_FUZZY:
+                logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] MATCH_FUZZY_OK score={mejor_score:.3f}")
                 logger.info(f"[VALIDADOR_FUZZY_BENEFICIARIO] ✅ MATCH FUZZY exitoso! nombre_ocr='{mejor_candidato}' nombre_objetivo='{beneficiario_norm}' score={mejor_score:.3f}")
                 return True
             else:
