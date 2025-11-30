@@ -253,6 +253,36 @@ class TelegramAnaHandlers:
                 await update.message.reply_text(mensaje, parse_mode='Markdown')
                 logger.info(f"[Ana] Folio {folio_mbco} asignado exitosamente a solicitud {solicitud_id}")
                 
+                # NUEVO: Procesar operación de tesorería inmediatamente
+                try:
+                    logger.info(f"[Ana] Iniciando proceso de tesorería para operación {solicitud_id}")
+                    await update.message.reply_text("⏳ Generando layout y enviando a Tesorería...")
+                    
+                    from tesoreria_operacion_service import tesoreria_operacion_service
+                    resultado_tesoreria = await tesoreria_operacion_service.procesar_operacion_tesoreria(solicitud_id)
+                    
+                    if resultado_tesoreria and resultado_tesoreria.get('success'):
+                        await update.message.reply_text(
+                            "✅ **Layout individual generado y enviado a Tesorería.**\n\n"
+                            "📧 Toño recibirá un correo con el layout CSV y los comprobantes del cliente."
+                        )
+                        logger.info(f"[Ana] ✅ Operación de tesorería procesada exitosamente")
+                    else:
+                        await update.message.reply_text(
+                            "⚠️ **Orden interna creada, pero hubo un problema enviando a Tesorería.**\n"
+                            "El equipo técnico revisará el caso."
+                        )
+                        logger.warning(f"[Ana] ⚠️ Error procesando tesorería para {solicitud_id}")
+                        
+                except Exception as e:
+                    logger.error(f"[Ana] Error en proceso de tesorería: {str(e)}")
+                    await update.message.reply_text(
+                        "⚠️ **Folio asignado, pero error enviando a Tesorería.**\n"
+                        "Contacta al equipo técnico."
+                    )
+                    import traceback
+                    traceback.print_exc()
+                
             else:
                 error = resultado.get("error", "Error desconocido")
                 logger.error(f"[Ana] Error al asignar folio: {error}")
