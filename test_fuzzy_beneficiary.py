@@ -14,7 +14,11 @@ Caso de prueba obligatorio:
 
 import sys
 import os
+import logging
 sys.path.insert(0, '/app/backend')
+
+# Activar logging para ver detalles
+logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 
 from validador_comprobantes_service import ValidadorComprobantes
 
