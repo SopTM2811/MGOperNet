@@ -419,14 +419,21 @@ class TesoreriaService:
             f.write(layout_csv)
             csv_path = f.name
         
+        # Preparar lista de adjuntos: CSV + comprobantes
+        adjuntos = [csv_path]  # Siempre incluir el layout CSV
+        adjuntos.extend(comprobantes_paths)  # Agregar comprobantes del cliente
+        
+        logger.info(f"[Tesorería] Total de archivos a adjuntar: {len(adjuntos)} (1 CSV + {len(comprobantes_paths)} comprobantes)")
+        
         try:
             await gmail_service.enviar_correo_con_adjuntos(
                 destinatario=self.tesoreria_email,
                 asunto=asunto,
                 cuerpo=cuerpo,
-                adjuntos=[csv_path]
+                adjuntos=adjuntos
             )
             logger.info(f"[Tesorería] ✅ Correo enviado exitosamente a {self.tesoreria_email}")
+            logger.info(f"[Tesorería] ✅ Adjuntos: 1 layout CSV + {len(comprobantes_paths)} comprobantes")
         except Exception as e:
             logger.error(f"[Tesorería] ❌ Error enviando correo: {str(e)}")
             logger.warning(f"[Tesorería] El proceso continuará, pero el correo no se envió")
