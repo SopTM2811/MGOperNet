@@ -299,10 +299,19 @@ class ValidadorComprobantes:
             if not es_origen and not es_rastreo and (es_destino or len(clabes_completas) == 1):
                 clabes_destino.append(clabe)
                 logger.info(f"[ValidadorComprobantes] ✓ CLABE {clabe} identificada como DESTINO")
+                if es_vault_thabyetha:
+                    logger.info(f"[VAULT_DEBUG] ✓ CLABE {clabe} MARCADA COMO DESTINO")
+                    logger.info(f"[VAULT_DEBUG]   - es_origen: {es_origen}")
+                    logger.info(f"[VAULT_DEBUG]   - es_rastreo: {es_rastreo}")
+                    logger.info(f"[VAULT_DEBUG]   - es_destino: {es_destino}")
             else:
                 logger.info(f"[ValidadorComprobantes] ✗ CLABE {clabe} ignorada (origen={es_origen}, rastreo={es_rastreo}, destino={es_destino})")
-                if es_thabyetha:
-                    logger.info(f"[THABYETHA_DEBUG] Contexto de CLABE {clabe}: {contexto[:200]}")
+                if es_vault_thabyetha:
+                    logger.info(f"[VAULT_DEBUG] ✗ CLABE {clabe} IGNORADA")
+                    logger.info(f"[VAULT_DEBUG]   - es_origen: {es_origen}")
+                    logger.info(f"[VAULT_DEBUG]   - es_rastreo: {es_rastreo}")
+                    logger.info(f"[VAULT_DEBUG]   - es_destino: {es_destino}")
+                    logger.info(f"[VAULT_DEBUG]   - Contexto (primeros 300 chars): {contexto[:300]}")
         
         if es_thabyetha:
             logger.info(f"[THABYETHA_DEBUG] CLABEs válidas después de filtros (destino): {clabes_destino}")
