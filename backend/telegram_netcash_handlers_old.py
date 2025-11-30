@@ -1,13 +1,7 @@
-"""Handlers de Telegram para NetCash V1 - FLUJO REORDENADO
+"""Handlers de Telegram para NetCash V1
 
 Este módulo contiene SOLO la interfaz conversacional de Telegram.
 TODA la lógica de negocio vive en netcash_service.py.
-
-NUEVO ORDEN DEL FLUJO:
-1. Paso 1: Comprobantes (multi-file, fallar rápido)
-2. Paso 2: Beneficiario + IDMEX (con frecuentes)
-3. Paso 3: Ligas NetCash
-4. Paso 4: Resumen y Confirmación
 
 Filosofía:
 - El bot pregunta y muestra
@@ -27,16 +21,16 @@ from config_cuentas_service import config_cuentas_service, TipoCuenta
 
 logger = logging.getLogger(__name__)
 
-# Estados del flujo conversacional NetCash V1 - REORDENADO
-NC_ESPERANDO_COMPROBANTE = 20  # Paso 1: Comprobantes
-NC_ESPERANDO_BENEFICIARIO = 21  # Paso 2a: Beneficiario (o selección frecuente)
-NC_ESPERANDO_IDMEX = 22  # Paso 2b: IDMEX (si no usó frecuente)
-NC_ESPERANDO_LIGAS = 23  # Paso 3: Ligas
-NC_ESPERANDO_CONFIRMACION = 24  # Paso 4: Confirmación
+# Estados del flujo conversacional NetCash V1
+NC_ESPERANDO_BENEFICIARIO = 20
+NC_ESPERANDO_IDMEX = 21
+NC_ESPERANDO_LIGAS = 22
+NC_ESPERANDO_COMPROBANTE = 23
+NC_ESPERANDO_CONFIRMACION = 24
 
 
 class TelegramNetCashHandlers:
-    """Clase con todos los handlers para NetCash V1 en Telegram - FLUJO REORDENADO"""
+    """Clase con todos los handlers para NetCash V1 en Telegram"""
     
     def __init__(self, bot_instance):
         """
@@ -139,13 +133,13 @@ class TelegramNetCashHandlers:
                 ]])
             )
     
-    # ==================== CREAR OPERACIÓN - PASO 1: COMPROBANTES ====================
+    # ==================== CREAR OPERACIÓN ====================
     
     async def iniciar_crear_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Inicia el flujo de crear operación NetCash.
         
-        PASO 1: Crear solicitud en el motor y pedir comprobantes PRIMERO
+        Paso 1: Crear solicitud en el motor y mostrar cuenta + pedir beneficiario
         """
         query = update.callback_query
         await query.answer()
@@ -183,7 +177,7 @@ class TelegramNetCashHandlers:
             
             # Guardar solicitud_id en el contexto
             context.user_data['nc_solicitud_id'] = solicitud.get('id')
-            context.user_data['nc_paso_actual'] = 'comprobantes'
+            context.user_data['nc_paso_actual'] = 'beneficiario'
             
             logger.info(f"[NC Telegram] Solicitud creada: {solicitud.get('id')} para cliente {cliente.get('id')}")
             
@@ -224,20 +218,14 @@ class TelegramNetCashHandlers:
             else:
                 logger.warning(f"[NC Telegram] No hay cuenta concertadora activa al crear operación")
             
-            mensaje += "🧾 **Paso 1 de 3: Comprobantes de depósito**\n\n"
-            mensaje += "Envíame uno o varios comprobantes de tus depósitos NetCash.\n"
-            mensaje += "Puedes adjuntar:\n"
-            mensaje += "• Varios archivos en un solo envío (álbum/selección múltiple)\n"
-            mensaje += "• O enviarlos en mensajes separados, uno tras otro\n\n"
-            mensaje += "Formatos aceptados:\n"
-            mensaje += "• Archivo PDF\n"
-            mensaje += "• Imagen (JPG, PNG)\n\n"
-            mensaje += "⚠️ **Importante:** Los comprobantes deben corresponder a la cuenta NetCash autorizada mostrada arriba.\n\n"
-            mensaje += "Cuando termines de subir todos tus comprobantes, pulsa **\"➡️ Continuar\"**."
+            mensaje += "📝 **Paso 1 de 4: Nombre del beneficiario**\n\n"
+            mensaje += "Por favor envíame el **nombre completo del beneficiario** "
+            mensaje += "(nombre + dos apellidos, sin números).\n\n"
+            mensaje += "Ejemplo: DANIEL FELIPE GALVEZ MAGALLON"
             
             await query.edit_message_text(mensaje, parse_mode="Markdown")
             
-            return NC_ESPERANDO_COMPROBANTE
+            return NC_ESPERANDO_BENEFICIARIO
             
         except Exception as e:
             logger.error(f"[NC Telegram] Error iniciando operación: {str(e)}")
@@ -249,10 +237,166 @@ class TelegramNetCashHandlers:
             )
             return ConversationHandler.END
     
-    # ==================== PASO 1: RECIBIR COMPROBANTES ====================
+    async def recibir_beneficiario(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Recibe y valida el nombre del beneficiario"""
+        beneficiario = update.message.text.strip().upper()
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text(
+                "❌ Sesión expirada. Por favor inicia de nuevo con /start"
+            )
+            return ConversationHandler.END
+        
+        try:
+            # Actualizar solicitud en el motor
+            await netcash_service.actualizar_solicitud(
+                solicitud_id,
+                SolicitudUpdate(beneficiario_reportado=beneficiario)
+            )
+            
+            # Validar solo este campo con el motor
+            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
+            validacion_beneficiario = validaciones.get("beneficiario", {})
+            
+            if not validacion_beneficiario.get("valido"):
+                # No válido - explicar error y pedir de nuevo
+                razon = validacion_beneficiario.get("razon", "Formato incorrecto")
+                mensaje = f"❌ **{razon}**\n\n"
+                mensaje += "Por favor envíame el nombre correcto.\n"
+                mensaje += "Recuerda: mínimo 3 palabras (nombre + dos apellidos), sin números.\n\n"
+                mensaje += "Ejemplo: DANIEL FELIPE GALVEZ MAGALLON"
+                
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                return NC_ESPERANDO_BENEFICIARIO
+            
+            # Válido - pasar al siguiente paso
+            context.user_data['nc_paso_actual'] = 'idmex'
+            
+            mensaje = f"✅ Beneficiario registrado: **{beneficiario}**\n\n"
+            mensaje += "📝 **Paso 2 de 4: IDMEX**\n\n"
+            mensaje += "Ahora envíame el **IDMEX del beneficiario** (10 dígitos).\n\n"
+            mensaje += "Ejemplo: 1234567890"
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            return NC_ESPERANDO_IDMEX
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error procesando beneficiario: {str(e)}")
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Por favor intenta de nuevo."
+            )
+            return NC_ESPERANDO_BENEFICIARIO
+    
+    async def recibir_idmex(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Recibe y valida el IDMEX"""
+        idmex = update.message.text.strip()
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Actualizar en el motor
+            await netcash_service.actualizar_solicitud(
+                solicitud_id,
+                SolicitudUpdate(idmex_reportado=idmex)
+            )
+            
+            # Validar
+            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
+            validacion_idmex = validaciones.get("idmex", {})
+            
+            if not validacion_idmex.get("valido"):
+                razon = validacion_idmex.get("razon", "Formato incorrecto")
+                mensaje = f"❌ **{razon}**\n\n"
+                mensaje += "Por favor envíame el IDMEX correcto (10 dígitos).\n\n"
+                mensaje += "Ejemplo: 1234567890"
+                
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                return NC_ESPERANDO_IDMEX
+            
+            # Válido - siguiente paso
+            context.user_data['nc_paso_actual'] = 'ligas'
+            
+            mensaje = f"✅ IDMEX registrado: **{idmex}**\n\n"
+            mensaje += "📝 **Paso 3 de 4: Cantidad de ligas**\n\n"
+            mensaje += "¿Cuántas **ligas NetCash** necesitas?\n\n"
+            mensaje += "Envíame solo el número (debe ser mayor a 0).\n\n"
+            mensaje += "Ejemplo: 3"
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            return NC_ESPERANDO_LIGAS
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error procesando IDMEX: {str(e)}")
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Intenta de nuevo."
+            )
+            return NC_ESPERANDO_IDMEX
+    
+    async def recibir_ligas(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Recibe y valida la cantidad de ligas"""
+        ligas_text = update.message.text.strip()
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Convertir a entero
+            try:
+                ligas = int(ligas_text)
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Por favor envía solo un número.\n\nEjemplo: 3"
+                )
+                return NC_ESPERANDO_LIGAS
+            
+            # Actualizar en el motor
+            await netcash_service.actualizar_solicitud(
+                solicitud_id,
+                SolicitudUpdate(cantidad_ligas_reportada=ligas)
+            )
+            
+            # Validar
+            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
+            validacion_ligas = validaciones.get("ligas", {})
+            
+            if not validacion_ligas.get("valido"):
+                razon = validacion_ligas.get("razon", "Cantidad inválida")
+                mensaje = f"❌ **{razon}**\n\n"
+                mensaje += "Por favor envía la cantidad correcta (número mayor a 0)."
+                
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+                return NC_ESPERANDO_LIGAS
+            
+            # Válido - siguiente paso (comprobante)
+            context.user_data['nc_paso_actual'] = 'comprobante'
+            
+            mensaje = f"✅ Cantidad de ligas: **{ligas}**\n\n"
+            mensaje += "📝 **Paso 4 de 4: Comprobantes de depósito**\n\n"
+            mensaje += "Puedes enviarme uno o varios comprobantes.\n"
+            mensaje += "• Si tienes varios, puedes enviarlos todos juntos (álbum / disparo múltiple).\n"
+            mensaje += "• O enviarlos uno por uno.\n\n"
+            mensaje += "Cuando termines, te voy a preguntar si quieres agregar más o continuar.\n\n"
+            mensaje += "Puedes enviar:\n"
+            mensaje += "• Archivo PDF\n"
+            mensaje += "• Imagen (JPG, PNG)\n\n"
+            mensaje += "⚠️ **Importante:** El comprobante debe ser de un depósito a la cuenta NetCash autorizada que te mostré al inicio."
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            return NC_ESPERANDO_COMPROBANTE
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error procesando ligas: {str(e)}")
+            await update.message.reply_text("❌ Error procesando tu información. Intenta de nuevo.")
+            return NC_ESPERANDO_LIGAS
     
     async def recibir_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Recibe y procesa comprobante(s) - Paso 1"""
+        """Recibe y procesa el comprobante (PDF o imagen)"""
         solicitud_id = context.user_data.get('nc_solicitud_id')
         
         if not solicitud_id:
@@ -282,7 +426,7 @@ class TelegramNetCashHandlers:
             
             await update.message.reply_text("🔍 Procesando comprobante...")
             
-            # Enviar al motor para agregar
+            # Enviar al motor para validación
             agregado = await netcash_service.agregar_comprobante(
                 solicitud_id,
                 str(file_path),
@@ -302,13 +446,13 @@ class TelegramNetCashHandlers:
             
             # Mensaje de confirmación
             mensaje = f"✅ Comprobante recibido.\n"
-            mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) adjunto(s) a esta operación.\n\n"
-            mensaje += "¿Quieres subir otro comprobante o continuar al siguiente paso?"
+            mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) agregados a esta operación.\n\n"
+            mensaje += "¿Quieres subir otro comprobante o continuamos?"
             
             # Botones inline
             keyboard = [
                 [InlineKeyboardButton("➕ Agregar otro comprobante", callback_data=f"nc_mas_comprobantes_{solicitud_id}")],
-                [InlineKeyboardButton("➡️ Continuar", callback_data=f"nc_continuar_paso1_{solicitud_id}")]
+                [InlineKeyboardButton("➡️ Continuar", callback_data=f"nc_continuar_comprobantes_{solicitud_id}")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -341,13 +485,13 @@ class TelegramNetCashHandlers:
         # Mantener en el estado NC_ESPERANDO_COMPROBANTE
         return NC_ESPERANDO_COMPROBANTE
     
-    async def continuar_desde_paso1(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handler para el botón 'Continuar' desde Paso 1 (Comprobantes)"""
+    async def continuar_con_comprobantes(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para el botón 'Continuar' después de subir comprobantes"""
         query = update.callback_query
         await query.answer()
         
         # Extraer solicitud_id del callback_data
-        solicitud_id = query.data.replace("nc_continuar_paso1_", "")
+        solicitud_id = query.data.replace("nc_continuar_comprobantes_", "")
         
         try:
             # Verificar cuántos comprobantes tiene la solicitud
@@ -357,49 +501,22 @@ class TelegramNetCashHandlers:
             
             if num_comprobantes == 0:
                 # No hay comprobantes - mostrar error y mantener en el mismo estado
-                mensaje = "⚠️ Para continuar, debes adjuntar por lo menos un comprobante de depósito.\n\n"
+                mensaje = "⚠️ Necesitamos al menos un comprobante para continuar con la operación NetCash.\n\n"
                 mensaje += "Por favor sube al menos uno."
                 
                 await query.edit_message_text(mensaje, parse_mode="Markdown")
                 return NC_ESPERANDO_COMPROBANTE
             
-            # Validar comprobantes antes de avanzar
-            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
-            validacion_comprobante = validaciones.get("comprobante", {})
+            # Hay al menos 1 comprobante - validar y generar resumen
+            await query.edit_message_text("⏳ Validando información...", parse_mode="Markdown")
             
-            # Contar comprobantes válidos
-            comprobantes_validos = [c for c in comprobantes if c.get("es_valido", False)]
+            # Generar resumen completo y mostrar confirmación
+            await self._mostrar_resumen_y_confirmar(update, context, solicitud_id)
             
-            if len(comprobantes_validos) == 0:
-                # NO hay comprobantes válidos - mostrar error claro y mantener en Paso 1
-                razon = validacion_comprobante.get("razon", "Comprobantes no válidos")
-                
-                mensaje = f"❌ **Se recibieron {num_comprobantes} comprobante(s), pero ninguno coincide con la cuenta NetCash autorizada.**\n\n"
-                mensaje += f"**Detalle:** {razon}\n\n"
-                
-                # Obtener cuenta activa para mostrar
-                cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
-                if cuenta:
-                    mensaje += "**La cuenta NetCash autorizada es:**\n"
-                    mensaje += f"• Banco: {cuenta.get('banco')}\n"
-                    mensaje += f"• CLABE: {cuenta.get('clabe')}\n"
-                    mensaje += f"• Beneficiario: {cuenta.get('beneficiario')}\n\n"
-                
-                mensaje += "Por favor envía comprobantes que correspondan a esta cuenta."
-                
-                await query.edit_message_text(mensaje, parse_mode="Markdown")
-                return NC_ESPERANDO_COMPROBANTE
-            
-            # Hay al menos 1 comprobante válido - pasar al Paso 2 (Beneficiarios)
-            await query.edit_message_text("✅ Comprobantes validados. Pasando al siguiente paso...", parse_mode="Markdown")
-            
-            # Mostrar Paso 2: Beneficiarios frecuentes
-            await self._mostrar_paso2_beneficiarios(query, context, solicitud_id)
-            
-            return NC_ESPERANDO_BENEFICIARIO
+            return NC_ESPERANDO_CONFIRMACION
             
         except Exception as e:
-            logger.error(f"[NC Telegram] Error en continuar_desde_paso1: {str(e)}")
+            logger.error(f"[NC Telegram] Error en continuar_con_comprobantes: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
             
@@ -408,299 +525,19 @@ class TelegramNetCashHandlers:
                 parse_mode="Markdown"
             )
             return NC_ESPERANDO_COMPROBANTE
-    
-    # ==================== PASO 2: BENEFICIARIO + IDMEX (CON FRECUENTES) ====================
-    
-    async def _mostrar_paso2_beneficiarios(self, query, context, solicitud_id):
-        """Muestra el Paso 2: Beneficiarios frecuentes o captura manual"""
-        try:
-            # Obtener cliente_id de la solicitud
-            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
-            cliente_id = solicitud.get("cliente_id")
+
+            # Mantener el estado en NC_ESPERANDO_COMPROBANTE
+            return NC_ESPERANDO_COMPROBANTE
             
-            # Consultar beneficiarios frecuentes (últimas 5 solicitudes exitosas)
-            from motor.motor_asyncio import AsyncIOMotorClient
-            import os
-            mongo_url = os.getenv('MONGO_URL')
-            db_name = os.getenv('DB_NAME', 'netcash_mbco')
-            client = AsyncIOMotorClient(mongo_url)
-            db = client[db_name]
-            
-            solicitudes_exitosas = await db.solicitudes_netcash.find(
-                {
-                    "cliente_id": cliente_id,
-                    "estado": "lista_para_mbc",
-                    "beneficiario_reportado": {"$exists": True, "$ne": None},
-                    "idmex_reportado": {"$exists": True, "$ne": None}
-                },
-                {"_id": 0, "beneficiario_reportado": 1, "idmex_reportado": 1}
-            ).sort("created_at", -1).limit(5).to_list(5)
-            
-            # Deduplicar beneficiarios (mismo beneficiario + idmex)
-            beneficiarios_frecuentes = {}
-            for sol in solicitudes_exitosas:
-                benef = sol.get("beneficiario_reportado")
-                idmex = sol.get("idmex_reportado")
-                key = f"{benef}_{idmex}"
-                if key not in beneficiarios_frecuentes:
-                    beneficiarios_frecuentes[key] = {
-                        "beneficiario": benef,
-                        "idmex": idmex
-                    }
-            
-            # Tomar los 3 más frecuentes
-            frecuentes = list(beneficiarios_frecuentes.values())[:3]
-            
-            mensaje = "👤 **Paso 2 de 3: Beneficiario + IDMEX**\n\n"
-            
-            if frecuentes:
-                mensaje += "🔁 **Beneficiarios frecuentes:**\n\n"
-                for idx, freq in enumerate(frecuentes, 1):
-                    mensaje += f"{idx}. {freq['beneficiario']} – IDMEX: {freq['idmex']}\n"
-                
-                mensaje += "\nPuedes elegir uno de la lista o escribir un beneficiario nuevo.\n"
-                mensaje += "Si prefieres escribir uno nuevo, simplemente envía el nombre completo del beneficiario."
-                
-                # Botones para beneficiarios frecuentes
-                keyboard = []
-                for freq in frecuentes:
-                    button_text = f"{freq['beneficiario'][:30]}... (IDMEX {freq['idmex']})"
-                    callback_data = f"nc_benef_freq_{freq['idmex']}"
-                    # Guardar en contexto para recuperar después
-                    context.user_data[f"benef_freq_{freq['idmex']}"] = freq
-                    keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
-                
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await query.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
-            else:
-                # No hay frecuentes - captura manual directa
-                mensaje += "Por favor envíame el **nombre completo del beneficiario**.\n\n"
-                mensaje += "El nombre debe tener:\n"
-                mensaje += "• Mínimo 3 palabras (nombre + dos apellidos)\n"
-                mensaje += "• Sin números\n\n"
-                mensaje += "**Ejemplo:** ANDRÉS MANUEL LÓPEZ OBRADOR"
-                
-                await query.message.reply_text(mensaje, parse_mode="Markdown")
-        
         except Exception as e:
-            logger.error(f"[NC Telegram] Error mostrando paso 2: {str(e)}")
+            logger.error(f"[NC Telegram] Error procesando comprobante: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
-            raise
-    
-    async def seleccionar_beneficiario_frecuente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handler cuando el usuario selecciona un beneficiario frecuente"""
-        query = update.callback_query
-        await query.answer()
-        
-        # Extraer IDMEX del callback_data
-        idmex = query.data.replace("nc_benef_freq_", "")
-        
-        # Recuperar datos del contexto
-        benef_data = context.user_data.get(f"benef_freq_{idmex}")
-        
-        if not benef_data:
-            await query.edit_message_text("❌ Error recuperando datos. Por favor intenta de nuevo.")
-            return NC_ESPERANDO_BENEFICIARIO
-        
-        solicitud_id = context.user_data.get('nc_solicitud_id')
-        
-        try:
-            # Actualizar solicitud con beneficiario + IDMEX
-            await netcash_service.actualizar_solicitud(
-                solicitud_id,
-                SolicitudUpdate(
-                    beneficiario_reportado=benef_data['beneficiario'],
-                    idmex_reportado=benef_data['idmex']
-                )
-            )
             
-            # Mensaje de confirmación
-            mensaje = f"✅ **Usaremos:**\n\n"
-            mensaje += f"• Beneficiario: {benef_data['beneficiario']}\n"
-            mensaje += f"• IDMEX: {benef_data['idmex']}\n\n"
-            mensaje += "Pasando al siguiente paso..."
-            
-            await query.edit_message_text(mensaje, parse_mode="Markdown")
-            
-            # Pasar directamente al Paso 3 (Ligas)
-            await self._mostrar_paso3_ligas(query, context, solicitud_id)
-            
-            return NC_ESPERANDO_LIGAS
-            
-        except Exception as e:
-            logger.error(f"[NC Telegram] Error seleccionando beneficiario frecuente: {str(e)}")
-            await query.edit_message_text("❌ Error procesando tu selección. Intenta de nuevo.")
-            return NC_ESPERANDO_BENEFICIARIO
-    
-    async def recibir_beneficiario(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Recibe y valida el nombre del beneficiario - Paso 2a"""
-        beneficiario = update.message.text.strip().upper()
-        solicitud_id = context.user_data.get('nc_solicitud_id')
-        
-        if not solicitud_id:
             await update.message.reply_text(
-                "❌ Sesión expirada. Por favor inicia de nuevo con /start"
+                "❌ Error procesando el comprobante. Por favor intenta de nuevo o contacta a soporte."
             )
-            return ConversationHandler.END
-        
-        try:
-            # Actualizar solicitud en el motor
-            await netcash_service.actualizar_solicitud(
-                solicitud_id,
-                SolicitudUpdate(beneficiario_reportado=beneficiario)
-            )
-            
-            # Validar solo este campo con el motor
-            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
-            validacion_beneficiario = validaciones.get("beneficiario", {})
-            
-            if not validacion_beneficiario.get("valido"):
-                # No válido - explicar error y pedir de nuevo
-                razon = validacion_beneficiario.get("razon", "Formato incorrecto")
-                mensaje = f"❌ **{razon}**\n\n"
-                mensaje += "Por favor envíame el nombre correcto.\n"
-                mensaje += "Recuerda: mínimo 3 palabras (nombre + dos apellidos), sin números.\n\n"
-                mensaje += "**Ejemplo:** ANDRÉS MANUEL LÓPEZ OBRADOR"
-                
-                await update.message.reply_text(mensaje, parse_mode="Markdown")
-                return NC_ESPERANDO_BENEFICIARIO
-            
-            # Válido - pasar al Paso 2b (IDMEX)
-            context.user_data['nc_paso_actual'] = 'idmex'
-            
-            mensaje = f"✅ Beneficiario registrado: **{beneficiario}**\n\n"
-            mensaje += "📝 **Paso 2b: IDMEX**\n\n"
-            mensaje += "Ahora envíame el **IDMEX del beneficiario** (10 dígitos).\n\n"
-            mensaje += "**Ejemplo:** 1234567890"
-            
-            await update.message.reply_text(mensaje, parse_mode="Markdown")
-            return NC_ESPERANDO_IDMEX
-            
-        except Exception as e:
-            logger.error(f"[NC Telegram] Error procesando beneficiario: {str(e)}")
-            await update.message.reply_text(
-                "❌ Error procesando tu información. Por favor intenta de nuevo."
-            )
-            return NC_ESPERANDO_BENEFICIARIO
-    
-    async def recibir_idmex(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Recibe y valida el IDMEX - Paso 2b"""
-        idmex = update.message.text.strip()
-        solicitud_id = context.user_data.get('nc_solicitud_id')
-        
-        if not solicitud_id:
-            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
-            return ConversationHandler.END
-        
-        try:
-            # Actualizar en el motor
-            await netcash_service.actualizar_solicitud(
-                solicitud_id,
-                SolicitudUpdate(idmex_reportado=idmex)
-            )
-            
-            # Validar
-            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
-            validacion_idmex = validaciones.get("idmex", {})
-            
-            if not validacion_idmex.get("valido"):
-                razon = validacion_idmex.get("razon", "Formato incorrecto")
-                mensaje = f"❌ **{razon}**\n\n"
-                mensaje += "Por favor envíame el IDMEX correcto (10 dígitos).\n\n"
-                mensaje += "**Ejemplo:** 1234567890"
-                
-                await update.message.reply_text(mensaje, parse_mode="Markdown")
-                return NC_ESPERANDO_IDMEX
-            
-            # Válido - pasar al Paso 3 (Ligas)
-            mensaje = f"✅ IDMEX registrado: **{idmex}**\n\n"
-            mensaje += "Pasando al siguiente paso..."
-            
-            await update.message.reply_text(mensaje, parse_mode="Markdown")
-            
-            # Mostrar Paso 3
-            await self._mostrar_paso3_ligas(update, context, solicitud_id)
-            
-            return NC_ESPERANDO_LIGAS
-            
-        except Exception as e:
-            logger.error(f"[NC Telegram] Error procesando IDMEX: {str(e)}")
-            await update.message.reply_text(
-                "❌ Error procesando tu información. Intenta de nuevo."
-            )
-            return NC_ESPERANDO_IDMEX
-    
-    # ==================== PASO 3: LIGAS NETCASH ====================
-    
-    async def _mostrar_paso3_ligas(self, update_or_query, context, solicitud_id):
-        """Muestra el Paso 3: Cantidad de ligas NetCash"""
-        mensaje = "🎫 **Paso 3 de 3: Cantidad de ligas NetCash**\n\n"
-        mensaje += "¿Cuántas **ligas NetCash** necesitas?\n\n"
-        mensaje += "Envíame solo el número (debe ser mayor a 0).\n\n"
-        mensaje += "**Ejemplo:** 3"
-        
-        if hasattr(update_or_query, 'callback_query'):
-            # Es un update
-            await update_or_query.message.reply_text(mensaje, parse_mode="Markdown")
-        else:
-            # Es un query
-            await update_or_query.message.reply_text(mensaje, parse_mode="Markdown")
-    
-    async def recibir_ligas(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Recibe y valida la cantidad de ligas - Paso 3"""
-        ligas_text = update.message.text.strip()
-        solicitud_id = context.user_data.get('nc_solicitud_id')
-        
-        if not solicitud_id:
-            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
-            return ConversationHandler.END
-        
-        try:
-            # Convertir a entero
-            try:
-                ligas = int(ligas_text)
-            except ValueError:
-                await update.message.reply_text(
-                    "❌ Por favor envía solo un número.\n\n**Ejemplo:** 3"
-                )
-                return NC_ESPERANDO_LIGAS
-            
-            # Actualizar en el motor
-            await netcash_service.actualizar_solicitud(
-                solicitud_id,
-                SolicitudUpdate(cantidad_ligas_reportada=ligas)
-            )
-            
-            # Validar
-            todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
-            validacion_ligas = validaciones.get("ligas", {})
-            
-            if not validacion_ligas.get("valido"):
-                razon = validacion_ligas.get("razon", "Cantidad inválida")
-                mensaje = f"❌ **{razon}**\n\n"
-                mensaje += "Por favor envía la cantidad correcta (número mayor a 0)."
-                
-                await update.message.reply_text(mensaje, parse_mode="Markdown")
-                return NC_ESPERANDO_LIGAS
-            
-            # Válido - pasar al Paso 4 (Resumen y Confirmación)
-            mensaje = f"✅ Cantidad de ligas: **{ligas}**\n\n"
-            mensaje += "Generando resumen de tu operación..."
-            
-            await update.message.reply_text(mensaje, parse_mode="Markdown")
-            
-            # Generar resumen completo
-            await self._mostrar_resumen_y_confirmar(update, context, solicitud_id)
-            
-            return NC_ESPERANDO_CONFIRMACION
-            
-        except Exception as e:
-            logger.error(f"[NC Telegram] Error procesando ligas: {str(e)}")
-            await update.message.reply_text("❌ Error procesando tu información. Intenta de nuevo.")
-            return NC_ESPERANDO_LIGAS
-    
-    # ==================== PASO 4: RESUMEN Y CONFIRMACIÓN ====================
+            return NC_ESPERANDO_COMPROBANTE
     
     async def _mostrar_resumen_y_confirmar(self, update, context, solicitud_id):
         """
@@ -737,42 +574,17 @@ class TelegramNetCashHandlers:
             icono_ligas = "✅" if "ligas" in campos_validos else "❌"
             mensaje += f"• Ligas NetCash: {ligas} {icono_ligas}\n"
             
-            # Comprobante - MEJORADO para diferenciar casos
+            # Comprobante
             num_comprobantes = campos.get("comprobantes", 0)
-            comprobante_valido = "comprobante" in campos_validos
+            icono_comp = "✅" if "comprobante" in campos_validos else "❌"
+            mensaje += f"• Comprobante: {num_comprobantes} archivo(s) {icono_comp}\n"
             
-            # Obtener solicitud para analizar comprobantes
-            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
-            comprobantes = solicitud.get("comprobantes", [])
-            comprobantes_validos_list = [c for c in comprobantes if c.get("es_valido", False)]
-            
-            if num_comprobantes == 0:
-                # Caso A: Sin archivos
-                icono_comp = "❌"
-                mensaje += f"• Comprobantes: 0 archivo(s) {icono_comp}\n"
-            elif len(comprobantes_validos_list) == 0:
-                # Caso B: Archivos recibidos pero ninguno válido
-                icono_comp = "❌"
-                mensaje += f"• Comprobantes: {num_comprobantes} archivo(s) {icono_comp}\n"
-            else:
-                # Caso C: Al menos uno válido
-                icono_comp = "✅"
-                mensaje += f"• Comprobantes: {num_comprobantes} archivo(s) ({len(comprobantes_validos_list)} válido(s)) {icono_comp}\n"
-            
-            # Mostrar errores si hay - MEJORADO
+            # Mostrar errores si hay
             if resumen.campos_invalidos:
                 mensaje += "\n⚠️ **Problemas detectados:**\n"
                 for error in resumen.campos_invalidos:
                     campo = error.get("campo", "desconocido")
                     razon = error.get("razon", "")
-                    
-                    # Mejorar mensaje para comprobantes
-                    if campo == "comprobante":
-                        if num_comprobantes == 0:
-                            razon = "No se recibió ningún comprobante."
-                        elif len(comprobantes_validos_list) == 0:
-                            razon = "Se recibieron comprobantes, pero ninguno coincide con la cuenta NetCash autorizada."
-                    
                     mensaje += f"• {campo.capitalize()}: {razon}\n"
             
             # Si todo está válido
