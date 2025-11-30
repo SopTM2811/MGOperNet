@@ -52,6 +52,55 @@ class TesoreriaService:
         logger.info(f"[Tesorería] Email: {self.tesoreria_email}")
         logger.info(f"[Tesorería] Cuentas de proveedor se cargan dinámicamente de BD")
     
+    def _generar_id_lote_mbco(self, solicitudes: List[Dict]) -> str:
+        """
+        Genera un ID de lote "humano" basado en los folios MBco de las solicitudes
+        
+        Formato: LTMBCO{primeros_4_digitos_folio1}-{primeros_4_digitos_folio2}-...
+        Usa máximo las 3 primeras solicitudes (ordenadas por fecha de creación)
+        
+        Ejemplos:
+        - 1 solicitud con folio 1234-234-D-11 → LTMBCO1234
+        - 2 solicitudes con folios 1234-234-D-11 y 4834-234-D-11 → LTMBCO1234-4834
+        - 3+ solicitudes → LTMBCO1234-4834-3949
+        
+        Args:
+            solicitudes: Lista de solicitudes del lote
+            
+        Returns:
+            ID de lote MBco en formato humano
+        """
+        # Ordenar solicitudes por fecha de creación
+        solicitudes_ordenadas = sorted(
+            solicitudes,
+            key=lambda s: s.get('created_at', datetime.now(timezone.utc))
+        )
+        
+        # Tomar máximo 3 solicitudes
+        solicitudes_para_id = solicitudes_ordenadas[:3]
+        
+        # Extraer primeros 4 dígitos de cada folio
+        prefijos = []
+        for sol in solicitudes_para_id:
+            folio_mbco = sol.get('folio_mbco', '')
+            # Extraer primeros 4 dígitos antes del primer guion
+            partes = folio_mbco.split('-')
+            if partes:
+                prefijo = partes[0][:4]  # Primeros 4 caracteres del primer segmento
+                if prefijo:
+                    prefijos.append(prefijo)
+        
+        # Construir ID
+        if prefijos:
+            id_lote_mbco = f"LTMBCO{'-'.join(prefijos)}"
+        else:
+            # Fallback si no hay folios válidos
+            id_lote_mbco = f"LTMBCO-{int(datetime.now(timezone.utc).timestamp())}"
+        
+        logger.info(f"[Tesorería] ID Lote MBco generado: {id_lote_mbco} (de {len(solicitudes)} solicitudes)")
+        
+        return id_lote_mbco
+    
     def convertir_folio_mbco_para_concepto(self, folio_mbco: str) -> str:
         """
         Convierte folio MBco de formato 1234-209-M-11 a 1234x209xMx11
