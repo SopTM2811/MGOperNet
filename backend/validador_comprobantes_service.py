@@ -234,7 +234,8 @@ class ValidadorComprobantes:
                     es_origen = any(kw in texto_antes for kw in keywords_origen)
             else:
                 # No es layout tabular, usar lógica tradicional
-                keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]
+                # MEJORADO V3.6: Agregar "RETIRO" para Vault/Panekneva
+                keywords_origen = ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO", "RETIRO", "CUENTA DE RETIRO"]
                 es_origen = any(kw in texto_antes for kw in keywords_origen)
             
             # Ignorar si la CLABE MISMA es CLAVE DE RASTREO o REFERENCIA
