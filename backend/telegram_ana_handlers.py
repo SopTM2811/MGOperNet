@@ -183,17 +183,25 @@ class TelegramAnaHandlers:
             return ANA_ESPERANDO_FOLIO_MBCO
         
         # Verificar que el folio no exista
+        logger.info(f"[Ana] Validando unicidad del folio: {folio_mbco}")
         try:
             folio_existente = await netcash_service.verificar_folio_mbco_existe(folio_mbco)
             if folio_existente:
+                logger.warning(f"[Ana] Folio {folio_mbco} ya está en uso")
                 await update.message.reply_text(
-                    f"❌ El folio `{folio_mbco}` ya está asignado a otra solicitud.\n\n"
-                    "Por favor, escribe un folio diferente:",
+                    f"❌ **Este folio MBco ya está asignado a otra solicitud.**\n\n"
+                    f"Folio: `{folio_mbco}`\n\n"
+                    "Por favor, ingresa un folio distinto:",
                     parse_mode='Markdown'
                 )
                 return ANA_ESPERANDO_FOLIO_MBCO
+            
+            logger.info(f"[Ana] Folio {folio_mbco} está disponible")
+            
         except Exception as e:
             logger.error(f"[Ana] Error verificando folio: {str(e)}")
+            import traceback
+            traceback.print_exc()
             await update.message.reply_text("❌ Error al verificar el folio. Intenta de nuevo.")
             return ANA_ESPERANDO_FOLIO_MBCO
         
