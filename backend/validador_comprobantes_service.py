@@ -231,12 +231,7 @@ class ValidadorComprobantes:
                     logger.warning(f"[ValidadorComprobantes] ❌ Patrón {patron} está en la MISMA LÍNEA que 'ASOCIADA' o asteriscos. NO válido.")
                     continue
                 
-                # Validación 2: NO debe tener asteriscos cerca
-                if "*" in contexto:
-                    logger.warning(f"[ValidadorComprobantes] ❌ Patrón {patron} tiene asteriscos cerca. NO válido.")
-                    continue
-                
-                # Validación 3: Debe estar en contexto de "Cuenta de depósito" o similar
+                # Validación 2: Debe estar en contexto de "Cuenta de depósito" o similar
                 # Normalizar para ignorar acentos
                 import unicodedata
                 contexto_normalizado = unicodedata.normalize('NFKD', contexto_upper).encode('ASCII', 'ignore').decode('ASCII')
