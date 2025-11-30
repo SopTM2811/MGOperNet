@@ -481,6 +481,54 @@ backend:
           El validador V3.5 está listo para producción con tolerancia a errores pequeños de OCR
           cuando la CLABE de 18 dígitos es detectada exactamente.
 
+  - task: "Treasury Workflow - Proceso automatizado de Tesorería cada 15 minutos"
+    implemented: true
+    working: true
+    file: "/app/backend/tesoreria_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implementado proceso automatizado de Tesorería que se ejecuta cada 15 minutos.
+          Busca solicitudes con estado 'orden_interna_generada', las agrupa en lotes,
+          genera layout CSV formato Fondeadora, envía correo a Tesorería y actualiza estados.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING COMPLETADO: Treasury Workflow funcionando correctamente.
+          
+          ESCENARIO PROBADO:
+          • Solicitud 1: Cliente "TEST CLIENTE A", Beneficiario "JUAN PÉREZ", 1 liga, $5,000 total, $50 comisión, $4,950 capital
+          • Solicitud 2: Cliente "TEST CLIENTE B", Beneficiario "MARÍA GARCÍA", 3 ligas, $12,000 total, $120 comisión, $11,880 capital
+          
+          PRUEBAS EJECUTADAS EXITOSAMENTE:
+          1. ✅ Setup: Creadas 2 solicitudes con estado 'orden_interna_generada'
+          2. ✅ Proceso ejecutado: tesoreria_service.procesar_lote_tesoreria() llamado directamente
+          3. ✅ Estados actualizados: Ambas solicitudes cambiaron a 'enviado_a_tesoreria'
+          4. ✅ Lote creado: Nuevo lote en colección 'lotes_tesoreria' con datos correctos
+          5. ✅ Totales verificados: $17,000 depósitos, $16,830 capital, $170 comisión
+          6. ✅ CSV generado: Layout correcto con 6 filas (4 capital + 2 comisión)
+          7. ✅ Conceptos correctos: Formato 'MBco {folio_mbco_con_x}' (guiones → 'x')
+          8. ✅ CLABEs origen: Capital usa NETCASH_CAPITAL_CLABE_ORIGEN, Comisión usa NETCASH_COMISION_CLABE_ORIGEN
+          9. ✅ No regresión: Segundo proceso retorna None (no procesa solicitudes ya procesadas)
+          10. ✅ Cleanup: Solicitudes y lote de prueba eliminados correctamente
+          
+          LAYOUT CSV VERIFICADO:
+          • Solicitud 1: 1 fila capital + 1 fila comisión = 2 filas
+          • Solicitud 2: 3 filas capital (divididas) + 1 fila comisión = 4 filas
+          • Total: 6 filas con formato Fondeadora correcto
+          • Conceptos: 'MBco TESTx001xTx43', 'MBco TESTx002xTx43 COMISION', etc.
+          
+          VARIABLES DE ENTORNO CONFIRMADAS:
+          • NETCASH_CAPITAL_CLABE_ORIGEN: 646180000000000000
+          • NETCASH_COMISION_CLABE_ORIGEN: 646180000000000001  
+          • TESORERIA_TEST_EMAIL: dfgalezzo@hotmail.com
+          
+          El proceso automatizado de Tesorería está listo para producción.
+
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
     implemented: true
