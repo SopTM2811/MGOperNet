@@ -296,12 +296,12 @@ class NetCashService:
                 }
             )
             
-            logger.info(f"[NetCash] Comprobante agregado: válido={es_valido}, monto={monto_detectado}")
-            return result.modified_count > 0
+            logger.info(f"[NetCash] ✅ Comprobante agregado: válido={es_valido}, monto={monto_detectado}")
+            return True, None  # Agregado exitosamente (válido o inválido, pero no duplicado)
             
         except Exception as e:
             logger.error(f"[NetCash] Error agregando comprobante: {str(e)}")
-            return False
+            return False, "error"
     
     # ==================== VALIDACIONES (REGLAS DURAS) ====================
     
