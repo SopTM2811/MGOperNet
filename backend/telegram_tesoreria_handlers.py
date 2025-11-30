@@ -24,14 +24,19 @@ class TelegramTesoreriaHandlers:
     def __init__(self, bot_app):
         self.bot = bot_app
     
-    async def notificar_nueva_orden_interna(self, orden_interna: dict):
+    async def notificar_nueva_orden_interna(self, orden_interna: dict, usuario: dict):
         """
         Envía notificación a Tesorería sobre nueva orden interna pendiente
         
         Args:
             orden_interna: Dict con los datos de la orden interna
+            usuario: Dict con datos del usuario (desde catálogo)
         """
         try:
+            telegram_id = usuario.get("telegram_id")
+            if not telegram_id:
+                logger.warning(f"[Tesorería Telegram] Usuario {usuario.get('nombre')} no tiene telegram_id")
+                return
             orden_id = orden_interna.get("id")
             folio_netcash = orden_interna.get("folio_netcash")
             folio_mbco = orden_interna.get("folio_mbco")
