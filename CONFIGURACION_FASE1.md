@@ -138,7 +138,7 @@ tail -f /var/log/supervisor/frontend.err.log
 
 Abre tu navegador y ve a:
 ```
-https://telegram-web-sync-2.preview.emergentagent.com
+https://payslip-verify-1.preview.emergentagent.com
 ```
 
 ---
