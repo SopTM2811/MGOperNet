@@ -375,11 +375,11 @@ class ValidadorComprobantes:
                     continue
             
             # Verificar que esté en contexto de DESTINO
-            # MEJORADO V3.6: Soporte para layout Vault/Panekneva
+            # MEJORADO V3.6: Soporte para layout Vault/Panekneva (con y sin acentos)
             keywords_destino = [
                 "DESTINO", "BENEFICIAR", "ABONO", "RECEPTOR", "DESTINATARIO",
                 "CUENTA DESTINO", "CUENTA ABONO", "CUENTA BENEFICIAR",
-                "CLABE DESTINO", "PARA", "DEPOSITO", "CUENTA DE DEPOSITO",
+                "CLABE DESTINO", "PARA", "DEPOSITO", "DEPÓSITO", "CUENTA DE DEPOSITO", "CUENTA DE DEPÓSITO",
                 "BANCO DESTINO", "TITULAR DE LA CUENTA BENEFICIARIA"
             ]
             
