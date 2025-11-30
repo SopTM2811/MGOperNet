@@ -148,8 +148,9 @@ class TelegramAnaHandlers:
         
         # Solicitar folio
         mensaje = "📝 **Asignación de folio MBco**\n\n"
-        mensaje += "Por favor, escribe el folio de operación MBco para esta solicitud.\n"
-        mensaje += "Ejemplo: `MB-2025-0007`\n\n"
+        mensaje += "Por favor, escribe el folio de operación MBco para esta solicitud.\n\n"
+        mensaje += "**Formato:** 4 dígitos – 3 dígitos – 1 letra (D, S, R o M) – 2 dígitos\n"
+        mensaje += "**Ejemplo:** `1234-209-M-11`\n\n"
         mensaje += "ℹ️ El folio debe ser único y no estar asignado a otra solicitud."
         
         await query.edit_message_text(mensaje, parse_mode='Markdown')
