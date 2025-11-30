@@ -16,6 +16,7 @@ from typing import List, Dict, Optional, Tuple
 from io import StringIO
 from motor.motor_asyncio import AsyncIOMotorClient
 from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
 import aiohttp
 
 logger = logging.getLogger(__name__)
