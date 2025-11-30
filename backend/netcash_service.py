@@ -1056,6 +1056,223 @@ class NetCashService:
         except Exception as e:
             logger.error(f"[NetCash] Error listando solicitudes: {str(e)}")
             return []
+    
+    async def verificar_folio_mbco_existe(self, folio_mbco: str) -> bool:
+        """
+        Verifica si un folio MBco ya está asignado a alguna solicitud
+        
+        Args:
+            folio_mbco: Folio MBco a verificar
+            
+        Returns:
+            True si el folio ya existe, False si no
+        """
+        try:
+            solicitud = await db[COLLECTION_NAME].find_one(
+                {"folio_mbco": folio_mbco},
+                {"_id": 0, "id": 1}
+            )
+            return solicitud is not None
+        except Exception as e:
+            logger.error(f"[NetCash] Error verificando folio MBco: {str(e)}")
+            return False
+    
+    async def asignar_folio_mbco_y_generar_orden_interna(
+        self,
+        solicitud_id: str,
+        folio_mbco: str,
+        usuario_asigna: str
+    ) -> Dict:
+        """
+        Asigna folio MBco a una solicitud y genera la orden interna para Tesorería
+        
+        Este es el punto de orquestación que:
+        1. Asigna el folio MBco a la solicitud
+        2. Cambia estado a 'orden_interna_generada'
+        3. Genera la orden interna (estructura de datos para Tesorería)
+        4. Envía correo a Tesorería con layout + comprobantes
+        5. Notifica a Tesorería por Telegram
+        
+        Args:
+            solicitud_id: ID de la solicitud
+            folio_mbco: Folio MBco asignado por Ana
+            usuario_asigna: Username o ID del usuario que asigna (Ana)
+            
+        Returns:
+            Dict con resultado:
+            {
+                "success": bool,
+                "solicitud": dict (si success),
+                "orden_interna": dict (si success),
+                "error": str (si no success)
+            }
+        """
+        try:
+            logger.info(f"[NetCash] Iniciando asignación folio MBco: {folio_mbco} para solicitud {solicitud_id}")
+            
+            # 1. Obtener solicitud actual
+            solicitud = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+            
+            if not solicitud:
+                return {"success": False, "error": "Solicitud no encontrada"}
+            
+            # Verificar estado correcto
+            if solicitud.get("estado") != "lista_para_mbc":
+                return {
+                    "success": False, 
+                    "error": f"Solicitud no está en estado 'lista_para_mbc' (estado actual: {solicitud.get('estado')})"
+                }
+            
+            # 2. Actualizar solicitud con folio MBco
+            ahora = datetime.now(timezone.utc)
+            
+            update_data = {
+                "folio_mbco": folio_mbco,
+                "estado": "orden_interna_generada",
+                "fecha_asignacion_mbco": ahora,
+                "usuario_asigna_mbco": usuario_asigna,
+                "updated_at": ahora
+            }
+            
+            await db[COLLECTION_NAME].update_one(
+                {"id": solicitud_id},
+                {"$set": update_data}
+            )
+            
+            logger.info(f"[NetCash] Folio MBco asignado: {folio_mbco}")
+            
+            # 3. Generar orden interna para Tesorería
+            orden_interna = await self._generar_orden_interna_tesoreria(solicitud_id, folio_mbco)
+            
+            logger.info(f"[NetCash] Orden interna generada: {orden_interna.get('id')}")
+            
+            # 4. Enviar correo a Tesorería
+            await self._enviar_correo_tesoreria(solicitud_id, orden_interna)
+            
+            logger.info(f"[NetCash] Correo enviado a Tesorería")
+            
+            # 5. Notificar a Tesorería por Telegram
+            await self._notificar_tesoreria_telegram(solicitud_id, orden_interna)
+            
+            logger.info(f"[NetCash] Tesorería notificada por Telegram")
+            
+            # 6. Obtener solicitud actualizada
+            solicitud_actualizada = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+            
+            return {
+                "success": True,
+                "solicitud": solicitud_actualizada,
+                "orden_interna": orden_interna
+            }
+            
+        except Exception as e:
+            logger.error(f"[NetCash] Error asignando folio MBco: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "error": str(e)}
+    
+    async def _generar_orden_interna_tesoreria(self, solicitud_id: str, folio_mbco: str) -> Dict:
+        """
+        Genera la orden interna que Tesorería usará para enviar las ligas
+        
+        Args:
+            solicitud_id: ID de la solicitud
+            folio_mbco: Folio MBco asignado
+            
+        Returns:
+            Dict con la orden interna generada
+        """
+        # Obtener solicitud
+        solicitud = await db[COLLECTION_NAME].find_one({"id": solicitud_id}, {"_id": 0})
+        
+        if not solicitud:
+            raise ValueError(f"Solicitud {solicitud_id} no encontrada")
+        
+        # Calcular totales
+        comprobantes = solicitud.get("comprobantes", [])
+        total_depositos = sum(
+            c.get("monto_detectado", 0) 
+            for c in comprobantes 
+            if c.get("es_valido") and not c.get("es_duplicado")
+        )
+        
+        comision_netcash = solicitud.get("comision_cliente", total_depositos * 0.01)
+        monto_ligas = total_depositos - comision_netcash
+        num_ligas = solicitud.get("num_ligas", 0)
+        
+        # Crear orden interna
+        from uuid import uuid4
+        orden_interna = {
+            "id": f"OI-{uuid4().hex[:8]}",
+            "folio_netcash": solicitud.get("folio_netcash"),
+            "folio_mbco": folio_mbco,
+            "solicitud_id": solicitud_id,
+            "estado": "pendiente_envio_ligas",  # Estados: pendiente_envio_ligas, ligas_enviadas, completada
+            "beneficiario": solicitud.get("beneficiario"),
+            "idmex": solicitud.get("idmex"),
+            "num_ligas": num_ligas,
+            "monto_total_ligas": monto_ligas,
+            "monto_por_liga": monto_ligas / num_ligas if num_ligas > 0 else 0,
+            "comprobantes_adjuntos": [
+                {
+                    "nombre": c.get("nombre_archivo"),
+                    "url": c.get("archivo_url"),
+                    "monto": c.get("monto_detectado")
+                }
+                for c in comprobantes
+                if c.get("es_valido") and not c.get("es_duplicado")
+            ],
+            "created_at": datetime.now(timezone.utc),
+            "created_by": "ana_mbco"
+        }
+        
+        # Guardar en colección de órdenes internas
+        await db["ordenes_internas_tesoreria"].insert_one(orden_interna)
+        
+        logger.info(f"[NetCash] Orden interna generada: {orden_interna['id']}")
+        
+        return orden_interna
+    
+    async def _enviar_correo_tesoreria(self, solicitud_id: str, orden_interna: Dict):
+        """
+        Envía correo a Tesorería con layout + comprobantes adjuntos
+        
+        Args:
+            solicitud_id: ID de la solicitud
+            orden_interna: Dict con la orden interna generada
+        """
+        # TODO: Implementar envío de correo
+        # Por ahora, solo logueamos
+        logger.info(f"[NetCash] 📧 Correo a Tesorería (MOCK)")
+        logger.info(f"  - Para: tesoreria@mbco.com")
+        logger.info(f"  - Asunto: Orden Interna {orden_interna['id']} - {orden_interna['folio_mbco']}")
+        logger.info(f"  - Layout: {orden_interna['num_ligas']} liga(s) x ${orden_interna['monto_por_liga']:,.2f}")
+        logger.info(f"  - Comprobantes adjuntos: {len(orden_interna['comprobantes_adjuntos'])}")
+        
+        # Hook para implementación futura
+        # await enviar_correo_smtp(
+        #     destinatario="tesoreria@mbco.com",
+        #     asunto=f"Orden Interna {orden_interna['id']} - {orden_interna['folio_mbco']}",
+        #     cuerpo=self._generar_layout_correo(orden_interna),
+        #     adjuntos=[c['url'] for c in orden_interna['comprobantes_adjuntos']]
+        # )
+    
+    async def _notificar_tesoreria_telegram(self, solicitud_id: str, orden_interna: Dict):
+        """
+        Notifica a Tesorería por Telegram sobre nueva orden interna
+        
+        Args:
+            solicitud_id: ID de la solicitud
+            orden_interna: Dict con la orden interna generada
+        """
+        # Importar aquí para evitar dependencia circular
+        from telegram_config import TELEGRAM_ID_TESORERIA
+        from telegram_tesoreria_handlers import telegram_tesoreria_handlers
+        
+        if telegram_tesoreria_handlers:
+            await telegram_tesoreria_handlers.notificar_nueva_orden_interna(orden_interna)
+        else:
+            logger.warning(f"[NetCash] telegram_tesoreria_handlers no inicializado, notificación no enviada")
 
 
 # Instancia global del servicio
