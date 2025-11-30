@@ -5,6 +5,10 @@ Test con los PDFs reales de THABYETHA de montos pequeños
 
 import sys
 import logging
+import os
+import urllib.request
+import tempfile
+
 sys.path.insert(0, '/app/backend')
 
 logging.basicConfig(
@@ -13,7 +17,6 @@ logging.basicConfig(
 )
 
 from validador_comprobantes_service import ValidadorComprobantes
-import fitz  # PyMuPDF
 
 CUENTA_ACTIVA = {
     "banco": "STP",
@@ -45,31 +48,22 @@ TEST_PDFS = [
     }
 ]
 
-def extraer_texto_pdf_url(url: str) -> str:
-    """Extrae texto de un PDF desde URL"""
-    import urllib.request
-    import tempfile
+def descargar_pdf(url: str, nombre: str) -> str:
+    """Descarga un PDF desde URL y lo guarda temporalmente"""
+    tmp_dir = "/tmp/test_pdfs"
+    os.makedirs(tmp_dir, exist_ok=True)
     
-    # Descargar PDF
+    filepath = os.path.join(tmp_dir, f"{nombre}.pdf")
+    
+    # Descargar
     with urllib.request.urlopen(url) as response:
         pdf_data = response.read()
     
-    # Guardar temporalmente
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-        tmp.write(pdf_data)
-        tmp_path = tmp.name
+    # Guardar
+    with open(filepath, 'wb') as f:
+        f.write(pdf_data)
     
-    # Extraer texto
-    doc = fitz.open(tmp_path)
-    texto = ""
-    for page in doc:
-        texto += page.get_text()
-    doc.close()
-    
-    import os
-    os.unlink(tmp_path)
-    
-    return texto
+    return filepath
 
 def main():
     validador = ValidadorComprobantes()
