@@ -28,8 +28,9 @@ ESPERANDO_TELEFONO, ESPERANDO_EMAIL = range(2)
 # Estados para flujo de operación extendido (legacy)
 ESPERANDO_MAS_COMPROBANTES, ESPERANDO_CANTIDAD_LIGAS, ESPERANDO_NOMBRE_LIGAS, ESPERANDO_IDMEX = range(10, 14)
 
-# Estados para flujo NetCash V1 (nuevo motor centralizado)
-NC_ESPERANDO_BENEFICIARIO, NC_ESPERANDO_IDMEX, NC_ESPERANDO_LIGAS, NC_ESPERANDO_COMPROBANTE, NC_ESPERANDO_CONFIRMACION = range(20, 25)
+# Estados para flujo NetCash V1 (nuevo motor centralizado) - REORDENADO
+# Nuevo orden: Comprobantes → Beneficiario+IDMEX → Ligas → Confirmación
+NC_ESPERANDO_COMPROBANTE, NC_ESPERANDO_BENEFICIARIO, NC_ESPERANDO_IDMEX, NC_ESPERANDO_LIGAS, NC_ESPERANDO_CONFIRMACION = range(20, 25)
 
 # Mapeo de teléfonos a roles internos
 TELEFONO_A_ROL = {
