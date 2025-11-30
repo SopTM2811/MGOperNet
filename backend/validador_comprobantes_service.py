@@ -112,42 +112,95 @@ class ValidadorComprobantes:
         
         return list(set(clabes_encontradas))  # Eliminar duplicados
     
-    def buscar_clabe_en_texto(self, texto: str, clabe_objetivo: str) -> bool:
-        """Busca la CLABE objetivo en el texto del comprobante - ESTRICTO"""
+    def buscar_clabe_en_texto(self, texto: str, clabe_objetivo: str) -> Tuple[bool, str]:
+        """
+        Busca la CLABE objetivo en el texto del comprobante
+        
+        Returns:
+            Tuple (encontrada: bool, metodo: str)
+            metodo puede ser: "completa", "sufijo_3", "no_encontrada"
+        """
         if not clabe_objetivo or len(clabe_objetivo) != 18:
             logger.warning(f"[ValidadorComprobantes] CLABE objetivo inválida: {clabe_objetivo}")
-            return False
+            return False, "no_encontrada"
         
         logger.info(f"[ValidadorComprobantes] Buscando CLABE objetivo: {clabe_objetivo}")
         
-        # Extraer todas las CLABEs del texto
+        # Extraer todas las CLABEs completas (18 dígitos) del texto
         clabes_en_texto = self.extraer_clabes_del_texto(texto)
         
-        if clabes_en_texto:
-            logger.info(f"[ValidadorComprobantes] CLABEs encontradas en el comprobante: {clabes_en_texto}")
+        # PASO 1: Filtrar CLABEs enmascaradas (con asteriscos) y CLABEs asociadas (origen)
+        clabes_validas = []
+        for clabe in clabes_en_texto:
+            # Buscar contexto alrededor de esta CLABE en el texto original
+            contexto_inicio = max(0, texto.find(clabe) - 50)
+            contexto_fin = min(len(texto), texto.find(clabe) + 50)
+            contexto = texto[contexto_inicio:contexto_fin].upper()
+            
+            # Ignorar si tiene "CLABE ASOCIADA" cerca (es cuenta de origen, no destino)
+            if "CLABE ASOCIADA" in contexto or "ASOCIADA" in contexto:
+                logger.info(f"[ValidadorComprobantes] Ignorando CLABE {clabe} (es CLABE asociada - cuenta de origen)")
+                continue
+            
+            # Ignorar si tiene asteriscos cerca (CLABE enmascarada)
+            if "*" in contexto:
+                logger.info(f"[ValidadorComprobantes] Ignorando CLABE {clabe} (tiene asteriscos - enmascarada)")
+                continue
+            
+            clabes_validas.append(clabe)
+        
+        if clabes_validas:
+            logger.info(f"[ValidadorComprobantes] CLABEs válidas encontradas (sin enmascarar ni asociadas): {clabes_validas}")
         else:
-            logger.warning(f"[ValidadorComprobantes] No se encontró ninguna CLABE (18 dígitos) en el comprobante")
+            logger.warning(f"[ValidadorComprobantes] No se encontró ninguna CLABE completa válida (18 dígitos) en el comprobante")
         
-        # Verificar si alguna coincide con la objetivo
-        for clabe_encontrada in clabes_en_texto:
+        # PASO 2: Verificar si alguna CLABE válida coincide EXACTAMENTE con la objetivo
+        for clabe_encontrada in clabes_validas:
             if clabe_encontrada == clabe_objetivo:
-                logger.info(f"[ValidadorComprobantes] ✅ CLABE objetivo ENCONTRADA: {clabe_encontrada}")
-                return True
+                logger.info(f"[ValidadorComprobantes] ✅ CLABE objetivo ENCONTRADA (completa): {clabe_encontrada}")
+                return True, "completa"
             else:
-                logger.info(f"[ValidadorComprobantes] CLABE encontrada {clabe_encontrada} NO coincide con objetivo {clabe_objetivo}")
+                logger.info(f"[ValidadorComprobantes] CLABE válida {clabe_encontrada} NO coincide con objetivo {clabe_objetivo}")
         
-        # Si no encontramos CLABEs completas, buscar últimos 4 dígitos como fallback
-        ultimos_4_objetivo = clabe_objetivo[-4:]
-        if 'CLABE' in texto.upper() and ultimos_4_objetivo in texto:
-            logger.warning(f"[ValidadorComprobantes] ⚠️ Solo se encontraron últimos 4 dígitos ({ultimos_4_objetivo}) cerca de 'CLABE', pero NO la CLABE completa")
-            # Buscar si hay OTRA CLABE con esos últimos 4 dígitos
-            for clabe in clabes_en_texto:
-                if clabe.endswith(ultimos_4_objetivo):
-                    logger.warning(f"[ValidadorComprobantes] Encontrada CLABE {clabe} que termina en {ultimos_4_objetivo}, pero NO es la objetivo")
-                    return False
+        # PASO 3: NUEVO - Validación por sufijo para formatos Banamex
+        # Si NO se encontró CLABE completa, buscar patrón "CLABE-XXX" o "CLABE XXX"
+        # donde XXX son los últimos 3 dígitos de la CLABE objetivo
+        ultimos_3_objetivo = clabe_objetivo[-3:]
         
-        logger.warning(f"[ValidadorComprobantes] ❌ CLABE objetivo {clabe_objetivo} NO encontrada en el comprobante")
-        return False
+        # Patrones que indican cuenta de depósito con sufijo
+        patrones_deposito = [
+            f"CLABE-{ultimos_3_objetivo}",
+            f"CLABE {ultimos_3_objetivo}",
+            f"CLABE: {ultimos_3_objetivo}",
+        ]
+        
+        texto_upper = texto.upper()
+        for patron in patrones_deposito:
+            if patron in texto_upper:
+                logger.info(f"[ValidadorComprobantes] ⚠️ Encontrado patrón '{patron}' (sufijo de CLABE objetivo)")
+                
+                # VALIDACIÓN EXTRA: Verificar que NO haya otra CLABE válida que contradiga
+                # (si hay CLABEs completas válidas y ninguna coincide, el sufijo no cuenta)
+                if len(clabes_validas) > 0:
+                    # Hay CLABEs completas pero ninguna coincidió
+                    logger.warning(f"[ValidadorComprobantes] Se encontró sufijo {ultimos_3_objetivo}, pero hay CLABEs completas que NO coinciden: {clabes_validas}")
+                    return False, "no_encontrada"
+                
+                # Buscar contexto para confirmar que es cuenta de DEPÓSITO (destino)
+                idx = texto_upper.find(patron)
+                contexto_inicio = max(0, idx - 100)
+                contexto_fin = min(len(texto), idx + 200)
+                contexto_deposito = texto[contexto_inicio:contexto_fin].upper()
+                
+                # Confirmar que está relacionado con "CUENTA DE DEPÓSITO" o "DESTINO"
+                if "CUENTA DE DEPOSITO" in contexto_deposito or "DEPOSITO" in contexto_deposito or "DESTINO" in contexto_deposito:
+                    logger.info(f"[ValidadorComprobantes] ✅ Validación por SUFIJO exitosa: sufijo {ultimos_3_objetivo} encontrado en contexto de cuenta de depósito")
+                    return True, "sufijo_3"
+                else:
+                    logger.warning(f"[ValidadorComprobantes] Patrón {patron} encontrado pero NO en contexto de cuenta de depósito")
+        
+        logger.warning(f"[ValidadorComprobantes] ❌ CLABE objetivo {clabe_objetivo} NO encontrada (ni completa ni por sufijo)")
+        return False, "no_encontrada"
     
     def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str) -> bool:
         """Busca el beneficiario objetivo en el texto (tolerante a separaciones)"""
