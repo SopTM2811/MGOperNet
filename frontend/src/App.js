@@ -10,6 +10,7 @@ import PendientesMBControl from "@/pages/PendientesMBControl";
 import AltaClienteTelegram from "@/pages/AltaClienteTelegram";
 import ConfiguracionCuenta from "@/pages/ConfiguracionCuenta";
 import MisSolicitudesNetCash from "@/pages/MisSolicitudesNetCash";
+import UsuariosNetCash from "@/pages/UsuariosNetCash";
 import { Toaster } from "@/components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
