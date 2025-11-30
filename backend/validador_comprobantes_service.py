@@ -412,9 +412,10 @@ class ValidadorComprobantes:
             return True, "sufijo_enmascarado"
         
         logger.warning(f"[ValidadorComprobantes] ❌ CLABE objetivo NO encontrada")
-        if es_thabyetha:
-            logger.info(f"[THABYETHA_DEBUG] Resultado final: clabe_encontrada=False metodo=no_encontrada (no se encontró ni CLABE completa ni sufijo)")
-            logger.info(f"[THABYETHA_DEBUG] ========== FIN DEBUG THABYETHA ==========")
+        if es_vault_thabyetha:
+            logger.warning(f"[VAULT_DEBUG] ❌ RESULTADO: INVÁLIDO")
+            logger.warning(f"[VAULT_DEBUG] Razón: No se encontró ni CLABE completa ni sufijo enmascarado")
+            logger.warning(f"[VAULT_DEBUG] ========== FIN DEBUG VAULT/THABYETHA ==========")
         return False, "no_encontrada"
     
     def buscar_beneficiario_en_texto(self, texto: str, beneficiario_objetivo: str, 
