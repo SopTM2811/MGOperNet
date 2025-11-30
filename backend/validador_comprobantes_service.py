@@ -255,6 +255,38 @@ class ValidadorComprobantes:
             ]
             es_destino = any(kw in contexto for kw in keywords_destino)
             
+            # MEJORA V3.5: Cuando AMBOS es_origen y es_destino son True, decidir por PROXIMIDAD
+            # Si "DESTINO" está en la misma línea o más cerca de la CLABE que "ORIGEN", es DESTINO
+            if es_origen and es_destino:
+                # Buscar qué keyword está más cerca de la CLABE
+                distancia_origen = float('inf')
+                distancia_destino = float('inf')
+                
+                for kw in ["ORIGEN", "ASOCIADA", "ORDENANTE", "CUENTA CARGO"]:
+                    if kw in contexto:
+                        idx = contexto.find(kw)
+                        idx_clabe = contexto.find(clabe)
+                        if idx != -1 and idx_clabe != -1:
+                            dist = abs(idx - idx_clabe)
+                            if dist < distancia_origen:
+                                distancia_origen = dist
+                
+                for kw in keywords_destino:
+                    if kw in contexto:
+                        idx = contexto.find(kw)
+                        idx_clabe = contexto.find(clabe)
+                        if idx != -1 and idx_clabe != -1:
+                            dist = abs(idx - idx_clabe)
+                            if dist < distancia_destino:
+                                distancia_destino = dist
+                
+                # Si DESTINO está más cerca, considerar como destino
+                if distancia_destino < distancia_origen:
+                    es_origen = False
+                    logger.info(f"[ValidadorComprobantes] Ambigüedad resuelta: DESTINO más cercano (dist={distancia_destino} vs {distancia_origen})")
+                else:
+                    logger.info(f"[ValidadorComprobantes] Ambigüedad resuelta: ORIGEN más cercano (dist={distancia_origen} vs {distancia_destino})")
+            
             if not es_origen and not es_rastreo and (es_destino or len(clabes_completas) == 1):
                 clabes_destino.append(clabe)
                 logger.info(f"[ValidadorComprobantes] ✓ CLABE {clabe} identificada como DESTINO")
