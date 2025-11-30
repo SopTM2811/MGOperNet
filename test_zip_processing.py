@@ -76,6 +76,7 @@ async def test_zip_processing():
     print(f"="*80)
     print(f"Total archivos encontrados: {resultado.get('total_archivos', 0)}")
     print(f"Comprobantes válidos: {resultado.get('validos', 0)}")
+    print(f"Comprobantes sin texto legible: {resultado.get('sin_texto_legible', 0)}")
     print(f"Comprobantes inválidos: {resultado.get('invalidos', 0)}")
     print(f"Duplicados: {resultado.get('duplicados', 0)}")
     print(f"No legibles: {resultado.get('no_legibles', 0)}")
