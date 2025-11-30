@@ -1144,7 +1144,10 @@ app.include_router(telegram_router, prefix="/api")
 
 # Import and include NetCash V1 router
 from routes.netcash_routes import router as netcash_router
+from routes.usuarios_routes import router as usuarios_router
+
 app.include_router(netcash_router, prefix="/api")
+app.include_router(usuarios_router)
 
 app.add_middleware(
     CORSMiddleware,
