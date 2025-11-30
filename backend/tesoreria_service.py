@@ -442,7 +442,8 @@ class TesoreriaService:
         
         cuerpo = "<html><body>"
         cuerpo += "<h2>Lote de Tesorería NetCash</h2>"
-        cuerpo += f"<p><strong>ID Lote:</strong> {lote_info['id']}</p>"
+        cuerpo += f"<p><strong>ID Lote interno:</strong> {lote_info['id']}</p>"
+        cuerpo += f"<p><strong>ID Lote MBco:</strong> {lote_info.get('id_lote_mbco', 'N/A')}</p>"
         cuerpo += f"<p><strong>Fecha/Hora:</strong> {lote_info['fecha_corte'].strftime('%Y-%m-%d %H:%M UTC')}</p>"
         cuerpo += "<hr>"
         
