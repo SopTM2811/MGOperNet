@@ -18,6 +18,18 @@ async def test_duplicados_globales():
     
     cliente_id = "test-cliente-global-dup-123"
     
+    # Limpiar operaciones anteriores de este cliente de prueba
+    from motor.motor_asyncio import AsyncIOMotorClient
+    import os
+    mongo_url = os.getenv('MONGO_URL')
+    db_name = os.getenv('DB_NAME', 'netcash_mbco')
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[db_name]
+    
+    result = await db.solicitudes_netcash.delete_many({"cliente_id": cliente_id})
+    if result.deleted_count > 0:
+        print(f"🧹 Limpieza: {result.deleted_count} operación(es) anterior(es) eliminada(s)\n")
+    
     # ====================
     # OPERACIÓN 1
     # ====================
