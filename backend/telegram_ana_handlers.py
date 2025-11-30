@@ -237,6 +237,7 @@ class TelegramAnaHandlers:
                 mensaje = "✅ **Folio MBco asignado correctamente.**\n\n"
                 mensaje += f"📋 **Solicitud:** {solicitud.get('id')}\n"
                 mensaje += f"🧾 **Folio MBco:** {folio_mbco}\n"
+                mensaje += f"🧑‍💼 **Cliente:** {solicitud.get('cliente_nombre', 'N/A')}\n"
                 mensaje += f"👤 **Beneficiario:** {solicitud.get('beneficiario_reportado')}\n"
                 
                 # Calcular total
