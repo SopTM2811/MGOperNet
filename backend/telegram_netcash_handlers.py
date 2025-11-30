@@ -300,6 +300,20 @@ class TelegramNetCashHandlers:
             if num_comprobantes == 0:
                 raise Exception("No se encontró el comprobante procesado")
             
+            # UX MEJORADA: Eliminar botones del mensaje anterior (si existe)
+            last_message_id = context.user_data.get('nc_last_comprobante_message_id')
+            if last_message_id:
+                try:
+                    # Quitar los botones del mensaje anterior
+                    await self.bot.app.bot.edit_message_reply_markup(
+                        chat_id=update.effective_chat.id,
+                        message_id=last_message_id,
+                        reply_markup=None
+                    )
+                except Exception as e:
+                    # Si falla (mensaje muy antiguo o ya editado), continuar sin problema
+                    logger.warning(f"[NC Telegram] No se pudo editar mensaje anterior: {str(e)}")
+            
             # Mensaje de confirmación
             mensaje = f"✅ Comprobante recibido.\n"
             mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) adjunto(s) a esta operación.\n\n"
@@ -312,7 +326,11 @@ class TelegramNetCashHandlers:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            # Enviar nuevo mensaje con botones
+            sent_message = await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            
+            # Guardar el message_id del nuevo mensaje para la próxima vez
+            context.user_data['nc_last_comprobante_message_id'] = sent_message.message_id
             
             # Mantener el estado en NC_ESPERANDO_COMPROBANTE
             return NC_ESPERANDO_COMPROBANTE
