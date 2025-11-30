@@ -100,20 +100,36 @@ class ValidadorComprobantes:
         return texto.strip()
     
     def extraer_clabes_del_texto(self, texto: str) -> list:
-        """Extrae todas las CLABEs (18 dígitos) encontradas en el texto"""
-        # Buscar secuencias de exactamente 18 dígitos
+        """
+        Extrae todas las CLABEs (18 dígitos) encontradas en el texto
+        
+        Soporta:
+        - 18 dígitos juntos: 646180139409481462
+        - 18 dígitos separados por espacios o saltos de línea
+        """
         clabes_encontradas = []
         
-        # Patrón 1: 18 dígitos juntos
-        matches = re.findall(r'\b(\d{18})\b', texto)
-        clabes_encontradas.extend(matches)
+        # Patrón 1: 18 dígitos con límites de palabra en el texto original
+        matches1 = re.findall(r'\b(\d{18})\b', texto)
+        clabes_encontradas.extend(matches1)
         
-        # Patrón 2: 18 dígitos con espacios cada 4 (ej: 1234 5678 9012 3456 78)
-        texto_sin_espacios = texto.replace(' ', '').replace('\n', '')
-        matches2 = re.findall(r'\b(\d{18})\b', texto_sin_espacios)
+        # Patrón 2: 18 dígitos en texto normalizado (sin espacios ni saltos de línea)
+        # Esto maneja casos donde la CLABE aparece separada por saltos de línea
+        texto_normalizado = re.sub(r'[\s\n\r]+', '', texto)  # Quitar TODOS los espacios en blanco
+        matches2 = re.findall(r'(\d{18})', texto_normalizado)
         clabes_encontradas.extend(matches2)
         
-        return list(set(clabes_encontradas))  # Eliminar duplicados
+        # Patrón 3: 18 dígitos con espacios/saltos cada N caracteres
+        # Útil para formatos: "6461 8013 9409 4814 62" o con saltos de línea
+        texto_limpio = re.sub(r'[\s\n\r]+', '', texto)
+        # Buscar cualquier secuencia de exactamente 18 dígitos consecutivos
+        matches3 = re.findall(r'(?<!\d)(\d{18})(?!\d)', texto_limpio)
+        clabes_encontradas.extend(matches3)
+        
+        # Eliminar duplicados manteniendo orden
+        clabes_unicas = list(dict.fromkeys(clabes_encontradas))
+        
+        return clabes_unicas
     
     def buscar_clabe_en_texto(self, texto: str, clabe_objetivo: str) -> Tuple[bool, str]:
         """
