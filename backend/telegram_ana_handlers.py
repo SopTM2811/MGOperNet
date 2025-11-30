@@ -206,7 +206,16 @@ class TelegramAnaHandlers:
             return ANA_ESPERANDO_FOLIO_MBCO
         
         # Asignar folio y generar orden interna
+        logger.info(f"[ANA_FOLIO] Mensaje de folio recibido: {folio_mbco}")
+        
+        # Obtener información del usuario correctamente
+        user = update.effective_user
+        telegram_id = user.id if user else None
+        username = user.username if user else None
+        
+        logger.info(f"[ANA_FOLIO] Usuario Telegram ID: {telegram_id}")
         logger.info(f"[Ana] Iniciando asignación de folio {folio_mbco} a solicitud {solicitud_id}")
+        
         await update.message.reply_text("⏳ Asignando folio y generando orden interna...")
         
         try:
@@ -215,7 +224,7 @@ class TelegramAnaHandlers:
             resultado = await netcash_service.asignar_folio_mbco_y_generar_orden_interna(
                 solicitud_id=solicitud_id,
                 folio_mbco=folio_mbco,
-                usuario_asigna=update.from_user.username or str(update.from_user.id)
+                usuario_asigna=username or str(telegram_id) if telegram_id else "unknown"
             )
             logger.info(f"[Ana] Resultado del servicio: success={resultado.get('success')}")
             
