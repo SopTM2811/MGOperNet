@@ -210,17 +210,41 @@ class TesoreriaService:
         fecha_corte = datetime.now(timezone.utc)
         
         # Calcular totales
-        total_depositos = sum(s.get('total_comprobantes_validos', 0) for s in solicitudes)
-        total_capital = sum(s.get('monto_ligas', 0) for s in solicitudes)
-        total_comision = sum(s.get('comision_cliente', 0) for s in solicitudes)
+        # IMPORTANTE: Usar las fórmulas correctas del negocio
+        total_depositos = Decimal('0')
+        total_capital = Decimal('0')
+        total_comision_dns = Decimal('0')  # Lo que realmente se paga al proveedor
+        total_comision_cliente = Decimal('0')  # Lo que se cobra al cliente (NO va al layout)
+        
+        for sol in solicitudes:
+            depositos = Decimal(str(sol.get('total_comprobantes_validos', 0)))
+            capital = Decimal(str(sol.get('monto_ligas', 0)))
+            comision_cliente = Decimal(str(sol.get('comision_cliente', 0)))
+            
+            # Comisión DNS = 0.375% del capital (lo que se paga al proveedor)
+            comision_dns = (capital * NETCASH_COMISION_DNS_PCT).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            
+            # Agregar a la solicitud para usarlo después
+            sol['comision_dns_calculada'] = float(comision_dns)
+            
+            total_depositos += depositos
+            total_capital += capital
+            total_comision_dns += comision_dns
+            total_comision_cliente += comision_cliente
+        
+        # Margen MBco = comision_cliente - comision_dns
+        # Este margen NO se incluye en el layout ni en el correo de Tesorería
+        margen_mbco = total_comision_cliente - total_comision_dns
         
         lote_info = {
             'id': lote_id,
             'fecha_corte': fecha_corte,
             'n_solicitudes': len(solicitudes),
-            'total_depositos': total_depositos,
-            'total_capital': total_capital,
-            'total_comision': total_comision,
+            'total_depositos': float(total_depositos),
+            'total_capital': float(total_capital),
+            'total_comision_dns': float(total_comision_dns),  # Lo que realmente va al proveedor
+            'total_comision_cliente': float(total_comision_cliente),  # Solo para tracking interno
+            'margen_mbco': float(margen_mbco),  # Solo para tracking interno, NO va a tesorería
             'solicitudes_ids': [s.get('id') for s in solicitudes],
             'estado': 'enviado'
         }
@@ -228,8 +252,10 @@ class TesoreriaService:
         logger.info(f"[Tesorería] Lote creado: {lote_id}")
         logger.info(f"[Tesorería] Solicitudes: {len(solicitudes)}")
         logger.info(f"[Tesorería] Total depósitos: ${total_depositos:,.2f}")
-        logger.info(f"[Tesorería] Total capital: ${total_capital:,.2f}")
-        logger.info(f"[Tesorería] Total comisión: ${total_comision:,.2f}")
+        logger.info(f"[Tesorería] Total capital (a proveedor): ${total_capital:,.2f}")
+        logger.info(f"[Tesorería] Total comisión DNS (0.375% capital, a proveedor): ${total_comision_dns:,.2f}")
+        logger.info(f"[Tesorería] [INTERNO] Comisión cliente (1%): ${total_comision_cliente:,.2f}")
+        logger.info(f"[Tesorería] [INTERNO] Margen MBco: ${margen_mbco:,.2f}")
         
         # 3. Generar layout CSV
         layout_csv = await self.generar_layout_fondeadora(solicitudes)
