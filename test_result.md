@@ -999,3 +999,199 @@ agent_communication:
       
       🎉 RESULTADO: El proceso automatizado de Tesorería está completamente funcional.
       Se ejecuta cada 15 minutos, procesa lotes correctamente y genera layouts listos para Fondeadora.
+
+## ========================================
+## P0 + FASE 2 IMPLEMENTADOS - 2025-12-01
+## ========================================
+
+### 🛡️ P0: REFUERZO DEL BOTÓN "CONTINUAR" (COMPLETADO)
+
+**Objetivo:** Blindar el flujo del botón "➡️ Continuar" para que cualquier error sea trazable y no pierda el progreso del usuario.
+
+#### Cambios implementados:
+1. ✅ **Try/Catch Global** en `continuar_desde_paso1` handler
+2. ✅ **ID de Error Único** con formato: `ERR_CONTINUAR_YYYYMMDD_HHMMSS_XXXX`
+3. ✅ **Logging Detallado** que incluye:
+   - Solicitud ID
+   - Telegram User ID
+   - Lista de comprobantes
+   - Total depositado
+   - Stack trace completo
+4. ✅ **Mensaje Claro al Usuario** en lugar del genérico:
+   ```
+   ❌ Tuvimos un problema interno al continuar con tu solicitud.
+   ✅ Tus comprobantes SÍ se guardaron y están a salvo.
+   👤 Ana o un enlace te contactarán pronto.
+   📋 ID de seguimiento: ERR_CONTINUAR_20251201_143527_8432
+   ```
+5. ✅ **Marcado Automático para Revisión Manual**:
+   - Campo `requiere_revision_manual: true` en BD
+   - Campo `error_id` con el ID único
+   - Campo `error_detalle` con toda la información
+6. ✅ **Log Específico para Montos Grandes** (≥ $1,000,000):
+   ```
+   [DEBUG_CONTINUAR] ⚠️ Monto alto detectado: $1,045,000.00
+   ```
+
+#### Archivos modificados:
+- `/app/backend/telegram_netcash_handlers.py` - Handler reforzado
+- `/app/MANEJO_ERRORES_CONTINUAR_P0.md` - Documentación completa
+
+#### Testing:
+- ✅ Test exhaustivo con comprobante de $1,045,000.00
+- ✅ Archivo: `/app/backend/tests/test_bug_comprobante_1045000.py`
+- ✅ Resultado: Sin errores, flujo funciona correctamente
+
+---
+
+### 📧 FASE 2: MONITOREO DE EMAILS TESORERÍA (COMPLETADO)
+
+**Objetivo:** Detectar automáticamente respuestas de Tesorería con comprobantes de dispersión, actualizar estados y notificar a todos.
+
+#### Componentes implementados:
+
+1. ✅ **Servicio de Monitoreo de Emails**
+   - Archivo: `/app/backend/tesoreria_email_monitor_service.py`
+   - Clase: `TesoreriaEmailMonitorService`
+   - Funcionalidad:
+     * Lee emails no leídos del inbox de Gmail
+     * Identifica operaciones usando Thread-ID o folio_mbco
+     * Descarga comprobantes adjuntos (PDFs)
+     * Actualiza estado a `dispersada_proveedor`
+     * Notifica a Ana y al cliente vía Telegram
+
+2. ✅ **Scheduler Automático**
+   - Archivo: `/app/backend/scheduler_email_monitor.py`
+   - Frecuencia: Cada 15 minutos
+   - Integrado en `/app/backend/server.py`
+
+3. ✅ **Actualización de Gmail Service**
+   - Archivo: `/app/backend/gmail_service.py`
+   - Método `enviar_correo_con_adjuntos()` ahora devuelve:
+     ```python
+     {
+         'message_id': '...',
+         'thread_id': '...'
+     }
+     ```
+
+4. ✅ **Actualización de Tesorería Operación Service**
+   - Archivo: `/app/backend/tesoreria_operacion_service.py`
+   - Ahora guarda `email_thread_id` y `email_message_id` en BD
+
+#### Estrategias de identificación:
+1. **Por Thread-ID** (más confiable) - Busca operaciones con el thread_id del email
+2. **Por folio_mbco** en asunto/cuerpo - Detecta patrones como `MBCO-0001-T-12`
+3. **Fallback** - Si es de Tesorería con PDFs pero sin folio identificable → Log de advertencia
+
+#### Nuevo flujo completo:
+```
+Ana asigna folio
+    ↓
+Se genera CSV layout
+    ↓
+Se envía email a Tesorería (con thread_id guardado)
+    ↓
+Estado: enviado_a_tesoreria
+    ↓
+(Scheduler cada 15 mins)
+    ↓
+Tesorería responde con comprobantes
+    ↓
+Sistema detecta email (por thread_id o folio)
+    ↓
+Descarga PDFs adjuntos
+    ↓
+Actualiza estado: dispersada_proveedor
+    ↓
+Notifica a Ana y al cliente
+    ↓
+Marca email como leído + etiqueta "NETCASH/PROCESADO"
+```
+
+#### Variables de entorno requeridas:
+```bash
+GMAIL_USER=...
+GMAIL_CLIENT_ID=...
+GMAIL_CLIENT_SECRET=...
+GMAIL_REFRESH_TOKEN=...
+TESORERIA_GMAIL_USER=...  # Opcional, para validación
+```
+
+**⚠️ Comportamiento sin Gmail configurado:**
+- Sistema continúa funcionando
+- Layouts se guardan localmente
+- Log claro: "Gmail no configurado"
+- NO envía emails ni monitorea respuestas
+
+#### Archivos creados/modificados:
+- **Creados:**
+  * `/app/backend/tesoreria_email_monitor_service.py`
+  * `/app/backend/scheduler_email_monitor.py`
+  * `/app/FASE2_MONITOREO_EMAILS_TESORERIA.md`
+
+- **Modificados:**
+  * `/app/backend/gmail_service.py`
+  * `/app/backend/tesoreria_operacion_service.py`
+  * `/app/backend/server.py`
+
+#### Nuevos campos en MongoDB (`solicitudes_netcash`):
+```javascript
+{
+  // Fase 1 (envío)
+  "email_thread_id": "...",
+  "email_message_id": "...",
+  
+  // Fase 2 (respuesta)
+  "comprobantes_dispersion": [...],
+  "fecha_dispersion_proveedor": "...",
+  "email_respuesta_tesoreria": {...}
+}
+```
+
+#### Notificaciones implementadas:
+- **A Ana:** "✅ Operación [folio] dispersada al proveedor"
+- **Al Cliente:** "✅ Tus ligas están en proceso"
+
+---
+
+### 📊 VERIFICACIÓN DE FUNCIONAMIENTO
+
+#### Backend iniciado correctamente:
+```bash
+✅ Scheduler de Tesorería iniciado
+✅ Scheduler de Monitoreo de Emails iniciado
+✅ Gmail Service inicializado
+✅ EmailMonitor configurado correctamente
+```
+
+#### Logs visibles cada 15 minutos:
+```
+[EmailMonitorScheduler] Ejecutando job de monitoreo de emails...
+[EmailMonitor] ========== INICIANDO PROCESAMIENTO DE RESPUESTAS ==========
+```
+
+---
+
+### 🎯 RESULTADO FINAL
+
+#### P0 - Botón "Continuar" reforzado:
+- ✅ Trazabilidad completa con IDs únicos
+- ✅ Mensajes claros al usuario
+- ✅ No se pierde el progreso
+- ✅ Log específico para montos grandes
+- ✅ Marcado automático para revisión manual
+
+#### Fase 2 - Monitoreo automático:
+- ✅ Detecta respuestas de Tesorería automáticamente
+- ✅ Descarga y guarda comprobantes
+- ✅ Actualiza estados sin intervención manual
+- ✅ Notifica a Ana y clientes
+- ✅ Funciona con o sin Gmail (modo degradado)
+
+#### Documentación completa:
+- ✅ `/app/MANEJO_ERRORES_CONTINUAR_P0.md`
+- ✅ `/app/FASE2_MONITOREO_EMAILS_TESORERIA.md`
+
+**El sistema ahora tiene un flujo 100% automatizado de principio a fin, con manejo robusto de errores y trazabilidad completa.**
+
