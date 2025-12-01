@@ -27,7 +27,7 @@ import os
 
 from netcash_models import (
     SolicitudNetCash, SolicitudCreate, SolicitudUpdate, ResumenCliente,
-    CanalOrigen, EstadoSolicitud, TipoCuenta, ValidacionCampo,
+    CanalOrigen, EstadoSolicitud, ValidacionCampo,
     ComprobanteDetalle, HistoricoEstado, CanalMetadata
 )
 from cuenta_deposito_service import cuenta_deposito_service
