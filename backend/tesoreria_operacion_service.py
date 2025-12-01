@@ -396,13 +396,30 @@ class TesoreriaOperacionService:
             return
         
         try:
-            await gmail_service.enviar_correo_con_adjuntos(
+            email_info = await gmail_service.enviar_correo_con_adjuntos(
                 destinatario=self.tesoreria_email,
                 asunto=asunto,
                 cuerpo=cuerpo,
                 adjuntos=adjuntos
             )
-            logger.info(f"[TesoreriaOp] ✅ Correo enviado a {self.tesoreria_email}")
+            
+            if email_info:
+                logger.info(f"[TesoreriaOp] ✅ Correo enviado a {self.tesoreria_email}")
+                
+                # Guardar thread_id en la solicitud para poder asociar respuestas
+                solicitud_id = solicitud.get('id')
+                await db.solicitudes_netcash.update_one(
+                    {"id": solicitud_id},
+                    {
+                        "$set": {
+                            "email_thread_id": email_info['thread_id'],
+                            "email_message_id": email_info['message_id']
+                        }
+                    }
+                )
+                logger.info(f"[TesoreriaOp] Thread ID guardado: {email_info['thread_id']}")
+            else:
+                raise Exception("No se obtuvo información del email enviado")
             
         except Exception as e:
             logger.error(f"[TesoreriaOp] ❌ Error enviando correo: {str(e)}")
