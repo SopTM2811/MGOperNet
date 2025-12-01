@@ -1195,3 +1195,119 @@ TESORERIA_GMAIL_USER=...  # Opcional, para validación
 
 **El sistema ahora tiene un flujo 100% automatizado de principio a fin, con manejo robusto de errores y trazabilidad completa.**
 
+
+## ========================================
+## AJUSTES QUIRÚRGICOS TESORERÍA - 2025-12-01
+## ========================================
+
+### 🔧 4 AJUSTES IMPLEMENTADOS Y VERIFICADOS
+
+**Contexto:** En pruebas reales se detectaron 4 detalles a corregir en el flujo de Tesorería por operación.
+
+#### ✅ Ajuste 1: CLABE Comisión DNS Correcta
+- **Problema:** Posible CLABE incorrecta en fila de comisión DNS
+- **Solución:** Verificado que el sistema usa correctamente:
+  * CLABE: `058680000012912655`
+  * Beneficiario: COMERCIALIZADORA UETACOP SA DE CV
+  * Banco: ASP
+- **Código:** Sistema obtiene cuenta desde `cuentas_proveedor_service`
+- **Test:** ✅ PASADO
+
+#### ✅ Ajuste 2: Nombre del Archivo CSV
+- **Problema:** Nombre del archivo no seguía formato estándar
+- **Solución:** Implementado formato `LTMBCO_{folio_mbco_con_x}.csv`
+  * Ejemplo: Folio `2367-123-R-11` → `LTMBCO_2367x123xRx11.csv`
+  * Archivo se guarda permanentemente en `/app/backend/uploads/layouts_operaciones/`
+- **Código modificado:** `_enviar_correo_operacion()` líneas 373-383
+- **Test:** ✅ PASADO (3 casos verificados)
+
+#### ✅ Ajuste 3: Adjuntar Comprobantes del Cliente
+- **Problema:** Comprobantes del cliente NO se adjuntaban al correo
+- **Solución:** 
+  * Corregido campo: `archivo_url` (antes `ruta_archivo`)
+  * Ahora adjunta: 1 CSV + N comprobantes válidos del cliente
+  * Log mejorado: `📎 Adjuntos totales: 1 layout CSV + 2 comprobante(s) cliente`
+- **Código modificado:** `_enviar_correo_operacion()` líneas 394-408
+- **Test:** ✅ PASADO (2 válidos + 1 inválido = 3 adjuntos correctos)
+
+#### ✅ Ajuste 4: Protección Anti-Duplicados
+- **Problema:** Se enviaban 2 correos idénticos para la misma operación
+- **Solución:** Nuevo campo `correo_tesoreria_enviado: bool` en BD
+  * Antes de enviar: Verifica si ya se envió
+  * Después de enviar: Marca flag como `True`
+  * Log: `⚠️ CORREO YA ENVIADO para operación {folio}`
+- **Código modificado:** `procesar_operacion_tesoreria()` líneas 197-240
+- **Test:** ✅ PASADO (detecta y evita reenvío)
+
+---
+
+### 📊 Resultados de Tests
+
+**Suite completa:** `/app/backend/tests/test_ajustes_tesoreria.py`
+
+```
+✅ test_1: CLABE comisión DNS correcta (058680000012912655)
+✅ test_2: Nombre archivo CSV correcto (LTMBCO_{folio_con_x}.csv)
+✅ test_3: Comprobantes del cliente adjuntados (1 CSV + N PDFs)
+✅ test_4: Protección anti-duplicados funcionando
+
+🎉 4/4 tests PASADOS
+```
+
+---
+
+### 📁 Archivos Modificados
+
+**Código:**
+- `/app/backend/tesoreria_operacion_service.py`
+  * Método `procesar_operacion_tesoreria()`: Anti-duplicados
+  * Método `_enviar_correo_operacion()`: Campo correcto + nombre CSV
+
+**Tests:**
+- `/app/backend/tests/test_ajustes_tesoreria.py` (NUEVO)
+
+**Documentación:**
+- `/app/AJUSTES_TESORERIA_COMPLETADOS.md`
+
+---
+
+### ✅ Verificación de No-Regresión
+
+**Lo que sigue funcionando correctamente:**
+- ✅ Flujo por operación (Ana asigna folio → email a Tesorería)
+- ✅ Lógica financiera: capital, comisión DNS, margen interno
+- ✅ Dispersión de capital en ligas irregulares
+- ✅ Fase 2: Monitoreo de emails funcionando
+- ✅ Scheduler de recordatorios activo
+- ✅ Notificaciones Telegram a Ana y cliente
+
+---
+
+### 📧 Formato Final del Email a Tesorería
+
+```
+De: bbvanetcashbot@gmail.com
+Para: tesoreria@example.com
+Asunto: NetCash – Orden de dispersión MBCO-0023-T-12 – Juan Pérez
+
+📎 Adjuntos:
+  1. LTMBCO_MBCOx0023xTx12.csv      ← Layout (nombre correcto)
+  2. comprobante_1300000.pdf          ← Comprobante original cliente
+  3. comprobante_adicional.pdf        ← Otro si hay más
+
+Layout CSV incluye:
+  • Filas de capital → CLABE: 012680001255709482 (AFFORDABLE)
+  • Fila comisión DNS → CLABE: 058680000012912655 (UETACOP) ✅
+```
+
+---
+
+### 🎯 Estado Final
+
+**Ajustes:** 4/4 ✅ COMPLETADOS  
+**Tests:** 4/4 ✅ PASADOS  
+**Regresiones:** 0 ✅  
+**Backend:** ✅ Reiniciado y funcionando  
+
+**El sistema está listo para operar en producción.**
+
