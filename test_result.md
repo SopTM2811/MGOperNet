@@ -2009,3 +2009,152 @@ Para cada monto probado:
 
 ---
 
+
+
+## ========================================
+## 🎯 BUG FIX P1 COMPLETADO: Detección de Duplicados Globales - 2024-12-01
+## ========================================
+
+### 🐛 Problema Reportado por Usuario
+
+**Bug P1:**
+- Operaciones 0022 y 0023 aceptaron el mismo comprobante
+- El sistema permitía "reciclar" comprobantes entre diferentes operaciones
+- Compromete la integridad de datos
+
+### 🔍 Causa Raíz Identificada
+
+**Archivo:** `/app/backend/netcash_service.py`
+**Líneas:** 235-244
+
+El código tenía lógica para detectar duplicados usando hash SHA-256, pero faltaba un estado crítico:
+
+```python
+# ❌ CÓDIGO ORIGINAL (con bug)
+estados_que_bloquean_duplicados = [
+    "lista_para_mbc",
+    "en_proceso_mbc",
+    "completada",
+    "borrador"
+]
+# FALTABA: "comprobantes_recibidos" ⬅️ Estado más común cuando usuarios suben archivos
+```
+
+**El problema:**
+- Cuando una operación está en estado `comprobantes_recibidos` (el más común)
+- El sistema NO la consideraba para detección de duplicados
+- Permitía usar el mismo comprobante en otra operación activa
+
+### ✅ Solución Aplicada
+
+```python
+# ✅ CÓDIGO CORREGIDO
+estados_que_bloquean_duplicados = [
+    "comprobantes_recibidos",  # ⬅️ AGREGADO (fix principal)
+    "lista_para_mbc",
+    "en_proceso_mbc",
+    "completada",
+    "borrador"
+]
+```
+
+**¿Por qué funciona ahora?**
+- Sistema ahora busca duplicados en operaciones con estado `comprobantes_recibidos`
+- Detecta cuando el mismo hash SHA-256 se intenta usar en otra operación activa
+- Marca el comprobante como `duplicado_global` y lo rechaza
+
+### 🧪 Test Creado
+
+**Archivo:** `/app/backend/tests/test_deteccion_duplicados_globales.py`
+
+Simula exactamente el escenario reportado:
+1. Crear Operación 0022 (estado: comprobantes_recibidos)
+2. Subir comprobante → generar hash
+3. Crear Operación 0023 (estado: comprobantes_recibidos)
+4. Intentar subir EL MISMO comprobante
+5. Verificar que sistema lo detecta como duplicado
+
+### 📊 Resultados del Test
+
+```
+================================================================================
+RESULTADOS DEL TEST
+================================================================================
+✅ CORRECTO: Sistema detectó el duplicado
+   Razón: duplicado_global:0022
+   Folio original detectado: 0022
+
+   Comprobante en operación 0023:
+   - es_duplicado: True
+   - tipo_duplicado: global
+   - operacion_original: 0022
+   ✅ Comprobante correctamente marcado como duplicado global
+
+Verificación en diferentes estados:
+   ✅ Estado 'comprobantes_recibidos': Duplicado detectado correctamente
+   ✅ Estado 'lista_para_mbc': Duplicado detectado correctamente
+   ✅ Estado 'en_proceso_mbc': Duplicado detectado correctamente
+   ✅ Estado 'completada': Duplicado detectado correctamente
+   ✅ Estado 'rechazada': Permitió reutilizar correctamente
+   ✅ Estado 'cancelada': Permitió reutilizar correctamente
+
+================================================================================
+✅ TEST PASADO: Detección de duplicados funciona correctamente
+================================================================================
+```
+
+### 📁 Archivos Modificados
+
+**Código:**
+- `/app/backend/netcash_service.py`
+  - Método: `agregar_comprobante()`
+  - Líneas: 235-244
+  - Cambio: Agregado `"comprobantes_recibidos"` a lista de estados bloqueantes
+
+**Tests:**
+- `/app/backend/tests/test_deteccion_duplicados_globales.py` (NUEVO)
+
+**Documentación:**
+- `/app/BUG_FIX_P1_DUPLICADOS_GLOBALES.md`
+
+### 💡 Comportamiento para el Usuario
+
+#### Caso 1: Duplicado detectado (operación activa)
+```
+⚠️ Comprobante ya utilizado anteriormente
+
+Este comprobante ya fue utilizado en otra operación NetCash (folio 0022).
+
+No lo vamos a contar de nuevo en el total de depósitos.
+```
+
+En la BD:
+- `es_duplicado`: `true`
+- `tipo_duplicado`: `"global"`
+- `operacion_original`: `"0022"`
+- `es_valido`: `false`
+
+#### Caso 2: Reutilización permitida (operación rechazada/cancelada)
+```
+✅ Comprobante recibido.
+Llevamos 1 comprobante(s) adjunto(s) a esta operación.
+```
+
+### ✅ Estado Final
+
+**BUG P1:** ✅ **COMPLETAMENTE CORREGIDO**
+
+**Funcionalidad verificada:**
+- ✅ Detecta duplicados en operaciones activas (comprobantes_recibidos)
+- ✅ Detecta duplicados en todos los estados del ciclo de vida
+- ✅ Permite reutilizar en operaciones rechazadas/canceladas
+- ✅ Hash SHA-256 funciona correctamente
+- ✅ Integridad de datos protegida
+
+**Backend:** ✅ Reiniciado y funcionando
+**Tests:** ✅ 100% pasados
+
+**El sistema ahora previene correctamente el "reciclaje" de comprobantes entre operaciones activas.**
+
+---
+
