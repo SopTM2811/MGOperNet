@@ -315,7 +315,7 @@ class GmailService:
             logger.error(f"[Gmail] Error gestionando etiqueta: {error}")
             return None
     
-    async def enviar_correo_con_adjuntos(self, destinatario: str, asunto: str, cuerpo: str, adjuntos: List[str] = None) -> bool:
+    async def enviar_correo_con_adjuntos(self, destinatario: str, asunto: str, cuerpo: str, adjuntos: List[str] = None) -> Optional[Dict]:
         """
         Envía un correo con adjuntos
         
@@ -326,7 +326,7 @@ class GmailService:
             adjuntos: Lista de rutas de archivos a adjuntar
             
         Returns:
-            True si se envió correctamente
+            Dict con message_id y thread_id si se envió correctamente, None si falló
         """
         try:
             from email.mime.multipart import MIMEMultipart
@@ -371,22 +371,31 @@ class GmailService:
             raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
             
             # Enviar
-            self.service.users().messages().send(
+            sent_message = self.service.users().messages().send(
                 userId='me',
                 body={'raw': raw_message}
             ).execute()
             
+            # Extraer message_id y thread_id de la respuesta
+            message_id = sent_message.get('id')
+            thread_id = sent_message.get('threadId')
+            
             logger.info(f"[Gmail] Correo enviado exitosamente a {destinatario} con {len(adjuntos) if adjuntos else 0} adjuntos")
-            return True
+            logger.info(f"[Gmail] Message ID: {message_id}, Thread ID: {thread_id}")
+            
+            return {
+                'message_id': message_id,
+                'thread_id': thread_id
+            }
             
         except HttpError as error:
             logger.error(f"[Gmail] Error enviando correo: {error}")
-            return False
+            return None
         except Exception as e:
             logger.error(f"[Gmail] Error inesperado enviando correo: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
-            return False
+            return None
 
 
 # Instancia global del servicio
