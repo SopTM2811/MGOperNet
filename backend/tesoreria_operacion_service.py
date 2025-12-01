@@ -118,12 +118,27 @@ class TesoreriaOperacionService:
             ligas.append(monto_liga)
             restante -= monto_liga
         
-        # Ajuste final: si quedó un restante, agregarlo a la última liga
+        # Ajuste final: si quedó un restante, manejarlo adecuadamente
         if restante > Decimal('0.01'):
-            if ligas:
-                ligas[-1] += restante
-            else:
+            # Si el restante es significativo
+            if restante >= MIN_LIGA and restante <= MAX_LIGA:
+                # Si está en rango, agregarlo como nueva liga
                 ligas.append(restante)
+            elif restante > MAX_LIGA:
+                # Si es muy grande, dividirlo recursivamente
+                ligas_restante = self._partir_capital_en_ligas(restante)
+                ligas.extend(ligas_restante)
+            else:
+                # Si es muy pequeño, agregarlo a la última liga
+                if ligas:
+                    ultima_liga = ligas[-1]
+                    if ultima_liga + restante <= MAX_LIGA:
+                        ligas[-1] += restante
+                    else:
+                        # La última liga se pasaría, crear nueva
+                        ligas.append(restante)
+                else:
+                    ligas.append(restante)
         elif restante < Decimal('-0.01'):
             # Si nos pasamos (por redondeos), ajustar la última liga
             if ligas:
