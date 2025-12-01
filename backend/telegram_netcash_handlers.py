@@ -859,7 +859,7 @@ class TelegramNetCashHandlers:
             db = client[db_name]
             
             # Buscar beneficiarios en operaciones válidas (no rechazadas ni canceladas)
-            estados_validos = ["lista_para_mbc", "en_proceso_mbc", "completada"]
+            estados_validos = ["lista_para_mbc", "en_proceso_mbc", "completada", "enviado_a_tesoreria", "orden_interna_generada"]
             
             solicitudes_historicas = await db.solicitudes_netcash.find(
                 {
