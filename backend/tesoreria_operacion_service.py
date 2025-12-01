@@ -269,7 +269,9 @@ class TesoreriaOperacionService:
                 'success': True,
                 'solicitud_id': solicitud_id,
                 'folio_mbco': folio_mbco,
-                'fecha_envio': fecha_envio
+                'fecha_envio': fecha_envio,
+                'correo_enviado': True,  # ✅ Flag explícito de envío exitoso
+                'ya_enviado_antes': False  # ✅ Es envío nuevo, no duplicado
             }
             
         except Exception as e:
