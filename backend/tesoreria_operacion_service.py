@@ -287,40 +287,25 @@ class TesoreriaOperacionService:
         ])
         
         # Datos de la operación
-        n_ligas = solicitud.get('cantidad_ligas_reportada', 1)
         monto_ligas = Decimal(str(solicitud.get('monto_ligas', 0)))
         comision_dns = Decimal(str(solicitud.get('comision_dns_calculada', 0)))
         
         # FILAS DE CAPITAL (LIGAS)
-        if n_ligas > 0 and monto_ligas > 0:
-            monto_por_liga = (monto_ligas / Decimal(str(n_ligas))).quantize(
-                Decimal('0.01'), 
-                rounding=ROUND_HALF_UP
-            )
+        # Usar la función que divide el capital en montos irregulares
+        # entre $100,000 y $349,999.99
+        if monto_ligas > 0:
+            ligas = self._partir_capital_en_ligas(monto_ligas)
             
-            # Generar n-1 filas
-            for i in range(n_ligas - 1):
+            for i, monto_liga in enumerate(ligas, 1):
                 writer.writerow([
                     clabe_capital,
                     beneficiario_capital,
-                    f"{monto_por_liga:.2f}",
+                    f"{monto_liga:.2f}",
                     f"MBco {folio_concepto}",
                     '',
                     '',
-                    f"Liga {i+1}/{n_ligas}"
+                    f"Liga {i}/{len(ligas)}"
                 ])
-            
-            # Última fila ajustada
-            monto_ultima_liga = monto_ligas - (monto_por_liga * Decimal(str(n_ligas - 1)))
-            writer.writerow([
-                clabe_capital,
-                beneficiario_capital,
-                f"{monto_ultima_liga:.2f}",
-                f"MBco {folio_concepto}",
-                '',
-                '',
-                f"Liga {n_ligas}/{n_ligas}"
-            ])
         
         # FILA DE COMISIÓN DNS
         if comision_dns > 0:
