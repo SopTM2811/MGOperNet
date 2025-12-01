@@ -19,7 +19,7 @@ from unittest.mock import Mock, AsyncMock, patch
 import sys
 sys.path.insert(0, '/app/backend')
 
-from telegram_bot import NetCashBot
+from telegram_bot import TelegramBotNetCash
 from telegram import Update, User, Message, Chat, InlineKeyboardButton
 
 
