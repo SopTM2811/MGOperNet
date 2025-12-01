@@ -720,19 +720,25 @@ class TelegramNetCashHandlers:
             logger.info(f"[CONTINUAR_P1] Total depositado calculado: ${total_depositado:,.2f}")
             
             # Construir mensaje de resumen intermedio
-            mensaje_resumen = "✅ **Comprobantes validados correctamente**\n\n"
-            mensaje_resumen += f"📊 **Resumen de depósitos detectados:**\n\n"
+            # IMPORTANTE: Usar HTML en lugar de Markdown para evitar problemas con $ y otros caracteres especiales
+            mensaje_resumen = "✅ <b>Comprobantes validados correctamente</b>\n\n"
+            mensaje_resumen += f"📊 <b>Resumen de depósitos detectados:</b>\n\n"
             
             if len(resumen_comprobantes) > 0:
-                mensaje_resumen += "\n".join(resumen_comprobantes)
-                mensaje_resumen += f"\n\n💰 **Total de depósitos detectados:** ${total_depositado:,.2f}\n"
+                # Formatear comprobantes (sin markdown, solo texto plano)
+                for comp_linea in resumen_comprobantes:
+                    # Remover cualquier markdown del nombre de archivo
+                    mensaje_resumen += comp_linea + "\n"
+                
+                # Escapar el símbolo $ para HTML (aunque en HTML no es necesario, lo hacemos por consistencia)
+                mensaje_resumen += f"\n💰 <b>Total de depósitos detectados:</b> ${total_depositado:,.2f}\n"
                 
                 # Mostrar información de duplicados si hay (diferenciar locales vs globales)
                 if len(comprobantes_duplicados) > 0:
                     duplicados_locales = [c for c in comprobantes_duplicados if c.get("tipo_duplicado") == "local"]
                     duplicados_globales = [c for c in comprobantes_duplicados if c.get("tipo_duplicado") == "global"]
                     
-                    mensaje_resumen += f"\n⚠️ **Nota:**"
+                    mensaje_resumen += f"\n⚠️ <b>Nota:</b>"
                     if len(duplicados_locales) > 0:
                         mensaje_resumen += f" {len(duplicados_locales)} comprobante(s) duplicado(s) en esta operación"
                     if len(duplicados_globales) > 0:
@@ -748,7 +754,7 @@ class TelegramNetCashHandlers:
             mensaje_resumen += "Continuaremos con el siguiente paso..."
             
             logger.info(f"[CONTINUAR_P1] Mostrando resumen al usuario...")
-            await query.edit_message_text(mensaje_resumen, parse_mode="Markdown")
+            await query.edit_message_text(mensaje_resumen, parse_mode="HTML")
             
             # Pequeña pausa para que el usuario vea el resumen
             import asyncio
