@@ -940,7 +940,7 @@ class NetCashService:
                 mensaje_siguiente = "Estamos procesando tu información. Te avisaremos del resultado."
             
             # Obtener cuenta concertadora
-            cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
             cuenta_info = None
             if cuenta:
                 cuenta_info = {
