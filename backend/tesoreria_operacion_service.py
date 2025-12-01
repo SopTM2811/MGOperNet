@@ -40,6 +40,110 @@ class TesoreriaOperacionService:
         logger.info(f"[TesoreriaOp] Servicio inicializado")
         logger.info(f"[TesoreriaOp] Email Tesorería: {self.tesoreria_email}")
     
+    def _partir_capital_en_ligas(self, capital: Decimal) -> List[Decimal]:
+        """
+        Divide el capital en múltiples filas cumpliendo reglas estrictas:
+        
+        1. Cada fila debe estar entre $100,000 y $349,999.99
+        2. Montos irregulares con centavos (no montos "bonitos")
+        3. No repetir exactamente el mismo monto
+        4. La suma debe ser exactamente igual al capital
+        
+        Args:
+            capital: Monto total a dividir
+            
+        Returns:
+            Lista de montos (Decimal) que suman exactamente el capital
+        """
+        import random
+        
+        MIN_LIGA = Decimal('100000.00')
+        MAX_LIGA = Decimal('349999.99')
+        
+        if capital <= MIN_LIGA:
+            # Si el capital es menor o igual al mínimo, retornar una sola liga
+            return [capital]
+        
+        ligas = []
+        restante = capital
+        
+        # Calcular cuántas ligas necesitamos (aproximado)
+        # Para evitar que la última sea muy pequeña, usamos un promedio
+        promedio_por_liga = (MIN_LIGA + MAX_LIGA) / Decimal('2')
+        num_ligas_aprox = int(capital / promedio_por_liga)
+        
+        if num_ligas_aprox < 1:
+            num_ligas_aprox = 1
+        
+        # Generar ligas con montos irregulares
+        for i in range(num_ligas_aprox):
+            if restante <= MIN_LIGA:
+                # Si queda poco, agregar como última liga
+                if restante > Decimal('0'):
+                    ligas.append(restante)
+                break
+            
+            # Calcular monto máximo para esta liga
+            # Asegurarnos de que quede suficiente para las ligas restantes
+            ligas_restantes = num_ligas_aprox - i
+            max_para_esta_liga = min(MAX_LIGA, restante - (MIN_LIGA * Decimal(str(ligas_restantes - 1))))
+            
+            if max_para_esta_liga < MIN_LIGA:
+                max_para_esta_liga = MIN_LIGA
+            
+            if max_para_esta_liga > restante:
+                max_para_esta_liga = restante
+            
+            # Generar monto irregular entre MIN y max_para_esta_liga
+            # Usar random para generar centavos "feos"
+            rango_entero = int((max_para_esta_liga - MIN_LIGA) * Decimal('100'))  # En centavos
+            
+            if rango_entero > 0:
+                centavos_aleatorios = random.randint(0, rango_entero)
+                monto_liga = MIN_LIGA + (Decimal(str(centavos_aleatorios)) / Decimal('100'))
+            else:
+                monto_liga = MIN_LIGA
+            
+            # Redondear a 2 decimales
+            monto_liga = monto_liga.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            
+            # Verificar que no sea igual a las anteriores (si es posible)
+            intentos = 0
+            while monto_liga in ligas and intentos < 10:
+                centavos_aleatorios = random.randint(0, rango_entero)
+                monto_liga = MIN_LIGA + (Decimal(str(centavos_aleatorios)) / Decimal('100'))
+                monto_liga = monto_liga.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                intentos += 1
+            
+            ligas.append(monto_liga)
+            restante -= monto_liga
+        
+        # Ajuste final: si quedó un restante, agregarlo a la última liga
+        if restante > Decimal('0.01'):
+            if ligas:
+                ligas[-1] += restante
+            else:
+                ligas.append(restante)
+        elif restante < Decimal('-0.01'):
+            # Si nos pasamos (por redondeos), ajustar la última liga
+            if ligas:
+                ligas[-1] += restante  # restante será negativo, así que resta
+        
+        # Verificación final
+        suma = sum(ligas)
+        diferencia = capital - suma
+        
+        if abs(diferencia) > Decimal('0.01'):
+            # Ajuste de precisión en la última liga
+            if ligas:
+                ligas[-1] += diferencia
+        
+        logger.info(f"[TesoreriaOp] Capital ${capital:,.2f} dividido en {len(ligas)} liga(s)")
+        for i, liga in enumerate(ligas, 1):
+            logger.info(f"[TesoreriaOp]   Liga {i}: ${liga:,.2f}")
+        
+        return ligas
+    
     def _convertir_folio_para_concepto(self, folio_mbco: str) -> str:
         """
         Convierte folio MBco para usar en concepto (reemplaza guiones por 'x')
