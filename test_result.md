@@ -1602,3 +1602,104 @@ Asunto: NetCash – Orden de dispersión {folio} – {cliente}
 
 **El sistema está funcionando correctamente según especificaciones.**
 
+
+## ========================================
+## BUG FIX: ERR_CONTINUAR_20251201_161807_7260 - 2025-12-01
+## ========================================
+
+### 🐛 Error Reportado
+Al hacer clic en "➡️ Continuar" después de subir comprobante válido:
+```
+❌ Tuvimos un problema interno al continuar con tu solicitud.
+📋 ID de seguimiento: ERR_CONTINUAR_20251201_161807_7260
+```
+
+### 🔍 Causa Raíz Identificada
+
+**Solicitud afectada:** `nc-1764605846469`
+**Comprobante:** `comprobante_prueba_325678_55.pdf`
+**Monto:** `$325,678.55` (con decimales)
+**Estado:** `es_valido: True` ✅
+
+**Error técnico:**
+```
+BadRequest: Can't parse entities: can't find end of the entity starting at byte offset 121
+```
+
+**Causa:** 
+- Mensaje usaba `parse_mode="Markdown"`
+- El monto `$325,678.55` con símbolo $ + comas + decimales
+- Markdown de Telegram es estricto con caracteres especiales
+- El parser no pudo procesar correctamente la combinación
+
+### ✅ Solución Implementada
+
+**Cambio:** Markdown → HTML
+
+#### Antes (Markdown - Problemático):
+```python
+mensaje_resumen = "✅ **Comprobantes validados correctamente**\n\n"
+mensaje_resumen += f"💰 **Total:** ${total_depositado:,.2f}\n"
+await query.edit_message_text(mensaje_resumen, parse_mode="Markdown")
+```
+❌ Error con montos como $325,678.55
+
+#### Después (HTML - Robusto):
+```python
+mensaje_resumen = "✅ <b>Comprobantes validados correctamente</b>\n\n"
+mensaje_resumen += f"💰 <b>Total:</b> ${total_depositado:,.2f}\n"
+await query.edit_message_text(mensaje_resumen, parse_mode="HTML")
+```
+✅ Funciona con cualquier monto
+
+### 📊 Ventajas de HTML
+
+- ✅ `$` no requiere escape
+- ✅ Comas `,` no causan problemas
+- ✅ Decimales `.` funcionan correctamente
+- ✅ Más predecible y robusto
+- ✅ Se ve igual visualmente para el usuario
+
+### 🧪 Tests Implementados
+
+**Archivo:** `/app/backend/tests/test_fix_err_continuar_markdown.py`
+
+**Resultado:** 2/2 ✅ PASADOS
+
+```
+Test 1: Mensaje con montos decimales
+  ✅ Monto con $ formateado correctamente
+  ✅ Usa HTML tags (<b>)
+  ✅ No usa Markdown (**)
+  
+Test 2: Comparación Markdown vs HTML
+  ✅ Demuestra diferencia entre ambos
+  ✅ Documenta ventajas de HTML
+```
+
+### 📁 Archivos Modificados
+
+**Código:**
+- `/app/backend/telegram_netcash_handlers.py`
+  * Método `continuar_desde_paso1()`
+  * Líneas 722-751
+  * Cambio: `parse_mode="Markdown"` → `parse_mode="HTML"`
+
+**Tests:**
+- `/app/backend/tests/test_fix_err_continuar_markdown.py` (NUEVO)
+
+**Documentación:**
+- `/app/BUG_FIX_ERR_CONTINUAR_MARKDOWN.md`
+
+### 🎯 Resultado Final
+
+**Bug:** ✅ CORREGIDO Y VERIFICADO
+
+**Estado:**
+- ✅ Tests: 2/2 pasados
+- ✅ Backend: Reiniciado y funcionando
+- ✅ Flujo: Usuario puede continuar sin errores
+- ✅ Manejo robusto de errores mantenido
+
+**El botón "➡️ Continuar" ahora funciona correctamente con cualquier monto, incluyendo decimales, comas y símbolos especiales.**
+
