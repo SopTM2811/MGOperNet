@@ -111,5 +111,5 @@ def test_dispersion_capital():
     return todos_ok
 
 if __name__ == "__main__":
-    resultado = test_dispersi on_capital()
+    resultado = test_dispersion_capital()
     sys.exit(0 if resultado else 1)
