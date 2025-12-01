@@ -10,6 +10,7 @@ Objetivo: Con comprobantes válidos el flujo debe avanzar sin errores ERR_CONTIN
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -31,7 +32,7 @@ class TestErrContinuarValidComprobantes:
     Suite de tests para bug P0: ERR_CONTINUAR con comprobantes válidos
     """
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def setup_db(self):
         """Configurar BD limpia para cada test"""
         mongo_url = os.getenv('MONGO_URL')
