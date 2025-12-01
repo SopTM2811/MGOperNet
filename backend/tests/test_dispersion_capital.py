@@ -15,7 +15,7 @@ from decimal import Decimal
 from tesoreria_operacion_service import TesoreriaOperacionService
 import random
 
-def test_dispersi on_capital():
+def test_dispersion_capital():
     """Test de dispersión de capital en ligas"""
     
     # Fijar seed para tests deterministas
