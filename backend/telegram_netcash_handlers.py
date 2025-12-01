@@ -478,21 +478,41 @@ class TelegramNetCashHandlers:
         return NC_ESPERANDO_COMPROBANTE
     
     async def continuar_desde_paso1(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handler para el botón 'Continuar' desde Paso 1 (Comprobantes)"""
+        """
+        Handler para el botón 'Continuar' desde Paso 1 (Comprobantes)
+        
+        REFORZADO P0: Try/catch global con logging detallado y manejo robusto de errores
+        """
         query = update.callback_query
         await query.answer()
         
         # Extraer solicitud_id del callback_data
         solicitud_id = query.data.replace("nc_continuar_paso1_", "")
         
+        # Variables para logging detallado en caso de error
+        telegram_user_id = None
+        comprobantes_nombres = []
+        total_depositado = 0.0
+        error_id = None
+        
         try:
+            # Obtener telegram_user_id para logging
+            telegram_user_id = query.from_user.id if query.from_user else "UNKNOWN"
+            
+            logger.info(f"[CONTINUAR_P1] Iniciando para solicitud {solicitud_id}, telegram_user_id: {telegram_user_id}")
+            
             # Verificar cuántos comprobantes tiene la solicitud
             solicitud = await netcash_service.obtener_solicitud(solicitud_id)
             comprobantes = solicitud.get("comprobantes", [])
             num_comprobantes = len(comprobantes)
             
+            # Capturar nombres de archivos para logging
+            comprobantes_nombres = [c.get("nombre_archivo", "SIN_NOMBRE") for c in comprobantes]
+            logger.info(f"[CONTINUAR_P1] Comprobantes en solicitud: {comprobantes_nombres}")
+            
             if num_comprobantes == 0:
                 # No hay comprobantes - mostrar error y mantener en el mismo estado
+                logger.warning(f"[CONTINUAR_P1] No hay comprobantes en solicitud {solicitud_id}")
                 mensaje = "⚠️ Para continuar, debes adjuntar por lo menos un comprobante de depósito.\n\n"
                 mensaje += "Por favor sube al menos uno."
                 
@@ -500,6 +520,7 @@ class TelegramNetCashHandlers:
                 return NC_ESPERANDO_COMPROBANTE
             
             # Validar comprobantes antes de avanzar
+            logger.info(f"[CONTINUAR_P1] Validando solicitud completa...")
             todas_validas, validaciones = await netcash_service.validar_solicitud_completa(solicitud_id)
             validacion_comprobante = validaciones.get("comprobante", {})
             
@@ -507,8 +528,11 @@ class TelegramNetCashHandlers:
             comprobantes_validos = [c for c in comprobantes if c.get("es_valido", False)]
             comprobantes_duplicados = [c for c in comprobantes if c.get("es_duplicado", False)]
             
+            logger.info(f"[CONTINUAR_P1] Comprobantes válidos: {len(comprobantes_validos)}, duplicados: {len(comprobantes_duplicados)}")
+            
             if len(comprobantes_validos) == 0:
                 # NO hay comprobantes válidos - analizar razones para mensaje claro
+                logger.warning(f"[CONTINUAR_P1] No hay comprobantes válidos en solicitud {solicitud_id}")
                 razon = validacion_comprobante.get("razon", "Comprobantes no válidos")
                 
                 num_unicos = num_comprobantes - len(comprobantes_duplicados)
@@ -564,6 +588,7 @@ class TelegramNetCashHandlers:
             
             # Hay al menos 1 comprobante válido - MOSTRAR RESUMEN INTERMEDIO
             # Calcular suma de montos de comprobantes válidos
+            logger.info(f"[CONTINUAR_P1] Calculando total de depósitos...")
             total_depositado = 0.0
             resumen_comprobantes = []
             
@@ -575,6 +600,13 @@ class TelegramNetCashHandlers:
                     resumen_comprobantes.append(f"  • {nombre}: ${monto:,.2f}")
                 else:
                     resumen_comprobantes.append(f"  • {nombre}: (Monto no detectado)")
+            
+            # LOG ESPECÍFICO PARA MONTOS GRANDES (≥ 1,000,000)
+            if total_depositado >= 1000000:
+                logger.info(f"[DEBUG_CONTINUAR] ⚠️ Monto alto detectado: ${total_depositado:,.2f} en solicitud {solicitud_id}")
+                logger.info(f"[DEBUG_CONTINUAR] Comprobantes con montos grandes: {comprobantes_nombres}")
+            
+            logger.info(f"[CONTINUAR_P1] Total depositado calculado: ${total_depositado:,.2f}")
             
             # Construir mensaje de resumen intermedio
             mensaje_resumen = "✅ **Comprobantes validados correctamente**\n\n"
@@ -604,6 +636,7 @@ class TelegramNetCashHandlers:
             
             mensaje_resumen += "Continuaremos con el siguiente paso..."
             
+            logger.info(f"[CONTINUAR_P1] Mostrando resumen al usuario...")
             await query.edit_message_text(mensaje_resumen, parse_mode="Markdown")
             
             # Pequeña pausa para que el usuario vea el resumen
@@ -611,19 +644,78 @@ class TelegramNetCashHandlers:
             await asyncio.sleep(2)
             
             # Mostrar Paso 2: Beneficiarios frecuentes
+            logger.info(f"[CONTINUAR_P1] Avanzando al Paso 2 (beneficiarios)...")
             await self._mostrar_paso2_beneficiarios(query, context, solicitud_id)
             
+            logger.info(f"[CONTINUAR_P1] ✅ Proceso completado exitosamente para solicitud {solicitud_id}")
             return NC_ESPERANDO_BENEFICIARIO
             
         except Exception as e:
-            logger.error(f"[NC Telegram] Error en continuar_desde_paso1: {str(e)}")
+            # MANEJO ROBUSTO DE ERRORES P0
+            from datetime import datetime
+            import random
             import traceback
-            logger.error(traceback.format_exc())
             
-            await query.edit_message_text(
-                "❌ Error al procesar tu solicitud. Por favor contacta a soporte.",
-                parse_mode="Markdown"
-            )
+            # Generar ID único de error
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            random_suffix = random.randint(1000, 9999)
+            error_id = f"ERR_CONTINUAR_{timestamp}_{random_suffix}"
+            
+            # LOG DETALLADO DEL ERROR
+            logger.error(f"=" * 70)
+            logger.error(f"[{error_id}] ERROR EN BOTÓN CONTINUAR")
+            logger.error(f"=" * 70)
+            logger.error(f"[{error_id}] Solicitud ID: {solicitud_id}")
+            logger.error(f"[{error_id}] Telegram User ID: {telegram_user_id}")
+            logger.error(f"[{error_id}] Comprobantes: {comprobantes_nombres}")
+            logger.error(f"[{error_id}] Total depositado calculado: ${total_depositado:,.2f}")
+            logger.error(f"[{error_id}] Tipo de error: {type(e).__name__}")
+            logger.error(f"[{error_id}] Mensaje de error: {str(e)}")
+            logger.error(f"[{error_id}] Stack trace completo:")
+            logger.error(traceback.format_exc())
+            logger.error(f"=" * 70)
+            
+            # Marcar solicitud como requiere revisión manual (sin perder avance)
+            try:
+                from motor.motor_asyncio import AsyncIOMotorClient
+                import os
+                mongo_url = os.getenv('MONGO_URL')
+                db_name = os.getenv('DB_NAME', 'netcash_mbco')
+                client = AsyncIOMotorClient(mongo_url)
+                db = client[db_name]
+                
+                await db.solicitudes_netcash.update_one(
+                    {"id": solicitud_id},
+                    {
+                        "$set": {
+                            "requiere_revision_manual": True,
+                            "error_id": error_id,
+                            "error_timestamp": datetime.now().isoformat(),
+                            "error_detalle": {
+                                "handler": "continuar_desde_paso1",
+                                "tipo": type(e).__name__,
+                                "mensaje": str(e),
+                                "telegram_user_id": telegram_user_id
+                            }
+                        }
+                    }
+                )
+                logger.info(f"[{error_id}] ✅ Solicitud marcada para revisión manual")
+            except Exception as db_error:
+                logger.error(f"[{error_id}] ❌ No se pudo marcar solicitud para revisión: {str(db_error)}")
+            
+            # MENSAJE CLARO Y ÚTIL AL CLIENTE
+            mensaje_error = "❌ **Tuvimos un problema interno al continuar con tu solicitud.**\n\n"
+            mensaje_error += "✅ **Tus comprobantes SÍ se guardaron** y están a salvo.\n\n"
+            mensaje_error += "👤 Ana o un enlace de nuestro equipo te contactarán pronto para ayudarte a continuar con tu operación.\n\n"
+            mensaje_error += f"📋 **ID de seguimiento:** `{error_id}`\n\n"
+            mensaje_error += "Por favor comparte este ID si contactas a soporte."
+            
+            try:
+                await query.edit_message_text(mensaje_error, parse_mode="Markdown")
+            except Exception as msg_error:
+                logger.error(f"[{error_id}] No se pudo enviar mensaje de error al usuario: {str(msg_error)}")
+            
             return NC_ESPERANDO_COMPROBANTE
     
     # ==================== PASO 2: BENEFICIARIO + IDMEX (CON FRECUENTES) ====================
