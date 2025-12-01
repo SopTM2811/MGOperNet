@@ -181,7 +181,7 @@ class TestMenuClienteActivo:
         context = Mock()
         
         # Ejecutar handler
-        bot = NetCashBot()
+        bot = TelegramBotNetCash()
         await bot.start(update, context)
         
         # Obtener mensaje
@@ -276,7 +276,7 @@ class TestMenuClienteActivo:
         context = Mock()
         
         # Ejecutar handler
-        bot = NetCashBot()
+        bot = TelegramBotNetCash()
         await bot.start(update, context)
         
         # Obtener mensaje y botones
