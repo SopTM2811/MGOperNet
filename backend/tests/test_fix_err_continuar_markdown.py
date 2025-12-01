@@ -136,9 +136,9 @@ async def test_construir_mensaje_resumen_con_monto_decimal():
         checks = {
             "Tiene monto con $": "$" in mensaje_resumen,
             "Tiene comas en monto": "," in mensaje_resumen,
-            "Tiene decimales": ".5" in str(total_depositado) or ".55" in str(total_depositado),
             "Usa HTML tags": "<b>" in mensaje_resumen,
-            "No usa Markdown": "**" not in mensaje_resumen
+            "No usa Markdown": "**" not in mensaje_resumen,
+            "Monto formateado correctamente": f"${total_depositado:,.2f}" in mensaje_resumen
         }
         
         print(f"\n🔍 Verificaciones:")
