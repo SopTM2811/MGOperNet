@@ -30,7 +30,7 @@ from netcash_models import (
     CanalOrigen, EstadoSolicitud, TipoCuenta, ValidacionCampo,
     ComprobanteDetalle, HistoricoEstado, CanalMetadata
 )
-from config_cuentas_service import config_cuentas_service
+from cuenta_deposito_service import cuenta_deposito_service
 from validador_comprobantes_service import ValidadorComprobantes
 
 logger = logging.getLogger(__name__)
