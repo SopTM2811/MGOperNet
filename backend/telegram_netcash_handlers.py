@@ -23,7 +23,7 @@ import aiohttp
 
 from netcash_service import netcash_service
 from netcash_models import SolicitudCreate, SolicitudUpdate, CanalOrigen, CanalMetadata
-from config_cuentas_service import config_cuentas_service, TipoCuenta
+from cuenta_deposito_service import cuenta_deposito_service
 
 logger = logging.getLogger(__name__)
 
