@@ -821,17 +821,23 @@ class TelegramNetCashHandlers:
             except Exception as db_error:
                 logger.error(f"[{error_id}] ❌ No se pudo marcar solicitud para revisión: {str(db_error)}")
             
-            # MENSAJE CLARO Y ÚTIL AL CLIENTE
-            mensaje_error = "❌ **Tuvimos un problema interno al continuar con tu solicitud.**\n\n"
-            mensaje_error += "✅ **Tus comprobantes SÍ se guardaron** y están a salvo.\n\n"
+            # MENSAJE CLARO Y ÚTIL AL CLIENTE (HTML para evitar errores de parsing)
+            mensaje_error = "❌ <b>Tuvimos un problema interno al continuar con tu solicitud.</b>\n\n"
+            mensaje_error += "✅ <b>Tus comprobantes SÍ se guardaron</b> y están a salvo.\n\n"
             mensaje_error += "👤 Ana o un enlace de nuestro equipo te contactarán pronto para ayudarte a continuar con tu operación.\n\n"
-            mensaje_error += f"📋 **ID de seguimiento:** `{error_id}`\n\n"
+            mensaje_error += f"📋 <b>ID de seguimiento:</b> <code>{error_id}</code>\n\n"
             mensaje_error += "Por favor comparte este ID si contactas a soporte."
             
             try:
-                await query.edit_message_text(mensaje_error, parse_mode="Markdown")
+                await query.edit_message_text(mensaje_error, parse_mode="HTML")
             except Exception as msg_error:
                 logger.error(f"[{error_id}] No se pudo enviar mensaje de error al usuario: {str(msg_error)}")
+                # Fallback: intentar sin formato si HTML también falla
+                try:
+                    mensaje_simple = f"⚠️ Tuvimos un problema al continuar.\n\nTus comprobantes están guardados.\n\nID: {error_id}"
+                    await query.edit_message_text(mensaje_simple)
+                except:
+                    pass
             
             return NC_ESPERANDO_COMPROBANTE
     
