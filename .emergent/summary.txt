@@ -1,180 +1,192 @@
 <analysis>**original_problem_statement:**
-The user's initial problem was a series of bugs related to a voucher validation and Telegram notifications. This evolved into a major feature request for an automated Treasury workflow.
+The user's initial problem was a series of bugs related to voucher validation and Telegram notifications. This evolved into a major feature request for an automated Treasury workflow.
 
 The requirements have been refined over several iterations:
 1.  **Initial Treasury Workflow (Batch)**: A scheduler runs every 15 mins, bundles all  requests, generates a master CSV layout, and sends a batch email and Telegram notification to Treasury.
-2.  **Formula Correction**: The commission calculation was incorrect. The agent fixed it to correctly distinguish between  (1% of total deposits) and  (0.375% of capital), ensuring the internal margin () is not exposed to Treasury.
-3.  **Refactor to Per-Operation Workflow**: The model was changed from batch processing to a per-operation flow.
-    *   When an admin (Ana) assigns a , a process is immediately triggered to generate an individual CSV layout and send a specific email to Treasury for that single operation.
-    *   The email must contain the individual CSV, the original client payment proofs, and clear instructions for the Treasury user.
-    *   The scheduler's role changed to a **reminder service**, sending Telegram alerts for operations pending dispersion.
-4.  **Closing the Loop (Phase 2 - Pending)**: Implement a mechanism to detect when the Treasury user replies to the operation email with payment proofs, update the operation's status to , and notify both Ana and the original client.
-5.  **Capital Dispersion Logic**: The CSV generation for capital must split the total amount into multiple irregular rows, each between 00,000 and 49,999.99, to avoid round numbers.
-6.  **Bug Fixes**:
-    *   A  error in Ana's Telegram flow.
-    *   A bug where the Treasury workflow was not being triggered for a specific operation (0023).
-    *   A new bug where uploading a specific PDF () causes a generic error when the user clicks Continuar.
+2.  **Refactor to Per-Operation Workflow**: The model was changed from batch processing to a per-operation flow. When an admin (Ana) assigns a , a process is immediately triggered to generate an individual CSV layout and send a specific email to Treasury for that single operation. The email must contain the individual CSV and the original client payment proofs.
+3.  **Closing the Loop (Phase 2)**: Implement a mechanism to detect when the Treasury user replies to the operation email with payment proofs, update the operation's status to , and notify stakeholders.
+4.  **Bug Fixes & Adjustments**:
+    *   A generic Error al procesar tu solicitud occurs when the client clicks the ➡️ Continuar button in the Telegram bot after uploading a valid voucher. This is a recurring, high-priority bug.
+    *   The Treasury email workflow has had several issues reported, including incorrect layout filenames, wrong CLABE for DNS commission, missing client voucher attachments, and duplicate emails being sent.
+    *   A new requirement to detect and prevent the use of the same voucher (payment proof) across different operations using a file hash.
 
 **User's preferred language**: español
 
 **what currently exists?**
-The application is a FastAPI/React/MongoDB stack. The core workflow, where a client submits vouchers via a Telegram bot and an admin (Ana) assigns a , is functional.
+The application is a FastAPI/React/MongoDB stack. The core workflow, where a client submits vouchers via a Telegram bot and an admin assigns a , is in place.
 
-The Treasury workflow has been significantly refactored. It now operates on a **per-operation basis**, triggered immediately after Ana assigns a . This generates an individual CSV layout and sends a detailed email to Treasury. The previously implemented 15-minute scheduler now functions solely as a reminder system for pending operations.
+The Treasury workflow operates on a **per-operation basis**, triggered after an admin assigns a . This generates a CSV and sends an email to Treasury. The previously implemented 15-minute scheduler now functions as a reminder service.
 
 Key components in place:
--   A robust voucher validator that handles multiple layouts (including Vault) and provides clear error messages.
--   Correct financial formula implementation for  and .
--   A  collection in MongoDB to dynamically manage provider bank accounts for capital and commission.
--   A capital dispersion function that splits large amounts into irregular chunks as per business rules.
--   The backend services (, ) and Telegram handlers () have been updated to support this per-operation flow.
+-   A robust error-handling framework has been added to the Telegram handlers (, ). When an unhandled exception occurs, it now provides the user with a friendly message and a unique error ID for support, while logging the full stack trace and marking the request for manual review in the database.
+-   The foundation for **Phase 2 (Email Monitoring)** has been laid. A new service () and a scheduler () have been created and integrated to periodically check a Gmail account for replies. The main operation service now saves the  to link replies back to operations.
+-   A suite of tests has been created to validate the Treasury workflow adjustments and the bug fixes.
 
 **Last working item**:
-The agent was debugging a bug reported by the user where the workflow fails after uploading a specific PDF.
+The agent was repeatedly trying to fix a critical bug where the client-facing Telegram bot fails after the user clicks the ➡️ Continuar button.
 
--   **Last item agent was working**: Investigating a generic Error al procesar tu solicitud that occurs when the user clicks the Continuar button in the client-facing Telegram bot after uploading . The agent successfully reproduced the issue and determined that the voucher validator itself processes the PDF correctly. The investigation pointed towards an unhandled exception within the  handler in  or the  method it invokes.
+-   **Last item agent was working**: Debugging the persistent  bug. The user reported the bug is still occurring in production (), even after previous attempts to fix it by changing the Telegram message format from Markdown to HTML. The root cause is not just a message formatting issue and requires deeper investigation into the application logic within the  handler. The user has provided explicit instructions to find the real stack trace from the logs and fix the underlying problem.
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: backend testing agent. Create a test that simulates a user session, adds the problematic PDF, and directly calls the function triggered by the Continuar callback to isolate and identify the exception.
--   **User Testing Done**: N
+-   **Agent Testing Done**: N (Previous tests were insufficient as the bug persists).
+-   **Which testing method agent to use?**: backend testing agent. Create a new test file  as requested by the user, with specific cases for valid vouchers with various amounts (e.g., 89,456.78, ,045,000.00) to ensure they process without error, and a controlled failure case to verify the error reporting mechanism works correctly.
+-   **User Testing Done**: N (User is the one reporting the bug is still present).
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Generic error on Continuar with  (P0)
+-   **Issue 1**: Generic error on Continuar button click (P0)
+-   **Issue 2**: Treasury Layout & Email issues (P1)
+-   **Issue 3**: Bug on voucher upload (P1)
 
 **Issues Detail:**
 -   **Issue 1:**
-    -   **Description**: After a client uploads  via the Telegram bot and presses the ➡️ Continuar button, the bot returns a generic error:  The voucher validator itself marks the PDF as valid, so the error occurs in the subsequent processing step.
-    -   **Attempted fixes**: The agent confirmed the voucher validator is not the source of the error. The investigation points to the  handler in .
+    -   **Description**: A generic error  with a tracking ID  is shown to the user after they upload a valid voucher and click ➡️ Continuar. This blocks the entire client workflow.
+    -   **Attempted fixes**: The agent twice attempted to fix this by changing the  of Telegram messages from  to , assuming it was a parsing error. These fixes were insufficient as the bug persists. The symptom was a  error, but this is likely triggered by an underlying exception in the application logic that causes the error message handler to be called.
     -   **Next debug checklist**:
-        1.  Examine the  handler in .
-        2.  Trace the execution into .
-        3.  Add detailed logging within these functions to pinpoint the exact line causing the exception, paying close attention to data type conversions (e.g., parsing the large amount ), session data handling, or database interactions.
-        4.  Wrap the problematic code in a more specific  block to catch the precise exception and return a meaningful error message to the user and log the full stack trace.
-    -   **Why fix this issue and what will be achieved with the fix?**: This bug blocks the creation of new operations, making it a critical issue. Fixing it will restore the primary user workflow.
+        1.  Locate the log entry for the latest error ID provided by the user: .
+        2.  Retrieve the full stack trace and the detailed error message stored in the  collection for that request.
+        3.  Identify the **root cause** of the exception within the  handler or the services it calls (). Check for logic errors, null value handling, or incorrect data type casting.
+        4.  Implement a definitive fix for the root cause.
+        5.  Enhance the test suite in  to cover this specific failure case and prevent regressions.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a P0 blocker for the entire client-facing workflow. Fixing it will allow users to create new operations.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Blocked on other issue**: None
+
+-   **Issue 2:**
+    -   **Description**: User reported a set of recurring issues with the Treasury workflow email and layout, even after the agent attempted fixes. These include:
+        1.  **Incorrect Filename**: The attached CSV layout is not named .
+        2.  **Incorrect CLABE**: The row for DNS commission in the CSV uses the wrong provider CLABE. It should always use the  account ().
+        3.  **Missing Attachments**: The client's original payment proof PDFs are not attached to the Treasury email along with the CSV.
+        4.  **Duplicate Emails**: Two identical emails are sent to Treasury for the same operation.
+    -   **Attempted fixes**: The agent created a test suite () and believed these were fixed. However, the user's continued reports indicate the fixes may be ineffective in the production flow.
+    -   **Next debug checklist**:
+        1.  Re-verify the entire flow triggered by Ana assigning a .
+        2.  For #4 (Duplicate Emails), ensure the  flag is being checked correctly and that no other process (like the scheduler) is re-triggering the email.
+        3.  For #1, #2, #3, meticulously trace the data and file paths through  to ensure the correct values and files are being used when constructing the email.
+    -   **Why fix this issue and what will be achieved with the fix?**: Ensures the Treasury department receives correct, complete, and non-redundant information, which is critical for the business process.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Blocked on other issue**: None
+
+-   **Issue 3:**
+    -   **Description**: Uploading a specific valid voucher () caused a generic error immediately upon processing, before the Continuar button was even pressed.
+    -   **Attempted fixes**: The agent implemented a robust  block in the  handler to catch such errors, log them with a unique ID, and prevent the application from crashing.
+    -   **Next debug checklist**: Although a protective fix was implemented, the underlying cause was not fully identified. It should be confirmed that the fix robustly handles all voucher processing errors and provides a clear path for manual review.
+    -   **Why fix this issue and what will be achieved with the fix?**: Prevents the bot from crashing on unexpected voucher formats and provides a better user experience.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: backend
     -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1**: Implement Phase 2 of the Treasury Workflow: Confirmation and Communication (P1)
-
-**Task Detail:**
--   **Task 1:**
-    -   **Where to resume**: This is the next logical feature after the current bug is fixed. The implementation should start by building a service that uses the Gmail API to monitor for replies to the operation-specific emails sent to Treasury.
-        1.  Create a mechanism (e.g., a scheduled job or webhook) to check the Treasury inbox for new messages.
-        2.  Match replies to existing operations using email  and the  in the subject.
-        3.  Download and save attachments (payment proofs) from the reply, associating them with the  document.
-        4.  Update the request's  to .
-        5.  Trigger Telegram notifications to Ana (admin) and the original client.
-    -   **What will be achieved with this?**: This will complete the end-to-end Treasury automation, closing the loop by confirming payments and notifying all stakeholders, which is a critical business requirement.
-    -   **Status**: NOT STARTED
+-   **Task 1**: Implement Phase 2 of Treasury Workflow: Confirmation and Communication (P1)
+    -   **Where to resume**: The basic components (, ,  integration) are in place. The next step is to build out the logic within the monitor service to:
+        1.  Connect to the Gmail API using credentials from env vars.
+        2.  Search for unread replies in the Treasury inbox based on the .
+        3.  Download attachments (payment proofs) from replies.
+        4.  Update the corresponding  document's  to .
+        5.  Trigger Telegram notifications to the admin and client.
+    -   **What will be achieved with this?**: This will complete the end-to-end Treasury automation, closing the loop by confirming payments and notifying all stakeholders.
+    -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: backend
-    -   **Blocked on something**: Issue 1 (Generic error on Continuar) must be resolved first to allow new operations to be created for testing.
+    -   **Blocked on something**: P0 Bug (Issue 1). The core workflow must be stable before this can be reliably tested.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
+    -   (P1) Implement Duplicate Voucher Check: Add logic to calculate a file hash (SHA-256) for each uploaded voucher and check if it already exists in the database to prevent reuse across different operations.
     -   (P2) Implement Permission Gates in the frontend (e.g., conditionally render the Usuarios button).
     -   (P2) Refactor frontend authentication to eliminate the hardcoded .
 -   **Future Tasks:**
     -   Create a user editing module in the frontend.
-    -   Refactor Treasury email recipients to be dynamically pulled from the user catalog instead of a static environment variable.
+    -   Refactor Treasury email recipients to be dynamically pulled from the user catalog.
     -   Implement Ver mis solicitudes functionality within the client's Telegram bot.
     -   Build out functionality for the remaining user roles (, , ).
 
 **Completed work in this session**
--   **Treasury Workflow Refactor**: Shifted from a 15-minute batch process to a **per-operation** model, triggered immediately when Ana assigns a .
--   **Scheduler Update**: The 15-minute scheduler was repurposed to act as a **reminder service** for operations pending Treasury action, instead of generating new batches.
--   **Financial Formula Correction**: Implemented the correct business logic for calculating  (1% of total) vs.  (0.375% of capital), ensuring internal margin is not exposed.
--   **Dynamic Provider Accounts**: Created a  collection and  to manage provider bank accounts from the database, removing hardcoded values.
--   **Capital Dispersion Logic**: Re-implemented and tested the function to split capital payments into irregular chunks between 00k and 50k for the CSV layout.
--   **Bug Fix: **: Resolved a bug in Ana's Telegram flow that occurred after the service refactor.
--   **Bug Fix: Treasury Workflow Failure (Op 0023)**: Fixed a bug where the new  was not being called from the main , causing the workflow to stall.
--   **Treasury Communication**: Enhanced the Treasury email with clear instructions and updated the Telegram alert to be more informative, including a new human-readable .
--   **Robust Voucher Validation**: Confirmed that the  correctly handles various problematic Vault layout PDFs, providing clear, specific rejection messages instead of generic errors.
+-   **Robust Error Handling**: Implemented a comprehensive  block in the  and  Telegram handlers. This catches exceptions, logs them with a unique ID, updates the DB to flag the request for manual review, and shows a user-friendly error message.
+-   **Treasury Email Monitor Scaffolding (Phase 2)**: Created  and , and integrated them into  to lay the groundwork for monitoring Gmail replies.
+-   ** Storage**: Modified  and  to capture and store the  in the  collection when an operation email is sent to Treasury.
+-   **Telegram Message Formatting Fix**: Changed multiple  and  calls from  to  to prevent parsing errors, although this did not fix the underlying bug.
+-   **Created Multiple Test Files**: Added several new test files to diagnose and verify fixes, including , , , , and .
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1**: The system allows the same payment proof (voucher) to be used for multiple different operations. The user requested a global duplication check based on the file's hash (SHA-256). This was requested in message #184 but was never implemented.
+
+**Known issue recurrence from previous fork**
+-   The bug where the client flow fails after clicking ➡️ Continuar has recurred multiple times despite attempted fixes. The agent has been focusing on the symptom (message parsing) rather than the root cause.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Event-Driven Architecture**: The Treasury workflow shifted from a time-based batch process (scheduler) to an event-driven one, triggered by an admin action (Ana assigning a folio) in Telegram.
--   **Service-Oriented Refactoring**: Logic was separated into more focused services, such as  and , improving modularity.
--   **Dynamic Configuration**: Moving provider bank accounts from environment variables to a MongoDB collection () for easier updates without code changes.
--   **Asynchronous Tasks**: Heavy use of  for handling concurrent Telegram interactions and backend processing.
+-   **Event-Driven Architecture**: Workflow triggered by a Telegram user action (admin assigning a folio).
+-   **Asynchronous Tasks**: Heavy use of  and the  library for background tasks (reminders, email monitoring).
+-   **Defensive Programming**: Implementation of robust  blocks with detailed logging and user-friendly feedback to handle unexpected failures gracefully.
 
 **key DB schema**
 -   ****:
-    -   : Now includes  and will require .
-    -   : String, path to the individually generated CSV.
-    -   : DateTime, timestamp for when the operation was sent.
-    -   (Upcoming) : Array of strings, for storing paths to payment proofs from Treasury.
-    -   (Upcoming) : DateTime.
--   ****: (New Collection)
-    -   : capital | comision_dns
-    -   : String
-    -   : String
-    -   : String
-    -   : Boolean
--   ****:
-    -   : String, new human-readable lot ID (e.g., ).
+    -   : String, to track the Gmail conversation thread.
+    -   : Boolean, flag to prevent duplicate emails.
+    -   : Boolean, flag for requests that failed processing.
+    -   : String, unique ID for logged errors (e.g., ).
+    -   : Dict, stores exception type and message for debugging.
+    -   (Upcoming) : Boolean, to flag reused vouchers.
+    -   (Upcoming) : String, SHA-256 hash of the voucher file.
 
 **changes in tech stack**
 -   None.
 
 **All files**
 -   **Created Files:**
-    -   : Contains the logic for the new per-operation Treasury workflow.
-    -   : Manages fetching active provider accounts from the database.
-    -   : Contains unit tests for the complex capital-splitting logic.
-    -   : Documentation for a previous bug fix.
-    -   : Documentation on how to manage the new provider accounts collection.
+    -   : Service to handle the logic of checking and processing emails from Treasury.
+    -   : Scheduler job to run the email monitor periodically.
+    -   : Test suite for surgical fixes to the treasury flow.
+    -   : Test for robust error handling on voucher upload.
+    -   : Test for the initial Markdown->HTML fix.
+    -   : End-to-end test simulating the user flow for the Continuar button.
+    -   , , , , , , : Documentation files for implemented changes and bug fixes.
 -   **Modified Files:**
-    -   : Integrated the call to  after a folio is assigned.
-    -   : Fixed a  and updated user-facing messages.
-    -   : Refactored to only send reminder notifications instead of processing new batches.
-    -   : Location of the current bug being investigated.
-
-**Areas that need refactoring**:
--   The old batch-processing service, , is now obsolete and could be removed to prevent confusion.
--   Frontend authentication still relies on a hardcoded  and requires a proper authentication system.
-
-**key api endpoints**
--   No new public API endpoints were created. All changes were internal to backend services and Telegram bot handlers.
+    -   : Heavily modified to add robust error handling and change message parsing from Markdown to HTML. Still the location of the P0 bug.
+    -   : Updated to save , use a flag to prevent duplicate emails, and attempts to fix layout/attachment issues.
+    -   : Modified to return the  and  after sending an email.
+    -   : Modified to initialize and run the new .
+    -   : Modified to handle voucher processing and error states.
 
 **Critical Info for New Agent**
--   **The absolute priority is fixing the bug with **. This bug blocks the entire client workflow. The error is **not** in the voucher validator, but in the Telegram handler () that is called after the voucher is uploaded.
--   The Treasury workflow is now **per-operation**, triggered when Ana assigns a . The scheduler () is now only for sending reminders. Do not try to debug batch creation.
--   The next major feature, after fixing the bug, is **Phase 2 of the Treasury workflow**: detecting email replies from Treasury to close the loop.
+-   **The absolute priority is the P0 bug **. The agent is stuck in a loop. Previous fixes targeting message formatting ( vs ) were insufficient. You **MUST** follow the user's latest instructions (message #267): find the real error from the logs using the provided ID (), identify the **root cause** in the application logic, and implement a definitive fix. Do not assume it is a formatting issue again.
+-   The user has reported several recurring issues with the Treasury workflow (layout name, DNS CLABE, missing attachments, duplicate emails). Although the previous agent created tests and marked them as fixed, their persistence suggests the fixes were not correct. These need to be re-investigated and solved definitively.
+-   A key feature request—**preventing duplicate voucher usage via file hash**—was made by the user but has been completely missed. This should be prioritized as a P1 task after the P0 blocker is resolved.
 
 **documents created in this job**
--   
--   
--   
+-   /app/MANEJO_ERRORES_CONTINUAR_P0.md
+-   /app/FASE2_MONITOREO_EMAILS_TESORERIA.md
+-   /app/BUG_FIX_HANDLER_COMPROBANTES.md
+-   /app/AJUSTES_TESORERIA_COMPLETADOS.md
+-   /app/VERIFICACION_COMPLETA_TESORERIA.md
+-   /app/BUG_FIX_ERR_CONTINUAR_MARKDOWN.md
+-   /app/BUG_FIX_ERR_CONTINUAR_COMPLETO.md
 
 **Last 5 User Messages and any pending user messages**
-1.  **Request**: Adjust treasury workflow, introducing a human-readable , adding instructions to the treasury email, and attaching original client vouchers. **Status: COMPLETED**.
-2.  **Request**: Change the treasury workflow from a batch process to a per-operation process, triggered when Ana assigns a . The scheduler should become a reminder service. Implement Phase 2 (detecting email replies) to close the loop. **Status: Phase 1 COMPLETED, Phase 2 PENDING**.
-3.  **Bug Report**: A  error appears in Ana's Telegram flow. Also, the individual CSV layout is not being attached to the Treasury email, and the capital splitting logic is incorrect. **Status: COMPLETED**.
-4.  **Bug Report**: After fixing the previous issues, a new bug appeared where Ana assigns a folio, but the treasury workflow (email, CSV) is not triggered for a specific operation (0023). **Status: COMPLETED**.
-5.  **Bug Report (Current Issue)**: Uploading a specific PDF () and clicking Continuar results in a generic error, blocking the user. **Status: IN PROGRESS**.
+1.  **Request (Msg #184)**: User reported 5 issues: incorrect CSV filename, incorrect DNS CLABE in CSV, missing voucher attachments in email, duplicate Treasury emails, and a new request to block duplicate vouchers using a file hash. **Status: Partially Addressed / Recurring**.
+2.  **Bug Report (Msg #205)**: User reported a bug with ID  when clicking the Continuar button. **Status: Fix Attempted, Failed**.
+3.  **Bug Report (Msg #238)**: User reported the *same* bug is still happening with a new ID , despite the previous fix. **Status: Fix Attempted, Failed**.
+4.  **Bug Report (Msg #267)**: User reported the bug is *still* present with ID . Provided very specific instructions to find the *real* root cause beyond message formatting and to create a proper test suite. **Status: IN PROGRESS (Current Task)**.
+5.  There are no other pending user messages. The agent's next action must be to address the bug from message #267.
 
 **Project Health Check:**
 -   **Broken:**
-    -   The client-facing Telegram bot workflow is blocked at the Continuar step for certain vouchers, preventing the creation of new operations.
--   **Mocked:**
-    -   Frontend authentication still uses a hardcoded .
+    -   The primary client-facing Telegram bot workflow is blocked by a critical P0 bug at the ➡️ Continuar step, preventing users from creating new operations.
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**:
-    -   
-    -    (and various other temporary test scripts)
--   **Known regressions**: None.
+-   **Test files created**: [, , , ]
+-   **Known regressions**: The Continuar button bug is a major regression/recurring issue.
 
 **Credentials to test flow:**
 -   **Ana's Test Telegram ID**: 
--   **Treasury Test Email**:  (read from  env var)
+-   **Treasury Test Email**:  (from  env var)
 
 **What agent forgot to execute**
--   The main pending task from the user's request is the implementation of **Phase 2 of the Treasury Workflow**: Detecting email replies from Treasury to mark operations as  and notify stakeholders. This has not been started.</analysis>
+-   The agent completely overlooked the user's request from message #184 to implement a global check for duplicate vouchers using a file hash (e.g., SHA-256) to prevent the same payment proof from being used in multiple operations. This is a critical un-started task.</analysis>

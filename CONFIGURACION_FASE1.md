@@ -138,7 +138,7 @@ tail -f /var/log/supervisor/frontend.err.log
 
 Abre tu navegador y ve a:
 ```
-https://treasury-flow-4.preview.emergentagent.com
+https://treasury-ops.preview.emergentagent.com
 ```
 
 ---
