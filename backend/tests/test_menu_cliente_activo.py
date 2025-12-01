@@ -98,7 +98,7 @@ class TestMenuClienteActivo:
         context = Mock()
         
         # Crear bot y ejecutar handler de start
-        bot = NetCashBot()
+        bot = TelegramBotNetCash()
         await bot.start(update, context)
         
         # Verificar que se llamó reply_text
