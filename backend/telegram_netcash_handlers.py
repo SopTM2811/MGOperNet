@@ -464,13 +464,110 @@ class TelegramNetCashHandlers:
             return NC_ESPERANDO_COMPROBANTE
             
         except Exception as e:
-            logger.error(f"[NC Telegram] Error procesando comprobante: {str(e)}")
+            # MANEJO ROBUSTO DE ERRORES - Similar al P0 del botón "Continuar"
+            from datetime import datetime
+            import random
             import traceback
-            logger.error(traceback.format_exc())
             
-            await update.message.reply_text(
-                "❌ Error procesando el comprobante. Por favor intenta de nuevo o contacta a soporte."
-            )
+            # Generar ID único de error
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            random_suffix = random.randint(1000, 9999)
+            error_id = f"ERR_COMP_{timestamp}_{random_suffix}"
+            
+            # LOG DETALLADO DEL ERROR
+            logger.error(f"=" * 70)
+            logger.error(f"[{error_id}] ERROR AL PROCESAR COMPROBANTE")
+            logger.error(f"=" * 70)
+            logger.error(f"[{error_id}] Solicitud ID: {solicitud_id}")
+            logger.error(f"[{error_id}] Telegram User ID: {telegram_user_id}")
+            logger.error(f"[{error_id}] Nombre archivo: {nombre_archivo}")
+            logger.error(f"[{error_id}] Ruta archivo: {file_path}")
+            logger.error(f"[{error_id}] Tipo de error: {type(e).__name__}")
+            logger.error(f"[{error_id}] Mensaje de error: {str(e)}")
+            logger.error(f"[{error_id}] Stack trace completo:")
+            logger.error(traceback.format_exc())
+            logger.error(f"=" * 70)
+            
+            # Marcar solicitud como requiere revisión manual
+            try:
+                from motor.motor_asyncio import AsyncIOMotorClient
+                import os
+                mongo_url = os.getenv('MONGO_URL')
+                db_name = os.getenv('DB_NAME', 'netcash_mbco')
+                client = AsyncIOMotorClient(mongo_url)
+                db = client[db_name]
+                
+                await db.solicitudes_netcash.update_one(
+                    {"id": solicitud_id},
+                    {
+                        "$set": {
+                            "requiere_revision_manual": True,
+                            "error_id": error_id,
+                            "error_timestamp": datetime.now().isoformat(),
+                            "error_detalle": {
+                                "handler": "recibir_comprobante",
+                                "tipo": type(e).__name__,
+                                "mensaje": str(e),
+                                "telegram_user_id": telegram_user_id,
+                                "archivo": nombre_archivo
+                            }
+                        }
+                    }
+                )
+                logger.info(f"[{error_id}] ✅ Solicitud marcada para revisión manual")
+            except Exception as db_error:
+                logger.error(f"[{error_id}] ❌ No se pudo marcar solicitud para revisión: {str(db_error)}")
+            
+            # MENSAJE ESPECÍFICO AL USUARIO según el tipo de error
+            mensaje_error = ""
+            
+            # Identificar tipos de error comunes y dar mensajes específicos
+            error_tipo = type(e).__name__
+            error_mensaje = str(e).lower()
+            
+            if "pdf" in error_mensaje or "read" in error_mensaje or "corrupt" in error_mensaje:
+                # Error de lectura del PDF
+                mensaje_error = "⚠️ **No pudimos leer correctamente tu comprobante.**\n\n"
+                mensaje_error += "Esto puede ocurrir si:\n"
+                mensaje_error += "• El PDF está dañado o corrupto\n"
+                mensaje_error += "• Es una imagen escaneada sin texto seleccionable\n"
+                mensaje_error += "• El archivo no es un PDF válido\n\n"
+                mensaje_error += "💡 **Solución:**\n"
+                mensaje_error += "Por favor, intenta:\n"
+                mensaje_error += "1. Exportar el comprobante nuevamente desde tu banca en línea\n"
+                mensaje_error += "2. Tomar una captura de pantalla clara del comprobante\n"
+                mensaje_error += "3. Asegurarte de que el archivo esté completo y se pueda abrir\n\n"
+            elif "vault" in error_mensaje or "validador" in error_mensaje:
+                # Error en el validador
+                mensaje_error = "⚠️ **Tuvimos un problema al validar tu comprobante.**\n\n"
+                mensaje_error += "El archivo se recibió correctamente, pero nuestro sistema de validación encontró un problema.\n\n"
+                mensaje_error += "💡 **No te preocupes:**\n"
+                mensaje_error += "• Tu comprobante SÍ está guardado\n"
+                mensaje_error += "• Ana o un enlace de nuestro equipo lo revisará manualmente\n"
+                mensaje_error += "• Te contactaremos para continuar con tu operación\n\n"
+            else:
+                # Error genérico pero con más info
+                mensaje_error = "⚠️ **Tuvimos un problema técnico al procesar tu comprobante.**\n\n"
+                mensaje_error += "✅ **Tu archivo SÍ se recibió** y está guardado de forma segura.\n\n"
+                mensaje_error += "👤 Ana o un enlace de nuestro equipo revisará tu comprobante manualmente y te contactará pronto para continuar con tu operación.\n\n"
+            
+            mensaje_error += f"📋 **ID de seguimiento:** `{error_id}`\n\n"
+            mensaje_error += "Por favor comparte este ID si contactas a soporte."
+            
+            try:
+                await update.message.reply_text(mensaje_error, parse_mode="Markdown")
+            except Exception as msg_error:
+                logger.error(f"[{error_id}] No se pudo enviar mensaje de error al usuario: {str(msg_error)}")
+                # Intentar sin markdown
+                try:
+                    await update.message.reply_text(
+                        f"⚠️ Tuvimos un problema al procesar tu comprobante.\n\n"
+                        f"Tu archivo está guardado y será revisado manualmente.\n\n"
+                        f"ID de seguimiento: {error_id}"
+                    )
+                except:
+                    pass
+            
             return NC_ESPERANDO_COMPROBANTE
     
     async def agregar_otro_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
