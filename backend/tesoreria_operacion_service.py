@@ -456,18 +456,6 @@ class TesoreriaOperacionService:
             logger.error(f"[TesoreriaOp] ❌ Error enviando correo: {str(e)}")
             logger.info(f"[TesoreriaOp] CSV guardado localmente en: {csv_path_permanente}")
             return False
-            
-            with open(csv_path_saved, 'w', encoding='utf-8') as f:
-                f.write(layout_csv)
-            
-            logger.info(f"[TesoreriaOp] CSV guardado localmente en: {csv_path_saved}")
-        
-        finally:
-            # Limpiar CSV temporal
-            try:
-                os.unlink(csv_path)
-            except:
-                pass
     
     def _generar_cuerpo_correo_operacion(self, solicitud: Dict) -> str:
         """Genera cuerpo HTML del correo por operación"""
