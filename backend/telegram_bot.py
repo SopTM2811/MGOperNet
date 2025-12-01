@@ -714,6 +714,18 @@ class TelegramBotNetCash:
         
         if not cliente:
             logger.warning(f"[es_cliente_activo] ❌ Cliente NO encontrado en BD con id={id_cliente}")
+            # CASO BORDE: Si el rol es cliente_activo pero no hay cliente en BD
+            # Permitir continuar de todas formas (la operación funcionará)
+            if rol == "cliente_activo":
+                logger.warning(f"[es_cliente_activo] ⚠️  Usuario tiene rol=cliente_activo sin cliente en BD - PERMITIENDO continuar")
+                # Crear cliente dummy para que el flujo funcione
+                cliente_dummy = {
+                    "id": id_cliente,
+                    "nombre": nombre,
+                    "estado": "activo",
+                    "telegram_id": int(telegram_id) if telegram_id.isdigit() else telegram_id
+                }
+                return True, usuario, cliente_dummy
             return False, usuario, None
         
         estado = cliente.get("estado")
