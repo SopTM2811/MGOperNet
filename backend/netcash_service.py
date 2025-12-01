@@ -302,7 +302,7 @@ class NetCashService:
             logger.info(f"[NetCash] Comprobante único, procesando validación...")
             
             # Validar comprobante contra cuenta concertadora activa
-            cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
             
             if not cuenta_activa:
                 logger.error(f"[NetCash] No hay cuenta concertadora activa")
@@ -830,7 +830,7 @@ class NetCashService:
             monto_ligas = total_comprobantes_validos - comision_cliente
             
             # Obtener cuenta NetCash utilizada
-            cuenta_activa = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
             cuenta_netcash_info = None
             if cuenta_activa:
                 cuenta_netcash_info = {
