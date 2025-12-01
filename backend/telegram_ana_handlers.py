@@ -256,28 +256,87 @@ class TelegramAnaHandlers:
                 # NUEVO: Procesar operación de tesorería inmediatamente
                 try:
                     logger.info(f"[Ana] Iniciando proceso de tesorería para operación {solicitud_id}")
-                    await update.message.reply_text("⏳ Generando layout y enviando a Tesorería...")
+                    
+                    # Mensaje a ANA (confirmación de que se está procesando)
+                    await update.message.reply_text("⏳ Procesando orden interna para Tesorería...")
                     
                     from tesoreria_operacion_service import tesoreria_operacion_service
                     resultado_tesoreria = await tesoreria_operacion_service.procesar_operacion_tesoreria(solicitud_id)
                     
+                    # Obtener chat_id de Tesorería
+                    tesoreria_chat_id = os.getenv('TELEGRAM_TESORERIA_CHAT_ID')
+                    
                     if resultado_tesoreria and resultado_tesoreria.get('success'):
+                        # Mensaje a ANA (resumen simple)
                         await update.message.reply_text(
-                            "✅ **Layout individual generado y enviado a Tesorería.**\n\n"
-                            "📧 Toño recibirá un correo con el layout CSV y los comprobantes del cliente."
+                            "✅ **Orden procesada correctamente.**\n\n"
+                            "El layout fue generado y enviado a Tesorería."
                         )
+                        
+                        # Mensaje OPERATIVO a TESORERÍA (detallado)
+                        if tesoreria_chat_id and tesoreria_chat_id != "PENDIENTE_CONFIGURAR":
+                            folio_mbco = resultado_tesoreria.get('folio_mbco', 'N/A')
+                            solicitud_data = await db.solicitudes_netcash.find_one(
+                                {'id': solicitud_id},
+                                {'_id': 0}
+                            )
+                            
+                            mensaje_tesoreria = (
+                                "🆕 **Nueva orden interna generada**\n\n"
+                                f"📋 Folio MBco: **{folio_mbco}**\n"
+                                f"👤 Cliente: {solicitud_data.get('cliente_nombre', 'N/A')}\n"
+                                f"💰 Capital: ${solicitud_data.get('monto_ligas', 0):,.2f}\n"
+                                f"👥 Beneficiario: {solicitud_data.get('beneficiario', 'N/A')}\n\n"
+                                f"📧 **Correo enviado con:**\n"
+                                f"• Layout CSV individual\n"
+                                f"• Comprobantes del cliente adjuntos\n\n"
+                                f"✅ La orden está lista para procesarse."
+                            )
+                            
+                            try:
+                                await context.bot.send_message(
+                                    chat_id=tesoreria_chat_id,
+                                    text=mensaje_tesoreria,
+                                    parse_mode="Markdown"
+                                )
+                                logger.info(f"[Tesorería] Notificación enviada para {folio_mbco}")
+                            except Exception as e_notif:
+                                logger.error(f"[Tesorería] Error enviando notificación: {str(e_notif)}")
+                        
                         logger.info(f"[Ana] ✅ Operación de tesorería procesada exitosamente")
                     else:
+                        # Mensaje a ANA
                         await update.message.reply_text(
-                            "⚠️ **Orden interna creada, pero hubo un problema enviando a Tesorería.**\n"
-                            "El equipo técnico revisará el caso."
+                            "⚠️ **Orden procesada con advertencias.**\n"
+                            "Verifica el estado en el sistema."
                         )
+                        
+                        # Notificación a TESORERÍA sobre problema
+                        if tesoreria_chat_id and tesoreria_chat_id != "PENDIENTE_CONFIGURAR":
+                            folio_mbco = resultado_tesoreria.get('folio_mbco', 'N/A') if resultado_tesoreria else 'N/A'
+                            mensaje_tesoreria_error = (
+                                "⚠️ **Advertencia en orden interna**\n\n"
+                                f"📋 Folio MBco: **{folio_mbco}**\n"
+                                f"❌ Hubo un problema al generar o enviar el correo.\n\n"
+                                f"Por favor, revisar manualmente."
+                            )
+                            
+                            try:
+                                await context.bot.send_message(
+                                    chat_id=tesoreria_chat_id,
+                                    text=mensaje_tesoreria_error,
+                                    parse_mode="Markdown"
+                                )
+                            except Exception as e_notif:
+                                logger.error(f"[Tesorería] Error enviando notificación: {str(e_notif)}")
+                        
                         logger.warning(f"[Ana] ⚠️ Error procesando tesorería para {solicitud_id}")
                         
                 except Exception as e:
                     logger.error(f"[Ana] Error en proceso de tesorería: {str(e)}")
+                    # Mensaje a ANA
                     await update.message.reply_text(
-                        "⚠️ **Folio asignado, pero error enviando a Tesorería.**\n"
+                        "⚠️ **Error al procesar orden.**\n"
                         "Contacta al equipo técnico."
                     )
                     import traceback
