@@ -1169,10 +1169,15 @@ async def startup_event():
     from cuentas_proveedor_service import cuentas_proveedor_service
     await cuentas_proveedor_service.sembrar_cuentas_iniciales()
     
-    # Iniciar scheduler de Tesorería (lotes cada 15 minutos)
+    # Iniciar scheduler de Tesorería (recordatorios cada 15 minutos)
     from scheduler_tesoreria import scheduler_tesoreria
     scheduler_tesoreria.start()
     logger.info("[Server] Scheduler de Tesorería iniciado")
+    
+    # Iniciar scheduler de Monitoreo de Emails (Fase 2 - cada 15 minutos)
+    from scheduler_email_monitor import email_monitor_scheduler
+    email_monitor_scheduler.start()
+    logger.info("[Server] Scheduler de Monitoreo de Emails iniciado")
 
 
 @app.on_event("shutdown")
