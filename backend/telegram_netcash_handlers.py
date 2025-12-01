@@ -900,10 +900,10 @@ class TelegramNetCashHandlers:
             for idx, freq in enumerate(frecuentes, 1):
                 logger.info(f"  {idx}. {freq['beneficiario']} - IDMEX: {freq['idmex']}")
             
-            mensaje = "👤 **Paso 2 de 3: Beneficiario + IDMEX**\n\n"
+            mensaje = "👤 <b>Paso 2 de 3: Beneficiario + IDMEX</b>\n\n"
             
             if frecuentes:
-                mensaje += "🔁 **Beneficiarios frecuentes:**\n\n"
+                mensaje += "🔁 <b>Beneficiarios frecuentes:</b>\n\n"
                 for idx, freq in enumerate(frecuentes, 1):
                     mensaje += f"{idx}. {freq['beneficiario']} – IDMEX: {freq['idmex']}\n"
                 
@@ -920,16 +920,16 @@ class TelegramNetCashHandlers:
                     keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
                 
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                await query.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+                await query.edit_message_text(mensaje, parse_mode="HTML", reply_markup=reply_markup)
             else:
                 # No hay frecuentes - captura manual directa
-                mensaje += "Por favor envíame el **nombre completo del beneficiario**.\n\n"
+                mensaje += "Por favor envíame el <b>nombre completo del beneficiario</b>.\n\n"
                 mensaje += "El nombre debe tener:\n"
                 mensaje += "• Mínimo 3 palabras (nombre + dos apellidos)\n"
                 mensaje += "• Sin números\n\n"
-                mensaje += "**Ejemplo:** ANDRÉS MANUEL LÓPEZ OBRADOR"
+                mensaje += "<b>Ejemplo:</b> ANDRÉS MANUEL LÓPEZ OBRADOR"
                 
-                await query.message.reply_text(mensaje, parse_mode="Markdown")
+                await query.edit_message_text(mensaje, parse_mode="HTML")
         
         except Exception as e:
             logger.error(f"[NC Telegram] Error mostrando paso 2: {str(e)}")
