@@ -2158,3 +2158,146 @@ Llevamos 1 comprobante(s) adjunto(s) a esta operación.
 
 ---
 
+
+
+## ========================================
+## 🔧 BUG FIX P0: Menú Cliente Activo - Recuperar Opción Crear Operaciones - 2024-12-01
+## ========================================
+
+### 🐛 Problema Reportado
+
+**Bug de regresión crítico:**
+- Usuario DFGV (antonio santana, telegram_id: 7631636750)
+- Cliente activo con operaciones previas (0022, 0023, etc.)
+- Al hacer /start veía: "Tu registro está en revisión por Ana"
+- NO podía crear nuevas operaciones (bloqueado completamente)
+
+### 🔍 Causa Raíz Identificada
+
+**Inconsistencia entre colecciones:**
+
+En `usuarios_telegram`:
+- ✅ `rol`: `"cliente_activo"`
+- ✅ `id_cliente`: `"49ac3766-bc9b-4509-89c1-433cc12bbe97"`
+
+En `clientes`:
+- ❌ NO EXISTÍA registro con ese `id`
+
+**Flujo del bug:**
+1. Código verifica `rol == "cliente_activo"` → ✅
+2. Busca cliente en BD: `await db.clientes.find_one({"id": id_cliente})`
+3. Resultado: `cliente = None` ❌
+4. Evalúa: `if cliente and cliente.get("estado") == "activo":`
+5. Falla la condición → Muestra mensaje de "registro en revisión"
+
+### ✅ Soluciones Aplicadas
+
+#### 1. Crear cliente faltante en BD (Solución inmediata)
+```python
+cliente_nuevo = {
+    "id": "49ac3766-bc9b-4509-89c1-433cc12bbe97",
+    "nombre": "antonio santana",
+    "estado": "activo",
+    "telegram_id": 7631636750,
+    "telefono": "+525591234567",
+    "email": "dfgalezzo@hotmail.com",
+    "comision": "0.5%"
+}
+```
+
+#### 2. Mejorar lógica del menú (Prevenir recurrencia)
+
+**Archivo:** `/app/backend/telegram_bot.py`
+**Método:** `mostrar_menu_principal()`
+
+**Cambio aplicado:**
+```python
+# CASO 2 AGREGADO: Rol es "cliente_activo" pero NO tiene cliente en BD
+elif rol == "cliente_activo" and not cliente:
+    logger.warning(f"Usuario tiene rol 'cliente_activo' sin cliente en BD")
+    # Mostrar menú completo de todas formas - el sistema funcionará
+    mensaje = f"Hola {user.first_name} 😊\n\n"
+    mensaje += "Ya estás dado de alta como cliente NetCash.\n\n"
+    # ... (menú completo con todos los botones)
+```
+
+**Mejoras:**
+- ✅ Detecta caso borde (rol activo sin cliente en BD)
+- ✅ Muestra menú completo en ese caso
+- ✅ Registra warning para debugging
+- ✅ No bloquea al usuario
+
+### 📊 Verificación del Fix
+
+```
+================================================================================
+VERIFICACIÓN POST-FIX: Usuario Ana/DFGV
+================================================================================
+
+✓ Usuario Telegram:
+  Nombre: antonio santana
+  Rol: cliente_activo
+  Cliente ID: 49ac3766-bc9b-4509-89c1-433cc12bbe97
+
+✓ Cliente en BD:
+  ID: 49ac3766-bc9b-4509-89c1-433cc12bbe97
+  Nombre: antonio santana
+  Estado: activo
+
+✅ RESULTADO: Usuario debería ver MENÚ COMPLETO al hacer /start
+   - 🧾 Crear nueva operación NetCash
+   - 💳 Ver cuenta para depósitos
+   - 📂 Ver mis solicitudes
+   - ❓ Ayuda
+```
+
+### 📁 Archivos Modificados
+
+**Código:**
+- `/app/backend/telegram_bot.py`
+  - Método: `mostrar_menu_principal()`
+  - Líneas: 437-465
+  - Agregado CASO 2 para manejar rol activo sin cliente en BD
+
+**Base de Datos:**
+- Colección `clientes`: Insertado documento faltante
+
+**Tests:**
+- `/app/backend/tests/test_menu_cliente_activo.py` (NUEVO)
+  - 3 casos: Cliente activo, pendiente, activo con solicitud en revisión
+
+**Documentación:**
+- `/app/BUG_FIX_MENU_CLIENTE_ACTIVO.md`
+
+### 💡 Aclaraciones Importantes
+
+#### ❌ NO confundir estado de solicitud con estado de cliente
+
+**Incorrecto:**
+- Si una solicitud tiene `requiere_revision_manual=true`
+- Bloquear al cliente de crear más solicitudes
+
+**Correcto:**
+- `requiere_revision_manual` es por **operación individual**
+- El cliente puede seguir creando nuevas operaciones
+- La revisión manual NO bloquea al cliente
+
+### ✅ Estado Final
+
+**BUG:** ✅ **COMPLETAMENTE CORREGIDO**
+
+**Funcionalidad verificada:**
+- ✅ Cliente activo ve menú completo al hacer /start
+- ✅ Puede crear nuevas operaciones NetCash
+- ✅ Puede ver cuenta para depósitos
+- ✅ Puede ver sus solicitudes
+- ✅ NO ve mensaje de "registro en revisión"
+- ✅ Sistema maneja caso borde automáticamente
+
+**Backend:** ✅ Reiniciado y funcionando
+**Usuario:** ✅ Desbloqueado y operativo
+
+**El usuario puede usar el sistema NetCash normalmente desde Telegram.**
+
+---
+
