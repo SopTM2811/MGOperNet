@@ -495,8 +495,14 @@ class TesoreriaOperacionService:
         
         for i, comp in enumerate(comprobantes_validos, 1):
             monto = comp.get('monto_detectado', 0)
-            cuenta = comp.get('cuenta_detectada', {})
-            clabe = cuenta.get('clabe', 'N/A') if cuenta else 'N/A'
+            # Obtener CLABE real detectada en el comprobante
+            cuenta_detectada = comp.get('cuenta_detectada', {})
+            clabe = cuenta_detectada.get('clabe', 'N/A') if isinstance(cuenta_detectada, dict) else 'N/A'
+            
+            # Si no hay cuenta_detectada, intentar con cuenta_stp_extraida (campo alternativo)
+            if clabe == 'N/A':
+                clabe = comp.get('cuenta_stp_extraida', 'N/A')
+            
             cuerpo += f"<li>Comprobante {i}: ${monto:,.2f} – Cuenta destino: {clabe}</li>"
         
         cuerpo += f"<li><strong>→ Total depósitos detectados: ${total_depositos:,.2f}</strong></li>"
