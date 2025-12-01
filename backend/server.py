@@ -1182,10 +1182,14 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    # Detener scheduler
+    # Detener schedulers
     from scheduler_tesoreria import scheduler_tesoreria
     scheduler_tesoreria.stop()
     logger.info("[Server] Scheduler de Tesorería detenido")
+    
+    from scheduler_email_monitor import email_monitor_scheduler
+    email_monitor_scheduler.shutdown()
+    logger.info("[Server] Scheduler de Monitoreo de Emails detenido")
     
     client.close()
 
