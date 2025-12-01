@@ -1174,8 +1174,7 @@ class NetCashService:
             
             return {
                 "success": True,
-                "solicitud": solicitud_actualizada,
-                "orden_interna": orden_interna
+                "solicitud": solicitud_actualizada
             }
             
         except Exception as e:
