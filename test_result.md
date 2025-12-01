@@ -1445,3 +1445,160 @@ te contactará pronto para continuar.
 
 **Ningún comprobante puede "romper" el flujo del cliente.**
 
+
+## ========================================
+## VERIFICACIÓN COMPLETA TESORERÍA - 2025-12-01
+## ========================================
+
+### 🧪 Suite Completa de Tests Ejecutada
+
+**Archivo:** `/app/backend/tests/test_completo_tesoreria_layout_adjuntos.py`
+
+**Resultado:** ✅ 5/5 TESTS PASADOS
+
+#### Test 1: Nombre Archivo CSV ✅
+```
+TEST-0001-T-99 → LTMBCO_TESTx0001xTx99.csv
+2367-123-R-11 → LTMBCO_2367x123xRx11.csv
+MBCO-9999-P-01 → LTMBCO_MBCOx9999xPx01.csv
+```
+
+#### Test 2: CLABE Comisión DNS Correcta ✅
+```
+Layout con 6 filas:
+  - 5 filas capital → CLABE: 012680001255709482 (AFFORDABLE)
+  - 1 fila comisión → CLABE: 058680000012912655 (UETACOP)
+
+Beneficiario: COMERCIALIZADORA UETACOP SA DE CV
+Monto: $3,750.00 (0.375% de $1,000,000)
+```
+
+#### Test 3: Comprobantes Adjuntados ✅
+```
+Operación con 3 comprobantes:
+  - 2 válidos → Adjuntados
+  - 1 inválido → NO adjuntado
+
+Resultado: 3 adjuntos (1 CSV + 2 comprobantes)
+```
+
+#### Test 4: No Envío Doble ✅
+```
+Intento 1: Marcar como enviado
+Intento 2: ⚠️ CORREO YA ENVIADO - Saltando reenvío
+
+Resultado: success=False, evitó duplicado
+```
+
+#### Test 5: Duplicados Entre Operaciones ✅
+```
+Operación 1: Agregar PDF → agregado=True
+Operación 2: Mismo PDF → agregado=False
+  ⚠️ COMPROBANTE DUPLICADO GLOBAL detectado
+  razon=duplicado_global
+
+Sistema rechazó correctamente el duplicado
+```
+
+---
+
+### 📁 Layout CSV Verificado
+
+**Archivo:** `/app/backend/uploads/layouts_operaciones/LTMBCO_2456x234xDx11.csv`
+
+```csv
+Clabe destinatario,Nombre o razon social destinatario,Monto,Concepto
+012680001255709482,AFFORDABLE MEDICAL SERVICES SC,495000.00,MBco 2456x234xDx11
+012680001255709482,AFFORDABLE MEDICAL SERVICES SC,495000.00,MBco 2456x234xDx11
+012680001255709482,AFFORDABLE MEDICAL SERVICES SC,495000.00,MBco 2456x234xDx11
+012680001255709482,AFFORDABLE MEDICAL SERVICES SC,495000.00,MBco 2456x234xDx11
+058680000012912655,COMERCIALIZADORA UETACOP SA DE CV,7425.00,MBco 2456x234xDx11 COMISION
+```
+
+✅ Nombre archivo correcto: `LTMBCO_2456x234xDx11.csv`
+✅ Capital: CLABE `012680001255709482`
+✅ Comisión DNS: CLABE `058680000012912655`
+
+---
+
+### 📧 Estructura del Correo
+
+```
+De: bbvanetcashbot@gmail.com
+Para: dfgalezzo@hotmail.com
+Asunto: NetCash – Orden de dispersión {folio} – {cliente}
+
+📎 Adjuntos:
+  1. LTMBCO_{folio_con_x}.csv    ← Layout
+  2. comprobante_cliente_1.pdf    ← Comprobante original
+  3. comprobante_cliente_2.pdf    ← Más si hay
+```
+
+---
+
+### ✅ Funcionalidades Verificadas
+
+1. ✅ **Nombre archivo CSV**: Formato `LTMBCO_{folio_con_x}.csv`
+2. ✅ **CLABE comisión DNS**: `058680000012912655` (UETACOP)
+3. ✅ **CLABE capital**: `012680001255709482` (AFFORDABLE)
+4. ✅ **Comprobantes adjuntos**: Todos los válidos se adjuntan
+5. ✅ **Anti-duplicado correo**: Flag `correo_tesoreria_enviado` previene reenvío
+6. ✅ **Duplicados globales**: Hash SHA-256 detecta mismo PDF en operaciones distintas
+
+---
+
+### 🔧 Troubleshooting para el Usuario
+
+**Si no ve los cambios:**
+
+1. Verificar backend actualizado:
+   ```bash
+   sudo supervisorctl status backend
+   tail -20 /var/log/supervisor/backend.err.log
+   ```
+
+2. Verificar cuentas en BD:
+   ```bash
+   cd /app/backend && python3 -c "
+   import asyncio
+   from cuentas_proveedor_service import cuentas_proveedor_service
+   
+   async def check():
+       comision = await cuentas_proveedor_service.obtener_cuenta_activa('comision_dns')
+       print('CLABE comisión:', comision.get('clabe'))
+       assert comision.get('clabe') == '058680000012912655'
+   
+   asyncio.run(check())
+   "
+   ```
+
+3. Generar layout nuevo y verificar:
+   ```bash
+   cd /app/backend && python3 tests/test_completo_tesoreria_layout_adjuntos.py
+   ```
+
+4. Ver último layout generado:
+   ```bash
+   ls -lht /app/backend/uploads/layouts_operaciones/ | head -3
+   cat $(ls -t /app/backend/uploads/layouts_operaciones/*.csv | head -1)
+   ```
+
+---
+
+### 📝 Documentación Completa
+
+- `/app/VERIFICACION_COMPLETA_TESORERIA.md` - Guía exhaustiva de verificación
+- `/app/backend/tests/test_completo_tesoreria_layout_adjuntos.py` - Suite completa de tests
+
+---
+
+### 🎯 Estado Final
+
+**Tests:** 5/5 ✅ PASADOS  
+**Layout:** ✅ Formato correcto  
+**CLABEs:** ✅ Correctas  
+**Adjuntos:** ✅ Todos incluidos  
+**Duplicados:** ✅ Detectados  
+
+**El sistema está funcionando correctamente según especificaciones.**
+
