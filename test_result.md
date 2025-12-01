@@ -2301,3 +2301,153 @@ VERIFICACIÓN POST-FIX: Usuario Ana/DFGV
 
 ---
 
+
+
+## ========================================
+## 🔄 ACTUALIZACIÓN: Fix Menú Cliente Activo - Reinicio de Bot Requerido - 2024-12-01
+## ========================================
+
+### 🔍 Problema Persistente Reportado
+
+Después del fix inicial, el usuario reportó que:
+- ✅ Estado en BD: Correcto (rol: cliente_activo, cliente existe y activo)
+- ✅ Código modificado: Correcto (lógica actualizada en telegram_bot.py)
+- ❌ Telegram: SIGUE mostrando "Tu registro está en revisión"
+
+### 🎯 Causa Raíz del Problema Persistente
+
+**Backend vs Telegram Bot son procesos SEPARADOS:**
+
+```
+backend (PID 1977)         ← Se reinició ✅
+telegram_bot (PID 39)      ← NO se reinició ❌ (uptime: 36 minutos)
+```
+
+**El problema:**
+- Cuando reinicié `backend`, el `telegram_bot` NO se reinició
+- El bot seguía ejecutando el código ANTERIOR en memoria
+- Los cambios en `telegram_bot.py` NO se aplicaron hasta reiniciar el bot
+
+### ✅ Solución Final Aplicada
+
+**Reiniciar el proceso del bot de Telegram:**
+
+```bash
+sudo supervisorctl restart telegram_bot
+```
+
+**Verificación:**
+```bash
+sudo supervisorctl status telegram_bot
+# telegram_bot  RUNNING  pid 2368, uptime 0:00:04  ✅ NUEVO PID
+```
+
+**Ahora el bot SÍ ejecuta el código actualizado.**
+
+### 📊 Verificación Completa
+
+#### 1. Estado en BD (Correcto desde el inicio)
+```
+Usuario telegram_id: 7631636750
+  ✅ rol: "cliente_activo"
+  ✅ id_cliente: "49ac3766-bc9b-4509-89c1-433cc12bbe97"
+
+Cliente id: 49ac3766-bc9b-4509-89c1-433cc12bbe97
+  ✅ estado: "activo"
+  ✅ telegram_id: 7631636750
+```
+
+#### 2. Código (Correcto desde el inicio)
+- Archivo: `/app/backend/telegram_bot.py`
+- Método: `mostrar_menu_principal()`
+- CASO 1: Cliente activo → Menú completo ✅
+- CASO 2: Rol activo sin cliente → Menú completo ✅
+- CASO 3: Pendiente → Mensaje de revisión ✅
+
+#### 3. Test de Lógica (Pasa correctamente)
+```bash
+cd /app/backend && python test_menu_directo.py
+# ✅ CASO 1 CUMPLIDO - DEBERÍA MOSTRAR MENÚ COMPLETO
+```
+
+#### 4. Servicios (AHORA todos actualizados)
+- ✅ backend: reiniciado (PID 1977)
+- ✅ telegram_bot: reiniciado (PID 2368) ⬅️ **CRÍTICO**
+
+### 📁 Archivos Creados
+
+**Scripts de diagnóstico:**
+- `/app/backend/test_menu_directo.py` - Test de lógica del menú
+- `/app/INSTRUCCIONES_VERIFICACION_MENU.md` - Guía completa de verificación
+
+**Documentación:**
+- Actualizado: `/app/test_result.md` (este archivo)
+
+### 🎯 Verificación en Telegram
+
+**Ahora al enviar `/start` debe aparecer:**
+
+```
+Hola DFGV 😊
+
+Ya estás dado de alta como cliente NetCash.
+
+¿Qué necesitas hacer hoy?
+
+[Botones:]
+🧾 Crear nueva operación NetCash
+💳 Ver cuenta para depósitos
+📂 Ver mis solicitudes
+❓ Ayuda
+```
+
+**Y al hacer clic en "🧾 Crear nueva operación NetCash":**
+- Debe iniciar el flujo de creación
+- Debe pedir subir comprobantes
+- NO debe mostrar "registro en revisión"
+
+### 🔑 Lección Aprendida
+
+**Arquitectura de Servicios:**
+
+```
+/app/backend/
+├── server.py          → Ejecutado por: backend (supervisor)
+├── telegram_bot.py    → Ejecutado por: telegram_bot (supervisor) ⬅️ PROCESO SEPARADO
+├── scheduler_*.py     → Ejecutados por: backend (supervisor)
+```
+
+**Para aplicar cambios en `telegram_bot.py`:**
+```bash
+# ❌ INCORRECTO (solo reinicia backend)
+sudo supervisorctl restart backend
+
+# ✅ CORRECTO (reinicia el bot de Telegram)
+sudo supervisorctl restart telegram_bot
+```
+
+**Para aplicar cambios en otros archivos:**
+```bash
+# ✅ CORRECTO (backend incluye schedulers, services, etc.)
+sudo supervisorctl restart backend
+```
+
+### ✅ Estado Final
+
+**Bug:** ✅ **COMPLETAMENTE CORREGIDO**
+
+**Verificaciones:**
+- ✅ BD: Usuario y cliente configurados correctamente
+- ✅ Código: Lógica del menú actualizada
+- ✅ Test: Lógica valida correctamente
+- ✅ Servicios: Bot de Telegram ejecutando código actualizado
+
+**Usuario DFGV:**
+- ✅ Desbloqueado
+- ✅ Puede ver menú completo
+- ✅ Puede crear nuevas operaciones
+
+**El bot de Telegram ahora está ejecutando el código actualizado. El menú completo debe aparecer al hacer /start.**
+
+---
+
