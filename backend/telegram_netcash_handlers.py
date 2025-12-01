@@ -107,7 +107,7 @@ class TelegramNetCashHandlers:
                 return
             
             # Obtener cuenta concertadora activa del motor
-            cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
             logger.info(f"[NC Telegram] cuenta_activa usada en ver_cuenta_depositos: {cuenta}")
             
             if not cuenta:
@@ -211,7 +211,7 @@ class TelegramNetCashHandlers:
                 return ConversationHandler.END
             
             # Obtener y mostrar cuenta concertadora
-            cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+            cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
             
             mensaje = "✅ **Iniciemos tu operación NetCash**\n\n"
             
@@ -685,7 +685,7 @@ class TelegramNetCashHandlers:
                     mensaje += f"**Detalle:** {razon}\n\n"
                 
                 # Obtener cuenta activa para mostrar
-                cuenta = await config_cuentas_service.obtener_cuenta_activa(TipoCuenta.CONCERTADORA)
+                cuenta = await cuenta_deposito_service.obtener_cuenta_activa()
                 if cuenta:
                     mensaje += "**La cuenta NetCash autorizada es:**\n"
                     mensaje += f"• Banco: {cuenta.get('banco')}\n"
