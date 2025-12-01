@@ -206,11 +206,14 @@ class TesoreriaOperacionService:
                 logger.warning(f"[TesoreriaOp] ⚠️ CORREO YA ENVIADO para operación {folio_mbco}")
                 logger.warning(f"[TesoreriaOp] Fecha envío previo: {solicitud.get('fecha_envio_tesoreria')}")
                 logger.warning(f"[TesoreriaOp] Saltando reenvío para evitar duplicado")
+                # SUCCESS = TRUE porque la operación YA está completa (correo ya enviado)
                 return {
-                    'success': False,
+                    'success': True,  # ✅ CORRECTO: El correo ya fue enviado antes
                     'solicitud_id': solicitud_id,
                     'folio_mbco': folio_mbco,
-                    'mensaje': 'Correo ya fue enviado previamente'
+                    'mensaje': 'Correo ya fue enviado previamente',
+                    'correo_enviado': True,  # ✅ Flag explícito
+                    'ya_enviado_antes': True  # ✅ Indicador de que fue envío previo
                 }
             
             logger.info(f"[TesoreriaOp] Procesando operación:")
