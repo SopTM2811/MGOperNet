@@ -172,9 +172,10 @@ class TesoreriaOperacionService:
     async def procesar_operacion_tesoreria(self, solicitud_id: str) -> Optional[Dict]:
         """
         Procesa una operación individual de tesorería:
-        1. Genera layout CSV individual
-        2. Envía correo a Tesorería con layout y comprobantes
-        3. Actualiza estado de la solicitud a 'enviado_a_tesoreria'
+        1. Verifica que no se haya enviado ya (evita duplicados)
+        2. Genera layout CSV individual
+        3. Envía correo a Tesorería con layout y comprobantes
+        4. Actualiza estado de la solicitud a 'enviado_a_tesoreria'
         
         Args:
             solicitud_id: ID de la solicitud a procesar
@@ -199,6 +200,19 @@ class TesoreriaOperacionService:
             folio_mbco = solicitud.get('folio_mbco', 'SIN-FOLIO')
             cliente = solicitud.get('cliente_nombre', 'N/A')
             
+            # ⚠️ PROTECCIÓN ANTI-DUPLICADOS (Ajuste 4)
+            # Verificar si ya se envió el correo a Tesorería
+            if solicitud.get('correo_tesoreria_enviado'):
+                logger.warning(f"[TesoreriaOp] ⚠️ CORREO YA ENVIADO para operación {folio_mbco}")
+                logger.warning(f"[TesoreriaOp] Fecha envío previo: {solicitud.get('fecha_envio_tesoreria')}")
+                logger.warning(f"[TesoreriaOp] Saltando reenvío para evitar duplicado")
+                return {
+                    'success': False,
+                    'solicitud_id': solicitud_id,
+                    'folio_mbco': folio_mbco,
+                    'mensaje': 'Correo ya fue enviado previamente'
+                }
+            
             logger.info(f"[TesoreriaOp] Procesando operación:")
             logger.info(f"[TesoreriaOp]   Folio MBco: {folio_mbco}")
             logger.info(f"[TesoreriaOp]   Cliente: {cliente}")
@@ -218,8 +232,8 @@ class TesoreriaOperacionService:
             # 3. Generar layout CSV individual
             layout_csv = await self._generar_layout_operacion(solicitud)
             
-            # 4. Enviar correo a Tesorería
-            await self._enviar_correo_operacion(solicitud, layout_csv)
+            # 4. Enviar correo a Tesorería (con comprobantes adjuntos)
+            email_enviado = await self._enviar_correo_operacion(solicitud, layout_csv)
             
             # 5. Actualizar estado de la solicitud
             fecha_envio = datetime.now(timezone.utc)
@@ -230,6 +244,7 @@ class TesoreriaOperacionService:
                     '$set': {
                         'estado': 'enviado_a_tesoreria',
                         'fecha_envio_tesoreria': fecha_envio,
+                        'correo_tesoreria_enviado': True,  # ⚠️ NUEVO FLAG ANTI-DUPLICADOS
                         'layout_individual_generado': True,
                         'updated_at': fecha_envio
                     },
