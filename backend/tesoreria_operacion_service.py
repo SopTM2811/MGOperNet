@@ -356,9 +356,12 @@ class TesoreriaOperacionService:
         
         return csv_content
     
-    async def _enviar_correo_operacion(self, solicitud: Dict, layout_csv: str):
+    async def _enviar_correo_operacion(self, solicitud: Dict, layout_csv: str) -> bool:
         """
         Envía correo a Tesorería con layout y comprobantes de la operación
+        
+        Returns:
+            bool: True si se envió correctamente, False si no
         """
         folio_mbco = solicitud.get('folio_mbco', 'SIN-FOLIO')
         folio_concepto = self._convertir_folio_para_concepto(folio_mbco)
@@ -372,43 +375,54 @@ class TesoreriaOperacionService:
         # Cuerpo
         cuerpo = self._generar_cuerpo_correo_operacion(solicitud)
         
-        # Preparar adjuntos
-        # 1. Guardar CSV temporal
-        import tempfile
+        # ⚠️ AJUSTE 2: Nombre correcto del archivo CSV
+        # Formato: LTMBCO_{folio_mbco_con_x}.csv
         csv_filename = f"LTMBCO_{folio_concepto}.csv"
         
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as f:
+        # Preparar adjuntos
+        # 1. Guardar CSV temporal con el nombre correcto
+        import tempfile
+        
+        # Crear directorio permanente para layouts
+        csv_dir = Path("/app/backend/uploads/layouts_operaciones")
+        csv_dir.mkdir(parents=True, exist_ok=True)
+        csv_path_permanente = csv_dir / csv_filename
+        
+        # Guardar CSV permanentemente (para tener respaldo)
+        with open(csv_path_permanente, 'w', encoding='utf-8') as f:
             f.write(layout_csv)
-            csv_path = f.name
         
-        adjuntos = [csv_path]
+        logger.info(f"[TesoreriaOp] CSV guardado permanentemente: {csv_path_permanente}")
         
-        # 2. Agregar comprobantes del cliente
+        # Usar el archivo permanente para adjuntar
+        adjuntos = [str(csv_path_permanente)]
+        
+        # ⚠️ AJUSTE 3: Agregar comprobantes del cliente (CORREGIDO)
+        # El campo correcto es 'archivo_url', no 'ruta_archivo'
         comprobantes = solicitud.get('comprobantes', [])
+        comprobantes_adjuntos = 0
+        
         for comp in comprobantes:
             if comp.get('es_valido') and not comp.get('es_duplicado'):
-                ruta = comp.get('ruta_archivo')
+                # Usar archivo_url que es el campo correcto
+                ruta = comp.get('archivo_url')
                 if ruta and Path(ruta).exists():
                     adjuntos.append(ruta)
+                    comprobantes_adjuntos += 1
+                    logger.info(f"[TesoreriaOp] Adjuntando comprobante: {Path(ruta).name}")
+                elif ruta:
+                    logger.warning(f"[TesoreriaOp] Comprobante no encontrado en disco: {ruta}")
         
-        logger.info(f"[TesoreriaOp] Adjuntos: 1 CSV + {len(adjuntos)-1} comprobantes")
+        logger.info(f"[TesoreriaOp] 📎 Adjuntos totales: 1 layout CSV + {comprobantes_adjuntos} comprobante(s) cliente")
         
         # Enviar correo
         from gmail_service import gmail_service
         
         if not gmail_service:
             logger.warning(f"[TesoreriaOp] Gmail service no disponible")
-            
-            # Guardar CSV localmente
-            csv_dir = Path("/app/backend/uploads/layouts_operaciones")
-            csv_dir.mkdir(parents=True, exist_ok=True)
-            csv_path_saved = csv_dir / csv_filename
-            
-            with open(csv_path_saved, 'w', encoding='utf-8') as f:
-                f.write(layout_csv)
-            
-            logger.info(f"[TesoreriaOp] CSV guardado en: {csv_path_saved}")
-            return
+            logger.info(f"[TesoreriaOp] CSV guardado localmente en: {csv_path_permanente}")
+            logger.info(f"[TesoreriaOp] Correo NO enviado - Gmail no configurado")
+            return False
         
         try:
             email_info = await gmail_service.enviar_correo_con_adjuntos(
@@ -420,6 +434,7 @@ class TesoreriaOperacionService:
             
             if email_info:
                 logger.info(f"[TesoreriaOp] ✅ Correo enviado a {self.tesoreria_email}")
+                logger.info(f"[TesoreriaOp] ✅ Adjuntos enviados: {csv_filename} + {comprobantes_adjuntos} comprobante(s)")
                 
                 # Guardar thread_id en la solicitud para poder asociar respuestas
                 solicitud_id = solicitud.get('id')
@@ -433,16 +448,14 @@ class TesoreriaOperacionService:
                     }
                 )
                 logger.info(f"[TesoreriaOp] Thread ID guardado: {email_info['thread_id']}")
+                return True
             else:
                 raise Exception("No se obtuvo información del email enviado")
             
         except Exception as e:
             logger.error(f"[TesoreriaOp] ❌ Error enviando correo: {str(e)}")
-            
-            # Guardar CSV localmente como respaldo
-            csv_dir = Path("/app/backend/uploads/layouts_operaciones")
-            csv_dir.mkdir(parents=True, exist_ok=True)
-            csv_path_saved = csv_dir / csv_filename
+            logger.info(f"[TesoreriaOp] CSV guardado localmente en: {csv_path_permanente}")
+            return False
             
             with open(csv_path_saved, 'w', encoding='utf-8') as f:
                 f.write(layout_csv)
