@@ -252,14 +252,28 @@ class TelegramNetCashHandlers:
     # ==================== PASO 1: RECIBIR COMPROBANTES ====================
     
     async def recibir_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Recibe y procesa comprobante(s) - Paso 1"""
+        """
+        Recibe y procesa comprobante(s) - Paso 1
+        
+        REFORZADO: Try/catch robusto con logging detallado y manejo de errores específico
+        """
         solicitud_id = context.user_data.get('nc_solicitud_id')
         
         if not solicitud_id:
             await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
             return ConversationHandler.END
         
+        # Variables para logging detallado en caso de error
+        telegram_user_id = None
+        nombre_archivo = None
+        file_path = None
+        error_id = None
+        
         try:
+            # Obtener telegram_user_id para logging
+            telegram_user_id = update.effective_user.id if update.effective_user else "UNKNOWN"
+            
+            logger.info(f"[RECIBIR_COMP] Iniciando para solicitud {solicitud_id}, telegram_user_id: {telegram_user_id}")
             # Determinar si es documento o foto
             if update.message.document:
                 file = await update.message.document.get_file()
