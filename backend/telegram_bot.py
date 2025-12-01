@@ -436,8 +436,12 @@ class TelegramBotNetCash:
         # Cliente activo o con id_cliente vinculado
         if id_cliente or rol in ["cliente", "cliente_activo"]:
             # Cliente registrado - verificar estado
-            cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
+            # Si tiene id_cliente, buscar en la colección clientes
+            cliente = None
+            if id_cliente:
+                cliente = await db.clientes.find_one({"id": id_cliente}, {"_id": 0})
             
+            # CASO 1: Cliente existe en BD y está activo
             if cliente and cliente.get("estado") == "activo":
                 # Cliente ACTIVO - mensaje personalizado (NetCash V1)
                 mensaje = f"Hola {user.first_name} 😊\n\n"
@@ -450,8 +454,22 @@ class TelegramBotNetCash:
                     [InlineKeyboardButton("📂 Ver mis solicitudes", callback_data="nc_ver_solicitudes")],
                     [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
                 ]
+            # CASO 2: Rol es "cliente_activo" pero NO tiene cliente en BD (caso borde - debe crearse)
+            elif rol == "cliente_activo" and not cliente:
+                logger.warning(f"[MENU] Usuario {usuario.get('telegram_id')} tiene rol 'cliente_activo' pero sin registro en colección 'clientes'")
+                # Mostrar menú completo de todas formas - el sistema funcionará
+                mensaje = f"Hola {user.first_name} 😊\n\n"
+                mensaje += "Ya estás dado de alta como cliente NetCash.\n\n"
+                mensaje += "¿Qué necesitas hacer hoy?\n"
+                
+                keyboard = [
+                    [InlineKeyboardButton("🧾 Crear nueva operación NetCash", callback_data="nc_crear_operacion")],
+                    [InlineKeyboardButton("💳 Ver cuenta para depósitos", callback_data="nc_ver_cuenta")],
+                    [InlineKeyboardButton("📂 Ver mis solicitudes", callback_data="nc_ver_solicitudes")],
+                    [InlineKeyboardButton("❓ Ayuda", callback_data="ayuda")]
+                ]
+            # CASO 3: Cliente pendiente de validación
             else:
-                # Cliente pendiente de validación
                 mensaje = f"Hola {user.first_name} 😊\n\n"
                 mensaje += "Tu registro está en revisión por Ana.\n\n"
                 mensaje += "Mientras tanto, puedes:\n"
