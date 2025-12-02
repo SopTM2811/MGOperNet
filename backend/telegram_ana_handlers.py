@@ -346,22 +346,17 @@ class TelegramAnaHandlers:
                                     comision_dns = solicitud_data.get('comision_dns_calculada', 0)
                                     total_proveedor = capital + comision_dns
                                     
+                                    # P3: Mensaje según especificación exacta del usuario
                                     mensaje_tesoreria = (
-                                        "🆕 **Nueva orden interna NetCash**\n\n"
-                                        f"📋 Folio NetCash: {solicitud_id}\n"
-                                        f"📋 Folio MBco: **{folio_mbco}**\n"
+                                        "🆕 **Nueva orden interna NetCash lista para Tesorería**\n\n"
+                                        f"📋 Folio NetCash: `{solicitud_id}`\n"
+                                        f"📋 Folio MBco: `{folio_mbco}`\n"
                                         f"👤 Cliente: {cliente_nombre}\n"
                                         f"👥 Beneficiario: {beneficiario}\n"
                                         f"🆔 IDMEX: {idmex}\n"
-                                        f"💰 Total depósitos: ${total_depositos:,.2f}\n\n"
-                                        f"💵 **Dispersión:**\n"
-                                        f"• Capital a proveedor (ligas): ${capital:,.2f}\n"
-                                        f"• Comisión DNS (0.375% capital): ${comision_dns:,.2f}\n"
-                                        f"• **Total a dispersar al proveedor: ${total_proveedor:,.2f}**\n\n"
-                                        f"📧 **Correo enviado con:**\n"
-                                        f"• Layout CSV individual\n"
-                                        f"• Comprobantes del cliente adjuntos\n\n"
-                                        f"✅ La orden está lista para procesarse."
+                                        f"💰 Total depósitos detectados: ${total_depositos:,.2f}\n"
+                                        f"💵 Monto a enviar en ligas: ${capital:,.2f}\n\n"
+                                        f"📎 Comprobantes del cliente y layout fueron enviados por correo a Tesorería."
                                     )
                                     
                                     logger.info(f"[Tesorería-P3] Enviando mensaje a chat_id={tesoreria_chat_id}")
