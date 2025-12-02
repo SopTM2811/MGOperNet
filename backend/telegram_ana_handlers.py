@@ -333,14 +333,17 @@ class TelegramAnaHandlers:
                         logger.warning(f"[Ana] ⚠️ Error procesando tesorería para {solicitud_id}")
                         
                 except Exception as e:
-                    logger.error(f"[Ana] Error en proceso de tesorería: {str(e)}")
-                    # Mensaje a ANA
-                    await update.message.reply_text(
-                        "⚠️ **Error al procesar orden.**\n"
-                        "Contacta al equipo técnico."
-                    )
+                    logger.error(f"[Ana] Exception en proceso de tesorería: {str(e)}")
+                    logger.error(f"[Ana] Tipo de error: {type(e).__name__}")
                     import traceback
                     traceback.print_exc()
+                    
+                    # Mensaje a ANA
+                    await update.message.reply_text(
+                        "⚠️ **Error al procesar orden.**\n\n"
+                        f"Detalle técnico: {str(e)}\n\n"
+                        "Contacta al equipo técnico."
+                    )
                 
             else:
                 error = resultado.get("error", "Error desconocido")
