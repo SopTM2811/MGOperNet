@@ -276,40 +276,61 @@ class TelegramAnaHandlers:
                     
                     if resultado_tesoreria and resultado_tesoreria.get('success'):
                         # Mensaje a ANA (resumen simple)
+                        folio_mbco = resultado_tesoreria.get('folio_mbco', 'N/A')
                         await update.message.reply_text(
                             "✅ **Orden procesada correctamente.**\n\n"
+                            f"Folio MBco: **{folio_mbco}**\n\n"
                             "El layout fue generado y enviado a Tesorería."
                         )
                         
-                        # Mensaje OPERATIVO a TESORERÍA (detallado)
-                        if tesoreria_chat_id and tesoreria_chat_id != "PENDIENTE_CONFIGURAR":
-                            folio_mbco = resultado_tesoreria.get('folio_mbco', 'N/A')
-                            solicitud_data = await db.solicitudes_netcash.find_one(
-                                {'id': solicitud_id},
-                                {'_id': 0}
-                            )
-                            
-                            mensaje_tesoreria = (
-                                "🆕 **Nueva orden interna generada**\n\n"
-                                f"📋 Folio MBco: **{folio_mbco}**\n"
-                                f"👤 Cliente: {solicitud_data.get('cliente_nombre', 'N/A')}\n"
-                                f"💰 Capital: ${solicitud_data.get('monto_ligas', 0):,.2f}\n"
-                                f"👥 Beneficiario: {solicitud_data.get('beneficiario', 'N/A')}\n\n"
-                                f"📧 **Correo enviado con:**\n"
-                                f"• Layout CSV individual\n"
-                                f"• Comprobantes del cliente adjuntos\n\n"
-                                f"✅ La orden está lista para procesarse."
-                            )
-                            
-                            try:
-                                await context.bot.send_message(
-                                    chat_id=tesoreria_chat_id,
-                                    text=mensaje_tesoreria,
-                                    parse_mode="Markdown"
+                        # Mensaje OPERATIVO a TESORERÍA (detallado) - aislado en try-except
+                        try:
+                            if tesoreria_chat_id and tesoreria_chat_id != "PENDIENTE_CONFIGURAR":
+                                solicitud_data = await db.solicitudes_netcash.find_one(
+                                    {'id': solicitud_id},
+                                    {'_id': 0}
                                 )
-                                logger.info(f"[Tesorería] Notificación enviada para {folio_mbco}")
-                            except Exception as e_notif:
-                                logger.error(f"[Tesorería] Error enviando notificación: {str(e_notif)}")
+                                
+                                if solicitud_data:
+                                    # Extraer datos necesarios
+                                    cliente_nombre = solicitud_data.get('cliente_nombre', 'N/A')
+                                    beneficiario = solicitud_data.get('beneficiario_reportado', 'N/A')
+                                    idmex = solicitud_data.get('idmex_reportado', 'N/A')
+                                    total_depositos = solicitud_data.get('total_comprobantes_validos', 0)
+                                    capital = solicitud_data.get('monto_ligas', 0)
+                                    comision_dns = solicitud_data.get('comision_dns_calculada', 0)
+                                    total_proveedor = capital + comision_dns
+                                    
+                                    mensaje_tesoreria = (
+                                        "🆕 **Nueva orden interna NetCash**\n\n"
+                                        f"📋 Folio NetCash: {solicitud_id}\n"
+                                        f"📋 Folio MBco: **{folio_mbco}**\n"
+                                        f"👤 Cliente: {cliente_nombre}\n"
+                                        f"👥 Beneficiario: {beneficiario}\n"
+                                        f"🆔 IDMEX: {idmex}\n"
+                                        f"💰 Total depósitos: ${total_depositos:,.2f}\n\n"
+                                        f"💵 **Dispersión:**\n"
+                                        f"• Capital a proveedor (ligas): ${capital:,.2f}\n"
+                                        f"• Comisión DNS (0.375% capital): ${comision_dns:,.2f}\n"
+                                        f"• **Total a dispersar al proveedor: ${total_proveedor:,.2f}**\n\n"
+                                        f"📧 **Correo enviado con:**\n"
+                                        f"• Layout CSV individual\n"
+                                        f"• Comprobantes del cliente adjuntos\n\n"
+                                        f"✅ La orden está lista para procesarse."
+                                    )
+                                    
+                                    await context.bot.send_message(
+                                        chat_id=tesoreria_chat_id,
+                                        text=mensaje_tesoreria,
+                                        parse_mode="Markdown"
+                                    )
+                                    logger.info(f"[Tesorería] Notificación enviada para {folio_mbco}")
+                                else:
+                                    logger.warning(f"[Tesorería] No se encontró solicitud {solicitud_id} para notificación")
+                        except Exception as e_tesoreria:
+                            # Error al enviar notificación a Tesorería NO debe afectar el mensaje a Ana
+                            logger.error(f"[Tesorería] Error obteniendo datos o enviando notificación: {str(e_tesoreria)}")
+                            logger.error(f"[Tesorería] Esto NO afecta el proceso - el correo ya fue enviado correctamente")
                         
                         logger.info(f"[Ana] ✅ Operación de tesorería procesada exitosamente")
                     else:
