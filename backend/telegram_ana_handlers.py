@@ -364,18 +364,25 @@ class TelegramAnaHandlers:
                                         f"✅ La orden está lista para procesarse."
                                     )
                                     
+                                    logger.info(f"[Tesorería-P3] Enviando mensaje a chat_id={tesoreria_chat_id}")
+                                    logger.info(f"[Tesorería-P3] Contenido: Folio NetCash={solicitud_id}, Folio MBco={folio_mbco}, Cliente={cliente_nombre}")
+                                    
                                     await context.bot.send_message(
                                         chat_id=tesoreria_chat_id,
                                         text=mensaje_tesoreria,
                                         parse_mode="Markdown"
                                     )
-                                    logger.info(f"[Tesorería] Notificación enviada para {folio_mbco}")
-                                else:
-                                    logger.warning(f"[Tesorería] No se encontró solicitud {solicitud_id} para notificación")
+                                    
+                                    logger.info(f"[Tesorería-P3] ✅ Notificación Telegram enviada exitosamente a {tesoreria_chat_id} para folio {folio_mbco}")
+                                    
                         except Exception as e_tesoreria:
                             # Error al enviar notificación a Tesorería NO debe afectar el mensaje a Ana
-                            logger.error(f"[Tesorería] Error obteniendo datos o enviando notificación: {str(e_tesoreria)}")
-                            logger.error(f"[Tesorería] Esto NO afecta el proceso - el correo ya fue enviado correctamente")
+                            logger.exception(f"[Tesorería-P3] ❌ Error al enviar notificación Telegram a Tesorería")
+                            logger.error(f"[Tesorería-P3] Chat ID intentado: {tesoreria_chat_id}")
+                            logger.error(f"[Tesorería-P3] Folio MBco: {folio_mbco}")
+                            logger.error(f"[Tesorería-P3] Solicitud ID: {solicitud_id}")
+                            logger.error(f"[Tesorería-P3] Detalle del error: {str(e_tesoreria)}")
+                            logger.error(f"[Tesorería-P3] NOTA: El correo a Tesorería ya fue enviado correctamente. Este error solo afecta la notificación por Telegram.")
                         
                         logger.info(f"[Ana] ✅ Operación de tesorería procesada exitosamente")
                     else:
