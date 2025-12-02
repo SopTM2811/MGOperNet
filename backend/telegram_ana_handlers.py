@@ -334,10 +334,10 @@ class TelegramAnaHandlers:
                         
                         logger.info(f"[Ana] ✅ Operación de tesorería procesada exitosamente")
                     else:
-                        # Mensaje a ANA
+                        # Mensaje a ANA cuando NO se pudo procesar la orden
                         await update.message.reply_text(
-                            "⚠️ **Orden procesada con advertencias.**\n"
-                            "Verifica el estado en el sistema."
+                            "⚠️ **No se pudo enviar la orden a Tesorería.**\n\n"
+                            "Intenta más tarde o contacta al área técnica."
                         )
                         
                         # Notificación a TESORERÍA sobre problema
