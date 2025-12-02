@@ -1051,6 +1051,55 @@ agent_communication:
       🎯 RESULTADO FINAL:
       FIX P0 COMPLETAMENTE VERIFICADO - El flujo de Tesorería está operativo.
       Ana puede asignar folios MBco sin errores de 'await'.
+  - agent: "testing"
+    message: |
+      ✅ TESTING FIXES P0, P1 Y P2 TESORERÍA COMPLETADO EXITOSAMENTE
+      
+      🎯 OBJETIVO:
+      Verificar fixes prioritarios del módulo de Tesorería/Ana en NetCash
+      
+      📋 TESTS EJECUTADOS (5/5 PASADOS):
+      
+      ✅ P1 - Validación formato folio:
+      • Formato nuevo (5 dígitos): 23456-209-M-11 → VÁLIDO
+      • Formato histórico (4 dígitos): 1234-209-M-11 → VÁLIDO
+      • Formatos inválidos correctamente rechazados
+      • Patrones regex implementados correctamente
+      
+      ✅ P2 - Renombrado comprobantes:
+      • Conversión folio: TEST-001-M-99 → TESTx001xMx99
+      • Renombrado: {folio}_comprobante_{N}.{ext}
+      • Preservación extensiones (.pdf, .jpg, .png)
+      • Solo comprobantes válidos adjuntados
+      
+      ✅ P2 - Cuenta destino correo:
+      • CLABE NetCash activa: 646180139409481462
+      • CLABE incluida en cuerpo HTML del correo
+      • Beneficiario: JARDINERIA Y COMERCIO THABYETHA SA DE CV
+      • Estructura HTML completa y válida
+      
+      ✅ P0 - Manejo errores:
+      • Import MongoDB (db) implementado correctamente
+      • Try-except anidado para aislar notificación Tesorería
+      • Mensajes a Ana SIN detalles técnicos
+      • Logs apropiados para debugging
+      
+      ✅ Integración completa:
+      • Archivos modificados con sintaxis correcta
+      • Imports necesarios presentes
+      • Backend funcionando sin errores P0
+      • Variables entorno configuradas
+      
+      🔧 CORRECCIONES APLICADAS:
+      • Eliminados detalles técnicos en mensajes a Ana
+      • Mejorados mensajes de error genéricos
+      • Preservado logging detallado para debugging
+      
+      📁 ARCHIVOS CREADOS:
+      • /app/backend_test_tesoreria_fixes.py - Suite completa tests
+      
+      🎉 RESULTADO: TODOS LOS FIXES P0, P1 Y P2 VERIFICADOS Y FUNCIONANDO
+      El módulo de Tesorería/Ana está operativo con las mejoras implementadas.
 
 ## ========================================
 ## P0 + FASE 2 IMPLEMENTADOS - 2025-12-01
