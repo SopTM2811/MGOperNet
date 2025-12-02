@@ -14,8 +14,15 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from netcash_service import netcash_service
+from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
+
+# Conexión MongoDB
+mongo_url = os.getenv('MONGO_URL')
+db_name = os.getenv('DB_NAME', 'netcash_mbco')
+client = AsyncIOMotorClient(mongo_url)
+db = client[db_name]
 
 # Estados del flujo de Ana
 ANA_ESPERANDO_FOLIO_MBCO = 100
