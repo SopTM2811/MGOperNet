@@ -396,6 +396,92 @@ class GmailService:
             import traceback
             logger.error(traceback.format_exc())
             return None
+    async def enviar_correo_respuesta(
+        self,
+        thread_id: str,
+        message_id: str,
+        asunto: str,
+        cuerpo: str,
+        cc: List[str] = None
+    ) -> Optional[Dict]:
+        """
+        Envía una respuesta en un hilo existente (reply)
+        
+        Args:
+            thread_id: ID del hilo al que se responde
+            message_id: ID del mensaje original al que se responde
+            asunto: Asunto del correo (debe incluir "Re:" si es respuesta)
+            cuerpo: Cuerpo HTML del correo
+            cc: Lista opcional de emails en copia
+        
+        Returns:
+            Dict con message_id y thread_id si se envió correctamente
+        """
+        try:
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            
+            # Obtener el mensaje original para extraer destinatario
+            mensaje_original = self.get_message(message_id)
+            if not mensaje_original:
+                logger.error(f"[Gmail] No se pudo obtener mensaje original {message_id}")
+                return None
+            
+            # Parsear mensaje para obtener remitente (que será nuestro destinatario)
+            mensaje_data = self.parse_message(mensaje_original)
+            destinatario = mensaje_data.get('from', '')
+            
+            if not destinatario:
+                logger.error(f"[Gmail] No se pudo extraer destinatario del mensaje original")
+                return None
+            
+            # Crear mensaje de respuesta
+            message = MIMEMultipart()
+            message['to'] = destinatario
+            message['from'] = self.gmail_user
+            message['subject'] = f"Re: {asunto}" if not asunto.startswith("Re:") else asunto
+            
+            # Headers para indicar que es una respuesta
+            message['In-Reply-To'] = message_id
+            message['References'] = message_id
+            
+            # Agregar CC si se especifica
+            if cc:
+                message['cc'] = ', '.join(cc)
+            
+            # Agregar cuerpo HTML
+            message.attach(MIMEText(cuerpo, 'html'))
+            
+            # Codificar mensaje
+            raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+            
+            # Enviar en el mismo hilo
+            sent_message = self.service.users().messages().send(
+                userId='me',
+                body={
+                    'raw': raw_message,
+                    'threadId': thread_id  # Importante: especificar threadId para responder en el mismo hilo
+                }
+            ).execute()
+            
+            # Extraer IDs
+            new_message_id = sent_message.get('id')
+            new_thread_id = sent_message.get('threadId')
+            
+            logger.info(f"[Gmail] Respuesta enviada exitosamente en thread {thread_id}")
+            logger.info(f"[Gmail] Nuevo Message ID: {new_message_id}")
+            
+            return {
+                'message_id': new_message_id,
+                'thread_id': new_thread_id
+            }
+            
+        except HttpError as error:
+            logger.error(f"[Gmail] Error enviando respuesta: {error}")
+            return None
+        except Exception as e:
+            logger.exception(f"[Gmail] Error inesperado enviando respuesta")
+            return None
 
 
 # Instancia global del servicio
