@@ -245,7 +245,7 @@ class TelegramAnaHandlers:
             logger.error(f"[Ana] Error verificando folio: {str(e)}")
             import traceback
             traceback.print_exc()
-            await update.message.reply_text("❌ Error al verificar el folio. Intenta de nuevo.")
+            await update.message.reply_text("❌ No se pudo verificar el folio. Intenta de nuevo.")
             return ANA_ESPERANDO_FOLIO_MBCO
         
         # Asignar folio y generar orden interna
