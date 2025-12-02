@@ -417,8 +417,7 @@ class TelegramAnaHandlers:
             logger.error(f"[Ana] Traceback:\n{traceback.format_exc()}")
             await update.message.reply_text(
                 "❌ **Error al asignar el folio.**\n\n"
-                "Por favor, contacta a soporte técnico.\n\n"
-                f"Detalles: {str(e)}"
+                "Por favor, contacta a soporte técnico."
             )
         
         # Limpiar contexto
