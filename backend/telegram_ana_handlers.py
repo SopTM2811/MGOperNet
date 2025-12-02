@@ -306,6 +306,7 @@ class TelegramAnaHandlers:
                     
                     # Obtener chat_id de Tesorería
                     tesoreria_chat_id = os.getenv('TELEGRAM_TESORERIA_CHAT_ID')
+                    logger.info(f"[Ana] TELEGRAM_TESORERIA_CHAT_ID configurado: {tesoreria_chat_id}")
                     
                     if resultado_tesoreria and resultado_tesoreria.get('success'):
                         # Mensaje a ANA (resumen simple)
@@ -316,15 +317,26 @@ class TelegramAnaHandlers:
                             "El layout fue generado y enviado a Tesorería."
                         )
                         
-                        # Mensaje OPERATIVO a TESORERÍA (detallado) - aislado en try-except
+                        # ⚠️ P3: Notificación OBLIGATORIA a TESORERÍA por Telegram
+                        # Esto SIEMPRE debe ejecutarse si la orden se procesó exitosamente
+                        logger.info(f"[Tesorería-P3] Iniciando envío de notificación Telegram a Tesorería")
+                        logger.info(f"[Tesorería-P3] Chat ID: {tesoreria_chat_id}, Folio MBco: {folio_mbco}, Solicitud ID: {solicitud_id}")
+                        
                         try:
-                            if tesoreria_chat_id and tesoreria_chat_id != "PENDIENTE_CONFIGURAR":
+                            # Validar que tengamos un chat_id válido
+                            if not tesoreria_chat_id or tesoreria_chat_id == "PENDIENTE_CONFIGURAR":
+                                logger.error(f"[Tesorería-P3] ❌ TELEGRAM_TESORERIA_CHAT_ID no está configurado correctamente: '{tesoreria_chat_id}'")
+                                logger.error(f"[Tesorería-P3] NO se puede enviar notificación a Tesorería")
+                            else:
+                                # Obtener datos de la solicitud para el mensaje
                                 solicitud_data = await db.solicitudes_netcash.find_one(
                                     {'id': solicitud_id},
                                     {'_id': 0}
                                 )
                                 
-                                if solicitud_data:
+                                if not solicitud_data:
+                                    logger.error(f"[Tesorería-P3] ❌ No se encontró solicitud {solicitud_id} en BD para notificación")
+                                else:
                                     # Extraer datos necesarios
                                     cliente_nombre = solicitud_data.get('cliente_nombre', 'N/A')
                                     beneficiario = solicitud_data.get('beneficiario_reportado', 'N/A')
