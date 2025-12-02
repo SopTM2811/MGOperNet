@@ -999,6 +999,58 @@ agent_communication:
       
       🎉 RESULTADO: El proceso automatizado de Tesorería está completamente funcional.
       Se ejecuta cada 15 minutos, procesa lotes correctamente y genera layouts listos para Fondeadora.
+  - agent: "testing"
+    message: |
+      ✅ TESTING P0 FIX COMPLETADO EXITOSAMENTE - 'await' outside async function RESUELTO
+      
+      🎯 OBJETIVO DEL TEST:
+      Verificar el fix P0 del error 'await' outside async function en tesoreria_operacion_service.py
+      
+      🐛 CONTEXTO DEL BUG:
+      • Error crítico: TypeError: 'await' outside async function
+      • Función afectada: _generar_cuerpo_correo_operacion
+      • Impacto: Bloqueaba flujo de Tesorería cuando Ana asignaba folio MBco
+      
+      🔧 CAMBIOS VERIFICADOS:
+      • Línea 465: _generar_cuerpo_correo_operacion convertida de 'def' a 'async def' ✅
+      • Línea 381: Llamada actualizada para usar 'await' ✅
+      
+      🧪 TESTS EJECUTADOS (5 TESTS):
+      1. ✅ Verificación sintaxis: Sin errores de compilación
+      2. ✅ Función async: inspect.iscoroutinefunction() = True
+      3. ✅ Ejecución await: Cuerpo generado correctamente (1608 caracteres)
+      4. ✅ Servicio backend: RUNNING (PID 684)
+      5. ✅ Logs backend: Sin errores relacionados con 'await'
+      
+      🔄 TEST DE INTEGRACIÓN COMPLETO:
+      • Solicitud de prueba: test_p0_1764635686
+      • Folio MBco: TEST-P0-001-T-99
+      • procesar_operacion_tesoreria() ejecutado sin excepciones ✅
+      • Resultado: {"success": true, "correo_enviado": true} ✅
+      • Estado BD actualizado: enviado_a_tesoreria ✅
+      • Flag correo_tesoreria_enviado: True ✅
+      
+      📧 VERIFICACIÓN EMAIL:
+      • Cuerpo generado: 1627 caracteres ✅
+      • CLABE NetCash activa incluida: 646180139409481462 ✅
+      • Folio MBco incluido en correo ✅
+      • Nombre cliente incluido en correo ✅
+      
+      🛡️ PROTECCIÓN ANTI-DUPLICADOS:
+      • Solicitud ya enviada detectada correctamente ✅
+      • No reenvío de correos duplicados ✅
+      • Resultado: {"success": true, "ya_enviado_antes": true} ✅
+      
+      📊 CRITERIOS DE ÉXITO VERIFICADOS:
+      ✅ Todos los tests pasan sin excepciones
+      ✅ No hay TypeError relacionado con 'await'
+      ✅ Función retorna {"success": True} cuando se completa
+      ✅ Obtiene cuenta NetCash activa y la incluye en email
+      ✅ Servicio backend está estable
+      
+      🎯 RESULTADO FINAL:
+      FIX P0 COMPLETAMENTE VERIFICADO - El flujo de Tesorería está operativo.
+      Ana puede asignar folios MBco sin errores de 'await'.
 
 ## ========================================
 ## P0 + FASE 2 IMPLEMENTADOS - 2025-12-01
