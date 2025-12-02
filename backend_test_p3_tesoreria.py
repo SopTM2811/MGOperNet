@@ -228,7 +228,7 @@ class TestP3Tesoreria:
                 "# ⚠️ P3: Notificación OBLIGATORIA a TESORERÍA por Telegram",
                 "[Tesorería-P3] Iniciando envío de notificación",
                 "tesoreria_chat_id = os.getenv('TELEGRAM_TESORERIA_CHAT_ID')",
-                "await context.bot.send_message("
+                "context.bot.send_message("
             ]
             
             found_indicators = sum(1 for indicator in p3_indicators if indicator in code_after_success)
