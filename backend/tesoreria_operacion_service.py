@@ -462,7 +462,7 @@ class TesoreriaOperacionService:
             logger.info(f"[TesoreriaOp] CSV guardado localmente en: {csv_path_permanente}")
             return False
     
-    def _generar_cuerpo_correo_operacion(self, solicitud: Dict) -> str:
+    async def _generar_cuerpo_correo_operacion(self, solicitud: Dict) -> str:
         """Genera cuerpo HTML del correo por operación"""
         
         folio_mbco = solicitud.get('folio_mbco', 'N/A')
