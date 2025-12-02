@@ -314,19 +314,44 @@ if __name__ == "__main__":
         # Test 4: Formato del mensaje (no requiere mocks)
         result4 = await test_p3_formato_mensaje_segun_especificacion()
         
-        # Tests con mocks
-        mock_context = pytest.fixture(mock_context)()
-        mock_update = pytest.fixture(mock_update)()
-        mock_db = pytest.fixture(mock_db)()
+        # Crear mocks para los tests que los necesitan
+        def create_mock_context():
+            context = MagicMock()
+            context.bot = MagicMock()
+            context.bot.send_message = AsyncMock()
+            return context
         
+        def create_mock_update():
+            update = MagicMock()
+            update.message = MagicMock()
+            update.message.reply_text = AsyncMock()
+            update.effective_user = MagicMock()
+            update.effective_user.id = 7631636750
+            update.effective_user.username = "ana_test"
+            return update
+        
+        def create_mock_db():
+            mock = MagicMock()
+            mock.solicitudes_netcash.find_one = AsyncMock(return_value={
+                'id': 'nc-test-123',
+                'folio_mbco': '23456-209-M-11',
+                'cliente_nombre': 'EMPRESA TEST SA DE CV',
+                'beneficiario_reportado': 'PROVEEDOR TEST SC',
+                'idmex_reportado': 'IDMEX123456',
+                'total_comprobantes_validos': 100000.00,
+                'monto_ligas': 99000.00,
+                'comision_dns_calculada': 371.25
+            })
+            return mock
+        
+        # Test 1: Con mocks
         result1 = await test_p3_notificacion_telegram_enviada_exitosamente(
-            mock_context, mock_update, mock_db
+            create_mock_context(), create_mock_update(), create_mock_db()
         )
         
-        # Resetear mock para segundo test
-        mock_context = pytest.fixture(mock_context)()
+        # Test 2: Con mocks (nuevo contexto para simular falla)
         result2 = await test_p3_notificacion_telegram_falla_no_afecta_flujo(
-            mock_context, mock_update, mock_db
+            create_mock_context(), create_mock_update(), create_mock_db()
         )
         
         print("\n" + "=" * 80)
