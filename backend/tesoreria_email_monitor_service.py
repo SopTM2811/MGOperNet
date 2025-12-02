@@ -223,7 +223,13 @@ class TesoreriaEmailMonitorService:
         message_id: str
     ) -> bool:
         """
-        Procesa la respuesta de Tesorería para una operación específica
+        Procesa la respuesta de Tesorería para una operación específica - P4A
+        
+        Flujo P4A:
+        1. Descargar comprobantes
+        2. Validar capital, comisión y concepto
+        3a. Si OK → Guardar y enviar a DNS
+        3b. Si error → Responder a Tesorería con detalles
         
         Args:
             operacion_id: ID de la solicitud NetCash
@@ -233,104 +239,223 @@ class TesoreriaEmailMonitorService:
         Returns:
             True si se procesó correctamente
         """
-        logger.info(f"[EmailMonitor] Procesando respuesta para operación {operacion_id}")
+        logger.info(f"[EmailMonitor-P4A] ========== INICIANDO PROCESAMIENTO P4A ==========")
+        logger.info(f"[EmailMonitor-P4A] Operación: {operacion_id}")
+        logger.info(f"[EmailMonitor-P4A] Message ID: {message_id}")
         
         try:
-            # 1. Verificar que la operación esté en estado correcto
+            # 1. Obtener datos de la operación
             solicitud = await db.solicitudes_netcash.find_one(
                 {"id": operacion_id},
                 {"_id": 0}
             )
             
             if not solicitud:
-                logger.error(f"[EmailMonitor] Operación {operacion_id} no encontrada")
+                logger.error(f"[EmailMonitor-P4A] ❌ Operación {operacion_id} no encontrada")
                 return False
             
-            if solicitud.get('estado') != 'enviado_a_tesoreria':
-                logger.warning(f"[EmailMonitor] Operación {operacion_id} no está en estado 'enviado_a_tesoreria' (actual: {solicitud.get('estado')})")
-                # Continuar de todas formas para guardar los adjuntos
+            logger.info(f"[EmailMonitor-P4A] Estado actual: {solicitud.get('estado')}")
+            logger.info(f"[EmailMonitor-P4A] Folio MBco: {solicitud.get('folio_mbco')}")
             
-            # 2. Descargar y guardar comprobantes adjuntos
+            # 2. Descargar comprobantes adjuntos
             adjuntos = mensaje_data.get('attachments', [])
             
             if not adjuntos:
-                logger.warning(f"[EmailMonitor] No hay adjuntos en la respuesta para operación {operacion_id}")
-                # Podría ser una respuesta sin comprobantes (consulta, etc.)
+                logger.warning(f"[EmailMonitor-P4A] ⚠️ No hay adjuntos en la respuesta")
                 return False
             
-            logger.info(f"[EmailMonitor] Descargando {len(adjuntos)} adjunto(s)...")
+            logger.info(f"[EmailMonitor-P4A] Descargando {len(adjuntos)} adjunto(s)...")
             
-            comprobantes_dispersion = []
-            upload_dir = Path("/app/backend/uploads/comprobantes_dispersion")
+            comprobantes_paths = []
+            upload_dir = Path("/app/backend/uploads/comprobantes_pago_proveedor")
             upload_dir.mkdir(parents=True, exist_ok=True)
             
-            for adjunto in adjuntos:
-                # Solo descargar PDFs (comprobantes)
+            folio_concepto = solicitud.get('folio_mbco', '').replace('-', 'x')
+            
+            for idx, adjunto in enumerate(adjuntos, 1):
+                # Solo PDFs
                 if not adjunto['filename'].lower().endswith('.pdf'):
-                    logger.info(f"[EmailMonitor] Saltando adjunto no-PDF: {adjunto['filename']}")
+                    logger.info(f"[EmailMonitor-P4A] Saltando no-PDF: {adjunto['filename']}")
                     continue
                 
-                logger.info(f"[EmailMonitor] Descargando: {adjunto['filename']}")
+                logger.info(f"[EmailMonitor-P4A] Descargando: {adjunto['filename']}")
                 
-                # Descargar adjunto
+                # Descargar
                 file_data = self.gmail_service.get_attachment(message_id, adjunto['attachment_id'])
                 
                 if not file_data:
-                    logger.error(f"[EmailMonitor] No se pudo descargar {adjunto['filename']}")
+                    logger.error(f"[EmailMonitor-P4A] ❌ No se pudo descargar {adjunto['filename']}")
                     continue
                 
-                # Guardar archivo
-                safe_filename = f"{operacion_id}_{adjunto['filename']}"
+                # Guardar con nombre según P4A: {folio_concepto}_pago_proveedor_{N}.pdf
+                extension = Path(adjunto['filename']).suffix
+                safe_filename = f"{folio_concepto}_pago_proveedor_{idx}{extension}"
                 file_path = upload_dir / safe_filename
                 
                 with open(file_path, 'wb') as f:
                     f.write(file_data)
                 
-                logger.info(f"[EmailMonitor] ✅ Guardado: {file_path}")
+                logger.info(f"[EmailMonitor-P4A] ✅ Guardado: {safe_filename}")
                 
-                comprobantes_dispersion.append({
-                    "nombre_archivo": adjunto['filename'],
-                    "ruta": str(file_path),
-                    "tamano_bytes": len(file_data),
-                    "fecha_descarga": datetime.now(timezone.utc).isoformat()
-                })
+                comprobantes_paths.append(str(file_path))
             
-            if not comprobantes_dispersion:
-                logger.warning(f"[EmailMonitor] No se descargó ningún comprobante PDF para operación {operacion_id}")
+            if not comprobantes_paths:
+                logger.error(f"[EmailMonitor-P4A] ❌ No se descargó ningún comprobante PDF")
                 return False
             
-            # 3. Actualizar estado de la operación
-            logger.info(f"[EmailMonitor] Actualizando estado de operación {operacion_id} a 'dispersada_proveedor'")
+            # 3. ⭐ VALIDACIONES P4A ⭐
+            logger.info(f"[EmailMonitor-P4A] ========== INICIANDO VALIDACIONES ==========")
             
-            await db.solicitudes_netcash.update_one(
-                {"id": operacion_id},
-                {
-                    "$set": {
-                        "estado": "dispersada_proveedor",
-                        "comprobantes_dispersion": comprobantes_dispersion,
-                        "fecha_dispersion_proveedor": datetime.now(timezone.utc),
-                        "email_respuesta_tesoreria": {
-                            "message_id": message_id,
-                            "thread_id": mensaje_data.get('thread_id'),
-                            "from": mensaje_data.get('from'),
-                            "subject": mensaje_data.get('subject'),
-                            "fecha_recibido": datetime.now(timezone.utc).isoformat()
-                        }
-                    }
-                }
+            # Importar servicio de validación
+            from comprobante_pago_validator_service import comprobante_pago_validator
+            from decimal import Decimal
+            
+            # Obtener datos esperados de la solicitud
+            capital_esperado = Decimal(str(solicitud.get('monto_ligas', 0)))
+            comision_esperada = Decimal(str(solicitud.get('comision_dns_calculada', 0)))
+            
+            logger.info(f"[EmailMonitor-P4A] Validando contra:")
+            logger.info(f"[EmailMonitor-P4A] - Capital esperado: ${capital_esperado}")
+            logger.info(f"[EmailMonitor-P4A] - Comisión esperada: ${comision_esperada}")
+            logger.info(f"[EmailMonitor-P4A] - Concepto esperado: {folio_concepto}")
+            
+            # Validar cada comprobante (o todos juntos si es uno solo)
+            # Para simplificar, validamos el primer PDF (el principal)
+            es_valido, errores, datos_extraidos = comprobante_pago_validator.validar_comprobante(
+                pdf_path=comprobantes_paths[0],
+                capital_esperado=capital_esperado,
+                comision_esperada=comision_esperada,
+                folio_concepto=folio_concepto
             )
             
-            logger.info(f"[EmailMonitor] ✅ Estado actualizado correctamente")
+            logger.info(f"[EmailMonitor-P4A] ========== RESULTADO VALIDACIÓN ==========")
+            logger.info(f"[EmailMonitor-P4A] Válido: {es_valido}")
+            if errores:
+                logger.error(f"[EmailMonitor-P4A] Errores: {errores}")
             
-            # 4. Notificar a Ana y al cliente
-            await self._notificar_dispersion(solicitud, comprobantes_dispersion)
+            # 4a. Si las validaciones PASAN → Enviar a DNS
+            if es_valido:
+                logger.info(f"[EmailMonitor-P4A] ✅ Todas las validaciones pasaron")
+                logger.info(f"[EmailMonitor-P4A] Procediendo a enviar correo a DNS...")
+                
+                # Importar servicio DNS
+                from dns_email_service import dns_email_service
+                
+                # Enviar correo a DNS con comprobantes
+                envio_exitoso = await dns_email_service.enviar_comprobantes_a_dns(
+                    solicitud=solicitud,
+                    comprobantes_paths=comprobantes_paths
+                )
+                
+                if envio_exitoso:
+                    # Actualizar estado en BD
+                    await db.solicitudes_netcash.update_one(
+                        {"id": operacion_id},
+                        {
+                            "$set": {
+                                "estado": "correo_enviado_a_proveedor",
+                                "pagado_a_dns": True,
+                                "pagos_proveedor": {
+                                    "fecha_recepcion": datetime.now(timezone.utc).isoformat(),
+                                    "correo_tesoreria": mensaje_data.get('from'),
+                                    "comprobantes": [Path(p).name for p in comprobantes_paths],
+                                    "capital_total_pdf": datos_extraidos.get('capital_total_pdf'),
+                                    "comision_total_pdf": datos_extraidos.get('comision_total_pdf')
+                                },
+                                "email_respuesta_tesoreria": {
+                                    "message_id": message_id,
+                                    "thread_id": mensaje_data.get('thread_id'),
+                                    "from": mensaje_data.get('from'),
+                                    "subject": mensaje_data.get('subject'),
+                                    "fecha_recibido": datetime.now(timezone.utc).isoformat()
+                                },
+                                "validacion_pagos_proveedor": {
+                                    "estado": "validado",
+                                    "fecha_validacion": datetime.now(timezone.utc).isoformat(),
+                                    "datos_extraidos": datos_extraidos
+                                }
+                            }
+                        }
+                    )
+                    
+                    logger.info(f"[EmailMonitor-P4A] ✅✅ PROCESO COMPLETADO EXITOSAMENTE ✅✅")
+                    logger.info(f"[EmailMonitor-P4A] - Comprobantes guardados: {len(comprobantes_paths)}")
+                    logger.info(f"[EmailMonitor-P4A] - Correo enviado a DNS")
+                    logger.info(f"[EmailMonitor-P4A] - Estado actualizado: correo_enviado_a_proveedor")
+                    
+                    return True
+                else:
+                    logger.error(f"[EmailMonitor-P4A] ❌ Error al enviar correo a DNS")
+                    # Guardar flag de pendiente
+                    await db.solicitudes_netcash.update_one(
+                        {"id": operacion_id},
+                        {"$set": {"correo_dns_pendiente": True}}
+                    )
+                    return False
             
-            return True
+            # 4b. Si las validaciones FALLAN → Responder a Tesorería con errores
+            else:
+                logger.error(f"[EmailMonitor-P4A] ❌ Validaciones fallaron")
+                logger.error(f"[EmailMonitor-P4A] Respondiendo a Tesorería con detalles de errores...")
+                
+                # Importar servicio DNS (maneja respuestas de error también)
+                from dns_email_service import dns_email_service
+                
+                # Responder a Tesorería en el mismo hilo
+                respuesta_exitosa = await dns_email_service.responder_a_tesoreria_con_error(
+                    thread_id=mensaje_data.get('thread_id'),
+                    message_id=message_id,
+                    folio_netcash=solicitud.get('id'),
+                    folio_mbco=solicitud.get('folio_mbco'),
+                    cliente_nombre=solicitud.get('cliente_nombre', 'N/A'),
+                    idmex=solicitud.get('idmex_reportado', 'N/A'),
+                    errores=errores
+                )
+                
+                # Guardar errores en BD (sin avanzar estado)
+                await db.solicitudes_netcash.update_one(
+                    {"id": operacion_id},
+                    {
+                        "$set": {
+                            "validacion_pagos_proveedor": {
+                                "estado": "error",
+                                "errores": errores,
+                                "fecha_ultima_validacion": datetime.now(timezone.utc).isoformat(),
+                                "capital_total_pdf": datos_extraidos.get('capital_total_pdf'),
+                                "comision_total_pdf": datos_extraidos.get('comision_total_pdf'),
+                                "conceptos_pdf": datos_extraidos.get('conceptos_pdf', [])
+                            },
+                            "comprobantes_pago_proveedor_rechazados": [Path(p).name for p in comprobantes_paths]
+                        }
+                    }
+                )
+                
+                if respuesta_exitosa:
+                    logger.info(f"[EmailMonitor-P4A] ✅ Respuesta de error enviada a Tesorería")
+                else:
+                    logger.error(f"[EmailMonitor-P4A] ❌ No se pudo enviar respuesta de error a Tesorería")
+                
+                # Retornar False porque no se completó el proceso
+                return False
         
         except Exception as e:
-            logger.error(f"[EmailMonitor] Error procesando respuesta para {operacion_id}: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
+            logger.exception(f"[EmailMonitor-P4A] ❌❌ Error crítico en procesamiento P4A")
+            
+            # Intentar responder a Tesorería con error técnico
+            try:
+                from dns_email_service import dns_email_service
+                await dns_email_service.responder_a_tesoreria_con_error(
+                    thread_id=mensaje_data.get('thread_id'),
+                    message_id=message_id,
+                    folio_netcash=operacion_id,
+                    folio_mbco=solicitud.get('folio_mbco', 'N/A') if solicitud else 'N/A',
+                    cliente_nombre='N/A',
+                    idmex='N/A',
+                    errores=[f"Error técnico al procesar comprobante: {str(e)}"]
+                )
+            except:
+                logger.error(f"[EmailMonitor-P4A] No se pudo enviar respuesta de error técnico")
+            
             return False
     
     async def _notificar_dispersion(self, solicitud: Dict, comprobantes: List[Dict]):
