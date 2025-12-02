@@ -188,7 +188,6 @@ async def test_procesar_operacion_simple():
             return False
         
         # Verificar que la función tiene la estructura esperada
-        import inspect
         sig = inspect.signature(tesoreria_operacion_service.procesar_operacion_tesoreria)
         params = list(sig.parameters.keys())
         
