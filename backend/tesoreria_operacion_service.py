@@ -493,17 +493,15 @@ class TesoreriaOperacionService:
         cuerpo += "<ul>"
         cuerpo += f"<li><strong>Total comprobantes:</strong> {len(comprobantes_validos)}</li>"
         
+        # Obtener cuenta NetCash receptora activa (la misma para todos los comprobantes)
+        from cuenta_deposito_service import cuenta_deposito_service
+        cuenta_netcash_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+        clabe_receptora = cuenta_netcash_activa.get('clabe', 'N/A') if cuenta_netcash_activa else 'N/A'
+        
         for i, comp in enumerate(comprobantes_validos, 1):
             monto = comp.get('monto_detectado', 0)
-            # Obtener CLABE real detectada en el comprobante
-            cuenta_detectada = comp.get('cuenta_detectada', {})
-            clabe = cuenta_detectada.get('clabe', 'N/A') if isinstance(cuenta_detectada, dict) else 'N/A'
-            
-            # Si no hay cuenta_detectada, intentar con cuenta_stp_extraida (campo alternativo)
-            if clabe == 'N/A':
-                clabe = comp.get('cuenta_stp_extraida', 'N/A')
-            
-            cuerpo += f"<li>Comprobante {i}: ${monto:,.2f} – Cuenta destino: {clabe}</li>"
+            # Mostrar la cuenta NetCash receptora (no la ordenante del comprobante)
+            cuerpo += f"<li>Comprobante {i}: ${monto:,.2f} – Cuenta destino: {clabe_receptora}</li>"
         
         cuerpo += f"<li><strong>→ Total depósitos detectados: ${total_depositos:,.2f}</strong></li>"
         cuerpo += "</ul>"
