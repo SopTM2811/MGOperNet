@@ -402,21 +402,36 @@ class TesoreriaOperacionService:
         # Usar el archivo permanente para adjuntar
         adjuntos = [str(csv_path_permanente)]
         
-        # ⚠️ AJUSTE 3: Agregar comprobantes del cliente (CORREGIDO)
-        # El campo correcto es 'archivo_url', no 'ruta_archivo'
+        # ⚠️ AJUSTE 3: Agregar comprobantes del cliente con nombres basados en folio MBco
         comprobantes = solicitud.get('comprobantes', [])
         comprobantes_adjuntos = 0
         
-        for comp in comprobantes:
+        # Directorio temporal para copiar comprobantes renombrados
+        comprobantes_dir = Path("/app/backend/uploads/temp_comprobantes")
+        comprobantes_dir.mkdir(parents=True, exist_ok=True)
+        
+        import shutil
+        
+        for idx, comp in enumerate(comprobantes, 1):
             if comp.get('es_valido') and not comp.get('es_duplicado'):
-                # Usar archivo_url que es el campo correcto
-                ruta = comp.get('archivo_url')
-                if ruta and Path(ruta).exists():
-                    adjuntos.append(ruta)
+                ruta_original = comp.get('archivo_url')
+                
+                if ruta_original and Path(ruta_original).exists():
+                    # Obtener extensión del archivo original
+                    extension = Path(ruta_original).suffix  # .pdf, .jpg, .png, etc.
+                    
+                    # Crear nuevo nombre con folio MBco
+                    nuevo_nombre = f"{folio_concepto}_comprobante_{idx}{extension}"
+                    ruta_renombrada = comprobantes_dir / nuevo_nombre
+                    
+                    # Copiar archivo con nuevo nombre
+                    shutil.copy2(ruta_original, ruta_renombrada)
+                    
+                    adjuntos.append(str(ruta_renombrada))
                     comprobantes_adjuntos += 1
-                    logger.info(f"[TesoreriaOp] Adjuntando comprobante: {Path(ruta).name}")
-                elif ruta:
-                    logger.warning(f"[TesoreriaOp] Comprobante no encontrado en disco: {ruta}")
+                    logger.info(f"[TesoreriaOp] Adjuntando comprobante renombrado: {nuevo_nombre}")
+                elif ruta_original:
+                    logger.warning(f"[TesoreriaOp] Comprobante no encontrado en disco: {ruta_original}")
         
         logger.info(f"[TesoreriaOp] 📎 Adjuntos totales: 1 layout CSV + {comprobantes_adjuntos} comprobante(s) cliente")
         
