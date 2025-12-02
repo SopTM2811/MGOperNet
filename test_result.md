@@ -2596,3 +2596,163 @@ Ya estás dado de alta como cliente NetCash.
 
 ---
 
+## ========================================
+## TESTING P0 FIX: 'await' outside async function - 2025-12-02
+## ========================================
+
+### 🎯 Objetivo del Test
+Verificar el fix P0 del error 'await' outside async function en `tesoreria_operacion_service.py`
+
+### 🐛 Contexto del Bug
+Se corrigió un bug crítico (P0) donde la función `_generar_cuerpo_correo_operacion` en `tesoreria_operacion_service.py` usaba `await` sin ser una función async. Esto causaba `TypeError: 'await' outside async function` cuando Ana asignaba un folio MBco, bloqueando todo el flujo de Tesorería.
+
+### 🔧 Cambios Realizados
+1. ✅ Convertí `_generar_cuerpo_correo_operacion` de `def` a `async def` (línea 465)
+2. ✅ Actualicé la llamada a esta función para usar `await` (línea 381)
+
+### 🧪 Tests Ejecutados
+
+#### Test 1: Verificación de Sintaxis
+```bash
+python -m py_compile tesoreria_operacion_service.py
+```
+- ✅ **RESULTADO:** Sin errores de sintaxis
+
+#### Test 2: Verificación Función Async
+```python
+inspect.iscoroutinefunction(service._generar_cuerpo_correo_operacion)
+```
+- ✅ **RESULTADO:** `_generar_cuerpo_correo_operacion` es correctamente async
+
+#### Test 3: Ejecución con await
+```python
+cuerpo = await service._generar_cuerpo_correo_operacion(solicitud_test)
+```
+- ✅ **RESULTADO:** Función ejecutada correctamente con await
+- ✅ **RESULTADO:** Cuerpo generado: 1608 caracteres
+- ✅ **RESULTADO:** Folio MBco incluido en el correo
+- ✅ **RESULTADO:** Nombre del cliente incluido en el correo
+
+#### Test 4: Servicio Backend
+```bash
+sudo supervisorctl status backend
+```
+- ✅ **RESULTADO:** Servicio backend está corriendo (PID 684, uptime 0:02:07)
+
+#### Test 5: Logs de Errores
+```bash
+tail -n 20 /var/log/supervisor/backend.err.log
+```
+- ✅ **RESULTADO:** No se encontraron errores relacionados con 'await'
+- ✅ **RESULTADO:** No se encontraron errores relacionados con tesorería
+
+### 🔄 Test de Integración Completo
+
+#### Datos de Prueba
+```json
+{
+  "id": "test_p0_1764635686",
+  "folio_mbco": "TEST-P0-001-T-99",
+  "cliente_nombre": "CLIENTE PRUEBA P0",
+  "total_comprobantes_validos": 100000.00,
+  "monto_ligas": 99625.00,
+  "comision_dns_calculada": 373.59
+}
+```
+
+#### Resultados del Procesamiento
+```python
+resultado = await tesoreria_operacion_service.procesar_operacion_tesoreria(solicitud_id)
+```
+
+**Resultado obtenido:**
+```json
+{
+  "success": true,
+  "solicitud_id": "test_p0_1764635686",
+  "folio_mbco": "TEST-P0-001-T-99",
+  "fecha_envio": "2025-12-02T00:34:47.660041+00:00",
+  "correo_enviado": true,
+  "ya_enviado_antes": false
+}
+```
+
+#### Verificaciones Exitosas
+- ✅ **procesar_operacion_tesoreria** funciona sin excepciones
+- ✅ **Retorna** `{"success": True}` correctamente
+- ✅ **solicitud_id** correcto en resultado
+- ✅ **folio_mbco** correcto en resultado
+- ✅ **Estado BD** actualizado a `enviado_a_tesoreria`
+- ✅ **Flag** `correo_tesoreria_enviado` actualizado a `True`
+
+### 📧 Verificación del Email
+
+#### Generación del Cuerpo
+```python
+cuerpo = await service._generar_cuerpo_correo_operacion(solicitud)
+```
+- ✅ **RESULTADO:** Cuerpo generado correctamente: 1627 caracteres
+- ✅ **RESULTADO:** CLABE de cuenta NetCash activa incluida (646180139409481462)
+- ✅ **RESULTADO:** Folio MBco incluido en el correo
+- ✅ **RESULTADO:** Nombre del cliente incluido en el correo
+
+### 🛡️ Test Anti-Duplicados
+
+#### Escenario
+Solicitud con `correo_tesoreria_enviado: true` procesada nuevamente
+
+#### Resultado
+```json
+{
+  "success": true,
+  "ya_enviado_antes": true
+}
+```
+- ✅ **RESULTADO:** Protección anti-duplicados funciona correctamente
+- ✅ **RESULTADO:** No se reenvía correo duplicado
+
+### 📊 Criterios de Éxito Verificados
+
+#### ✅ Todos los tests en el archivo pasan sin excepciones
+- **Test sintaxis:** ✅ PASADO
+- **Test función async:** ✅ PASADO  
+- **Test ejecución await:** ✅ PASADO
+- **Test integración completa:** ✅ PASADO
+- **Test anti-duplicados:** ✅ PASADO
+
+#### ✅ No hay TypeError relacionado con 'await'
+- **Logs backend:** Sin errores 'await'
+- **Ejecución real:** Sin excepciones
+- **Función async:** Correctamente definida
+
+#### ✅ La función retorna `{"success": True}` cuando se completa
+- **Resultado verificado:** `success: true`
+- **Estructura completa:** Todos los campos esperados
+- **BD actualizada:** Estados correctos
+
+#### ✅ El servicio backend está estable
+- **Supervisor status:** RUNNING
+- **Logs de error:** Limpios
+- **Funcionalidad:** Operativa
+
+### 🎯 Resultado Final
+
+**Estado:** ✅ **FIX P0 COMPLETAMENTE VERIFICADO**
+
+**Funcionalidades Confirmadas:**
+- ✅ `_generar_cuerpo_correo_operacion` es correctamente async
+- ✅ Se puede usar await sin errores
+- ✅ `procesar_operacion_tesoreria` funciona sin excepciones  
+- ✅ Retorna `{"success": True}` correctamente
+- ✅ Obtiene cuenta NetCash activa y la incluye en el email
+- ✅ Actualiza correctamente el estado en BD
+- ✅ Protección anti-duplicados funcional
+
+**Archivos de Test Creados:**
+- `/app/backend/test_tesoreria_fix_simple.py` - Test básico del fix
+- `/app/backend/test_tesoreria_integration.py` - Test de integración completo
+
+**El fix P0 está funcionando correctamente y el flujo de Tesorería está operativo.**
+
+---
+
