@@ -10,6 +10,7 @@ Flujo:
 """
 
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from netcash_service import netcash_service
