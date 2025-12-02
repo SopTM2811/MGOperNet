@@ -409,7 +409,7 @@ class TelegramAnaHandlers:
             else:
                 error = resultado.get("error", "Error desconocido")
                 logger.error(f"[Ana] Error al asignar folio: {error}")
-                await update.message.reply_text(f"❌ **Error al asignar folio:**\n\n{error}")
+                await update.message.reply_text("❌ **No se pudo asignar el folio.**\n\nPor favor, intenta de nuevo o contacta a soporte técnico.")
             
         except Exception as e:
             logger.error(f"[Ana] Excepción asignando folio: {str(e)}")
