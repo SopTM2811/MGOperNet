@@ -229,6 +229,10 @@ async def test_p3_verificar_variable_entorno_telegram_chat_id():
     print("\n🔍 Test P3-3: Verificando configuración de TELEGRAM_TESORERIA_CHAT_ID")
     
     import os
+    from dotenv import load_dotenv
+    
+    # Cargar variables de entorno
+    load_dotenv('/app/backend/.env')
     
     # Verificar que la variable existe
     chat_id = os.getenv('TELEGRAM_TESORERIA_CHAT_ID')
