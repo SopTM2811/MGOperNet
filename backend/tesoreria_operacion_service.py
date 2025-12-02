@@ -378,7 +378,7 @@ class TesoreriaOperacionService:
         asunto = f"NetCash – Orden de dispersión {folio_mbco} – {cliente}"
         
         # Cuerpo
-        cuerpo = self._generar_cuerpo_correo_operacion(solicitud)
+        cuerpo = await self._generar_cuerpo_correo_operacion(solicitud)
         
         # ⚠️ AJUSTE 2: Nombre correcto del archivo CSV
         # Formato: LTMBCO_{folio_mbco_con_x}.csv
