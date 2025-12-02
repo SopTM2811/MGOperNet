@@ -156,14 +156,43 @@ class TelegramAnaHandlers:
         # Guardar en contexto
         context.user_data['ana_solicitud_id_actual'] = solicitud_id
         
-        # Solicitar folio
-        mensaje = "📝 **Asignación de folio MBco**\n\n"
-        mensaje += "Por favor, escribe el folio de operación MBco para esta solicitud.\n\n"
-        mensaje += "**Formato:** 4 dígitos – 3 dígitos – 1 letra (D, S, R o M) – 2 dígitos\n"
-        mensaje += "**Ejemplo:** `1234-209-M-11`\n\n"
-        mensaje += "ℹ️ El folio debe ser único y no estar asignado a otra solicitud."
-        
-        await query.edit_message_text(mensaje, parse_mode='Markdown')
+        # Obtener datos de la solicitud para mostrar confirmación
+        try:
+            solicitud = await db.solicitudes_netcash.find_one(
+                {'id': solicitud_id},
+                {'_id': 0}
+            )
+            
+            if not solicitud:
+                await query.edit_message_text("❌ No se encontró la solicitud.")
+                return ConversationHandler.END
+            
+            # Extraer datos clave
+            folio_nc = solicitud.get('id', 'N/A')
+            cliente = solicitud.get('cliente_nombre', 'N/A')
+            beneficiario = solicitud.get('beneficiario_reportado', 'N/A')
+            total_depositos = solicitud.get('total_comprobantes_validos', 0)
+            
+            # Solicitar folio con confirmación de la solicitud
+            mensaje = "📝 **Asignación de folio MBco**\n\n"
+            mensaje += "🎯 **Vas a asignar folio a esta solicitud:**\n\n"
+            mensaje += f"📋 Folio NetCash: `{folio_nc}`\n"
+            mensaje += f"👤 Cliente: {cliente}\n"
+            mensaje += f"👥 Beneficiario: {beneficiario}\n"
+            mensaje += f"💰 Total depósitos: ${total_depositos:,.2f}\n\n"
+            mensaje += "───────────────────────\n\n"
+            mensaje += "📝 **Escribe el folio MBco:**\n\n"
+            mensaje += "**Formato:** #####-###-[D|S|R|M]-##\n"
+            mensaje += "**Ejemplo:** `23456-209-M-11`\n\n"
+            mensaje += "ℹ️ 5 dígitos – 3 dígitos – 1 letra (D, S, R o M) – 2 dígitos\n"
+            mensaje += "ℹ️ El folio debe ser único."
+            
+            await query.edit_message_text(mensaje, parse_mode='Markdown')
+            
+        except Exception as e:
+            logger.error(f"[Ana] Error obteniendo solicitud: {str(e)}")
+            await query.edit_message_text("❌ Error al cargar los datos de la solicitud.")
+            return ConversationHandler.END
         
         return ANA_ESPERANDO_FOLIO_MBCO
     
