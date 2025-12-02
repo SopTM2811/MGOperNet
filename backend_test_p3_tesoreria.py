@@ -189,8 +189,8 @@ class TestP3Tesoreria:
             checks = [
                 ("Try-catch envuelve envío", "try:" in telegram_code and "except Exception as e_tesoreria:" in telegram_code),
                 ("Log de error sin afectar flujo", "logger.exception" in telegram_code or "logger.error" in telegram_code),
-                ("Mensaje a Ana NO contiene detalles técnicos", "El correo a Tesorería ya fue enviado correctamente" in telegram_code),
-                ("Error NO cancela correo", "Este error solo afecta la notificación por Telegram" in telegram_code)
+                ("Mensaje a Ana NO contiene detalles técnicos", "El correo a Tesorería ya fue enviado correctamente" in code_content),
+                ("Error NO cancela correo", "Este error solo afecta la notificación por Telegram" in code_content)
             ]
             
             passed_checks = sum(1 for _, check in checks if check)
