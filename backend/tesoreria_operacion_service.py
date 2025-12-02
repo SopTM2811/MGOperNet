@@ -9,6 +9,7 @@ el nuevo modelo de trabajo: una operación = un layout = un correo
 import logging
 import os
 import csv
+import shutil
 from datetime import datetime, timezone
 from typing import Dict, Optional, List
 from io import StringIO
