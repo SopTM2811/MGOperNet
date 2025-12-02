@@ -27,6 +27,10 @@ async def test_p3_integration():
     logger.info("=" * 50)
     
     try:
+        # Cargar variables de entorno desde .env
+        from dotenv import load_dotenv
+        load_dotenv('/app/backend/.env')
+        
         # Test 1: Verificar que las variables de entorno están configuradas
         logger.info("📋 Test 1: Verificando configuración...")
         
