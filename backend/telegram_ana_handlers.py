@@ -204,7 +204,7 @@ class TelegramAnaHandlers:
         solicitud_id = context.user_data.get('ana_solicitud_id_actual')
         
         if not solicitud_id:
-            await update.message.reply_text("❌ Error: No se encontró la solicitud. Por favor inicia el proceso de nuevo.")
+            await update.message.reply_text("❌ No se encontró la solicitud. Por favor inicia el proceso de nuevo.")
             return ConversationHandler.END
         
         # Validación de formato: 4 o 5 dígitos iniciales (compatibilidad histórica)
