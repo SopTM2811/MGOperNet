@@ -129,9 +129,9 @@ class TestP3Tesoreria:
             with open(self.telegram_ana_handlers_path, 'r') as f:
                 code_content = f.read()
             
-            # Campos requeridos en el mensaje
+            # Campos requeridos en el mensaje (buscar texto exacto)
             required_fields = [
-                "🆕 Nueva orden interna NetCash lista para Tesorería",
+                "🆕 **Nueva orden interna NetCash lista para Tesorería**",
                 "📋 Folio NetCash:",
                 "📋 Folio MBco:",
                 "👤 Cliente:",
