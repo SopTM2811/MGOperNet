@@ -207,15 +207,19 @@ class TelegramAnaHandlers:
             await update.message.reply_text("❌ Error: No se encontró la solicitud. Por favor inicia el proceso de nuevo.")
             return ConversationHandler.END
         
-        # Validación de formato: ^\d{4}-\d{3}-[DSRM]-\d{2}$
+        # Validación de formato: 4 o 5 dígitos iniciales (compatibilidad histórica)
+        # Formato nuevo: ^\d{5}-\d{3}-[DSRM]-\d{2}$
+        # Formato viejo: ^\d{4}-\d{3}-[DSRM]-\d{2}$
         import re
-        patron_folio = r'^\d{4}-\d{3}-[DSRM]-\d{2}$'
+        patron_folio_nuevo = r'^\d{5}-\d{3}-[DSRM]-\d{2}$'
+        patron_folio_viejo = r'^\d{4}-\d{3}-[DSRM]-\d{2}$'
         
-        if not re.match(patron_folio, folio_mbco):
+        if not (re.match(patron_folio_nuevo, folio_mbco) or re.match(patron_folio_viejo, folio_mbco)):
             await update.message.reply_text(
                 "❌ **El folio no tiene el formato correcto.**\n\n"
-                "Recuerda: 4 dígitos – 3 dígitos – 1 letra (D, S, R o M) – 2 dígitos.\n"
-                "**Ejemplo:** `1234-209-M-11`\n\n"
+                "**Formato esperado:** #####-###-[D|S|R|M]-##\n"
+                "**Ejemplo:** `23456-209-M-11`\n\n"
+                "ℹ️ 5 dígitos – 3 dígitos – 1 letra (D, S, R o M) – 2 dígitos\n\n"
                 "Por favor, escribe un folio válido:",
                 parse_mode='Markdown'
             )
