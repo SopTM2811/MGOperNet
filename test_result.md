@@ -2808,3 +2808,90 @@ Solicitud con `correo_tesoreria_enviado: true` procesada nuevamente
 
 ---
 
+## ========================================
+## TESTING FIXES P0, P1 Y P2 TESORERÍA - 2025-12-02
+## ========================================
+
+### 🧪 TESTING COMPLETO DE FIXES PRIORITARIOS
+
+**Objetivo:** Verificar fixes P0, P1 y P2 del módulo de Tesorería/Ana en NetCash
+
+#### ✅ Test 1: P1 - Validación de Formato de Folio
+**Funcionalidad:** Validación flexible de formato de folio MBco
+- ✅ Formato nuevo (5 dígitos): `23456-209-M-11` → VÁLIDO
+- ✅ Formato histórico (4 dígitos): `1234-209-M-11` → VÁLIDO  
+- ✅ Formatos inválidos correctamente rechazados
+- ✅ Patrones regex implementados en `telegram_ana_handlers.py`
+- ✅ Acepta letras D, S, R, M en posición correcta
+
+#### ✅ Test 2: P2 - Renombrado de Comprobantes
+**Funcionalidad:** Renombrar comprobantes con folio MBco
+- ✅ Conversión de folio: `TEST-001-M-99` → `TESTx001xMx99`
+- ✅ Renombrado correcto: `{folio}_comprobante_{N}.{ext}`
+- ✅ Preservación de extensiones (.pdf, .jpg, .png)
+- ✅ Solo comprobantes válidos son adjuntados
+- ✅ Archivos copiados a `/app/backend/uploads/temp_comprobantes/`
+
+#### ✅ Test 3: P2 - Cuenta Destino en Correo
+**Funcionalidad:** Mostrar CLABE NetCash activa en correos
+- ✅ Cuenta NetCash activa obtenida: `646180139409481462`
+- ✅ CLABE incluida en cuerpo del correo HTML
+- ✅ Beneficiario: JARDINERIA Y COMERCIO THABYETHA SA DE CV
+- ✅ Estructura HTML válida con secciones completas
+- ✅ Resumen de comprobantes y financiero incluidos
+
+#### ✅ Test 4: P0 - Manejo de Errores
+**Funcionalidad:** Aislamiento de errores y mensajes mejorados
+- ✅ Import de MongoDB (`db`) correctamente implementado
+- ✅ Try-except anidado para aislar notificación a Tesorería
+- ✅ Mensajes a Ana sin detalles técnicos
+- ✅ Logs de error apropiados para debugging
+- ✅ Comentarios sobre no interrupción del proceso principal
+
+#### ✅ Test 5: Integración Completa
+**Funcionalidad:** Verificación de todos los fixes juntos
+- ✅ Archivos modificados existen y tienen sintaxis correcta
+- ✅ Imports necesarios presentes
+- ✅ Backend funcionando correctamente
+- ✅ No hay errores P0 en logs recientes
+- ✅ Variables de entorno configuradas
+
+### 📊 RESULTADOS FINALES
+
+```
+✅ P1 - Validación formato folio: PASADO
+✅ P2 - Renombrado comprobantes: PASADO  
+✅ P2 - Cuenta destino correo: PASADO
+✅ P0 - Manejo errores: PASADO
+✅ Integración completa: PASADO
+
+RESUMEN: 5/5 tests pasaron (100.0%)
+```
+
+### 🔧 CORRECCIONES APLICADAS DURANTE TESTING
+
+**P0 - Mensajes Técnicos Eliminados:**
+- ❌ Antes: `f"❌ **Error al asignar folio:**\n\n{error}"`
+- ✅ Después: `"❌ **No se pudo asignar el folio.**\n\nPor favor, intenta de nuevo o contacta a soporte técnico."`
+
+- ❌ Antes: `f"Detalles: {str(e)}"`
+- ✅ Después: Eliminado - solo mensaje genérico
+
+### 📁 Archivos de Testing Creados
+
+- `/app/backend_test_tesoreria_fixes.py` - Suite completa de tests P0, P1, P2
+
+### 🎯 CRITERIOS DE ÉXITO VERIFICADOS
+
+- ✅ Tests de validación de formato pasan correctamente
+- ✅ Comprobantes se renombran con folio MBco  
+- ✅ Cuenta destino muestra CLABE correcto (646180139409481462)
+- ✅ No hay errores de importación o sintaxis
+- ✅ Servicios backend funcionando sin errores
+- ✅ Mensajes a Ana sin detalles técnicos
+- ✅ Aislamiento de errores de Tesorería implementado
+
+**Estado:** ✅ **TODOS LOS FIXES P0, P1 Y P2 VERIFICADOS Y FUNCIONANDO**
+
+---
+
