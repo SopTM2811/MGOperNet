@@ -1727,7 +1727,7 @@ class TelegramNetCashHandlers:
         return NC_MANUAL_CAPTURAR_BENEFICIARIO
     
     async def recibir_beneficiario_nuevo_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handler para recibir el nombre del beneficiario nuevo en captura manual"""
+        """Handler para recibir selección de beneficiario (número o nombre nuevo)"""
         solicitud_id = context.user_data.get('nc_solicitud_id')
         
         if not solicitud_id:
@@ -1735,7 +1735,39 @@ class TelegramNetCashHandlers:
             return ConversationHandler.END
         
         try:
-            beneficiario = update.message.text.strip().upper()
+            texto = update.message.text.strip()
+            
+            # Verificar si es un número (selección de beneficiario frecuente)
+            if texto.isdigit():
+                numero = texto
+                beneficiarios_lista = context.user_data.get('beneficiarios_lista', {})
+                
+                if numero in beneficiarios_lista:
+                    # Selección de beneficiario frecuente
+                    benef_data = beneficiarios_lista[numero]
+                    
+                    # Guardar en contexto
+                    context.user_data['nc_manual_beneficiario'] = benef_data.get('nombre_beneficiario')
+                    context.user_data['nc_manual_idmex_beneficiario'] = benef_data.get('idmex')
+                    context.user_data['nc_manual_id_beneficiario_frecuente'] = benef_data.get('id')
+                    
+                    # Actualizar última vez usado
+                    await beneficiarios_frecuentes_service.actualizar_ultima_vez_usado(benef_data.get('id'))
+                    
+                    logger.info(f"[NC Manual] Beneficiario frecuente #{numero} seleccionado: {benef_data.get('nombre_beneficiario')}")
+                    
+                    # Siguiente paso: Número de ligas
+                    await self._pedir_num_ligas_manual_directo(update, context)
+                    return NC_MANUAL_NUM_LIGAS
+                else:
+                    await update.message.reply_text(
+                        f"❌ Número inválido. Por favor elige un número de la lista o escribe un nombre completo.",
+                        parse_mode="Markdown"
+                    )
+                    return NC_MANUAL_ELEGIR_BENEFICIARIO
+            
+            # Si no es número, es un beneficiario nuevo
+            beneficiario = texto.upper()
             
             # Validar beneficiario (mínimo 3 palabras, sin números)
             import re
@@ -1745,42 +1777,41 @@ class TelegramNetCashHandlers:
                 await update.message.reply_text(
                     f"❌ El beneficiario debe tener mínimo 3 palabras (nombre + 2 apellidos).\n\n"
                     f"Detectadas: {len(palabras)} palabra(s)\n\n"
-                    f"**Ejemplo:** JUAN CARLOS PÉREZ GÓMEZ",
+                    f"**Ejemplo:** SERGIO CORTES LEYVA",
                     parse_mode="Markdown"
                 )
-                return NC_MANUAL_CAPTURAR_BENEFICIARIO
+                return NC_MANUAL_ELEGIR_BENEFICIARIO
             
             if re.search(r'\d', beneficiario):
                 await update.message.reply_text(
                     "❌ El nombre del beneficiario no debe contener números.\n\n"
-                    "**Ejemplo:** JUAN CARLOS PÉREZ GÓMEZ",
+                    "**Ejemplo:** SERGIO CORTES LEYVA",
                     parse_mode="Markdown"
                 )
-                return NC_MANUAL_CAPTURAR_BENEFICIARIO
+                return NC_MANUAL_ELEGIR_BENEFICIARIO
             
             # Guardar en contexto
             context.user_data['nc_manual_beneficiario'] = beneficiario
             
             logger.info(f"[NC Manual] Beneficiario nuevo capturado: {beneficiario}")
             
-            # Preguntar por CLABE (opcional)
+            # Pedir IDMEX del beneficiario (OBLIGATORIO)
             mensaje = f"✅ Beneficiario registrado: **{beneficiario}**\n\n"
-            mensaje += "📝 **Paso 4 (opcional):** ¿Deseas capturar la CLABE donde se van a aplicar los depósitos?\n\n"
-            mensaje += "Esto ayuda a que futuras operaciones sean más rápidas.\n\n"
-            mensaje += "Puedes:\n"
-            mensaje += "• Enviar la CLABE de 18 dígitos, o\n"
-            mensaje += "• Escribir **omitir** para continuar sin CLABE"
+            mensaje += "📝 **Paso siguiente:** Escribe el **IDMEX del beneficiario**.\n\n"
+            mensaje += "Este dato es obligatorio para registrar a la persona física como beneficiario frecuente."
             
             await update.message.reply_text(mensaje, parse_mode="Markdown")
             
-            return NC_MANUAL_CAPTURAR_CLABE
+            return NC_MANUAL_CAPTURAR_IDMEX_BENEFICIARIO
             
         except Exception as e:
-            logger.error(f"[NC Manual] Error procesando beneficiario nuevo: {str(e)}")
+            logger.error(f"[NC Manual] Error procesando beneficiario: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             await update.message.reply_text(
                 "❌ Error procesando tu información. Por favor intenta de nuevo."
             )
-            return NC_MANUAL_CAPTURAR_BENEFICIARIO
+            return NC_MANUAL_ELEGIR_BENEFICIARIO
     
     async def recibir_clabe_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler para recibir CLABE en captura manual"""
