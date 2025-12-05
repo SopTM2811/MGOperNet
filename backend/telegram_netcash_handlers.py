@@ -1901,6 +1901,7 @@ class TelegramNetCashHandlers:
                 # Obtener cliente info
                 solicitud = await netcash_service.obtener_solicitud(solicitud_id)
                 cliente_id = solicitud.get("cliente_id")
+                telegram_chat_id = solicitud.get("canal_metadata", {}).get("telegram_chat_id")
                 
                 # Obtener IDMEX del cliente (para la asociación)
                 from motor.motor_asyncio import AsyncIOMotorClient
@@ -1913,30 +1914,31 @@ class TelegramNetCashHandlers:
                 cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
                 idmex_cliente = cliente.get("idmex") if cliente else None
                 
-                if idmex_cliente:
-                    # Crear beneficiario frecuente con IDMEX del beneficiario
-                    benef_creado = await beneficiarios_frecuentes_service.crear_beneficiario_frecuente(
-                        idmex=idmex_cliente,  # IDMEX del cliente para buscar sus frecuentes
-                        cliente_id=cliente_id,
-                        nombre_beneficiario=beneficiario,
-                        idmex_beneficiario=idmex_beneficiario  # IDMEX del beneficiario
-                    )
-                    
-                    if benef_creado:
-                        context.user_data['nc_manual_id_beneficiario_frecuente'] = benef_creado.get('id')
-                        logger.info(f"[NC Manual] Beneficiario guardado como frecuente: {benef_creado.get('id')}")
-                        await query.edit_message_text(
-                            "✅ Beneficiario guardado como frecuente.\n\nContinuando...",
-                            parse_mode="Markdown"
-                        )
-                    else:
-                        await query.edit_message_text(
-                            "⚠️ No se pudo guardar como frecuente, pero continuaremos con tu operación.",
-                            parse_mode="Markdown"
-                        )
-                else:
+                # Usar IDMEX del cliente si existe, sino usar telegram_id como llave alternativa
+                llave_cliente = idmex_cliente if idmex_cliente else f"tg_{telegram_chat_id}"
+                
+                logger.info(f"[NC Manual-BenefFrec] Guardando beneficiario frecuente con llave: {llave_cliente}")
+                
+                # Crear beneficiario frecuente
+                benef_creado = await beneficiarios_frecuentes_service.crear_beneficiario_frecuente(
+                    idmex=llave_cliente,  # IDMEX del cliente o telegram_id alternativo
+                    cliente_id=cliente_id,
+                    nombre_beneficiario=beneficiario,
+                    idmex_beneficiario=idmex_beneficiario  # IDMEX del beneficiario
+                )
+                
+                if benef_creado:
+                    context.user_data['nc_manual_id_beneficiario_frecuente'] = benef_creado.get('id')
+                    logger.info(f"[NC Manual-BenefFrec] ✅ Beneficiario guardado: {benef_creado.get('id')}")
                     await query.edit_message_text(
-                        "⚠️ No se pudo guardar (cliente sin IDMEX), pero continuaremos.",
+                        "✅ Beneficiario guardado como frecuente.\n\nContinuando...",
+                        parse_mode="Markdown"
+                    )
+                else:
+                    # Solo log interno, NO mostrar mensaje técnico al usuario
+                    logger.warning(f"[NC Manual-BenefFrec] No se pudo guardar beneficiario frecuente (continuando operación)")
+                    await query.edit_message_text(
+                        "✅ Continuando con tu operación...",
                         parse_mode="Markdown"
                     )
             else:
