@@ -626,17 +626,24 @@ class NetCashService:
         
         try:
             update_data = {
+                "estado": "esperando_validacion_ana",  # ⭐ Estado correcto para que aparezca en web
                 "origen_montos": "manual_cliente",
                 "num_comprobantes_declarado": num_comprobantes,
                 "monto_total_declarado": monto_total,
                 "beneficiario_declarado": beneficiario,
+                "beneficiario_reportado": beneficiario,  # Para compatibilidad con vista web
+                "cantidad_ligas_reportada": num_ligas,
                 "ligas_solicitadas": num_ligas,
+                "validado_por_ana": False,  # Pendiente de validación
                 "updated_at": datetime.now(timezone.utc)
             }
             
             # Agregar IDMEX del beneficiario si existe
             if idmex_beneficiario:
                 update_data["idmex_beneficiario_declarado"] = idmex_beneficiario
+                update_data["idmex_reportado"] = idmex_beneficiario  # Para compatibilidad
+            
+            logger.info(f"[NetCash-Manual] Actualizando estado a 'esperando_validacion_ana'")
             
             result = await db[COLLECTION_NAME].update_one(
                 {"id": solicitud_id},
