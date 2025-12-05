@@ -593,6 +593,59 @@ class NetCashService:
                 except Exception as e:
                     logger.warning(f"[NetCash ZIP] No se pudo eliminar directorio temporal: {str(e)}")
     
+    
+    async def guardar_datos_captura_manual(
+        self,
+        solicitud_id: str,
+        num_comprobantes: int,
+        monto_total: float,
+        beneficiario: str,
+        num_ligas: int
+    ) -> bool:
+        """
+        Guarda los datos capturados manualmente del usuario cuando el OCR falla
+        
+        Args:
+            solicitud_id: ID de la solicitud
+            num_comprobantes: Número de comprobantes declarado por el usuario
+            monto_total: Monto total declarado
+            beneficiario: Beneficiario declarado
+            num_ligas: Número de ligas solicitadas
+        
+        Returns:
+            True si se guardó exitosamente
+        """
+        logger.info(f"[NetCash-Manual] Guardando datos de captura manual para {solicitud_id}")
+        logger.info(f"[NetCash-Manual] Comprobantes: {num_comprobantes}, Monto: ${monto_total:,.2f}")
+        logger.info(f"[NetCash-Manual] Beneficiario: {beneficiario}, Ligas: {num_ligas}")
+        
+        try:
+            result = await db[COLLECTION_NAME].update_one(
+                {"id": solicitud_id},
+                {
+                    "$set": {
+                        "origen_montos": "manual_cliente",
+                        "num_comprobantes_declarado": num_comprobantes,
+                        "monto_total_declarado": monto_total,
+                        "beneficiario_declarado": beneficiario,
+                        "ligas_solicitadas": num_ligas,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                logger.info(f"[NetCash-Manual] ✅ Datos guardados correctamente")
+                return True
+            else:
+                logger.error(f"[NetCash-Manual] ❌ No se pudo guardar (solicitud no encontrada?)")
+                return False
+                
+        except Exception as e:
+            logger.exception(f"[NetCash-Manual] Error guardando datos: {str(e)}")
+            return False
+    
+
     def _calcular_hash_archivo(self, archivo_url: str) -> str:
         """
         Calcula hash SHA-256 del contenido de un archivo.
