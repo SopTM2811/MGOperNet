@@ -603,7 +603,8 @@ class NetCashService:
         num_comprobantes: int,
         monto_total: float,
         beneficiario: str,
-        num_ligas: int
+        num_ligas: int,
+        idmex_beneficiario: Optional[str] = None
     ) -> bool:
         """
         Guarda los datos capturados manualmente del usuario cuando el OCR falla
@@ -614,27 +615,32 @@ class NetCashService:
             monto_total: Monto total declarado
             beneficiario: Beneficiario declarado
             num_ligas: Número de ligas solicitadas
+            idmex_beneficiario: IDMEX del beneficiario (persona física)
         
         Returns:
             True si se guardó exitosamente
         """
         logger.info(f"[NetCash-Manual] Guardando datos de captura manual para {solicitud_id}")
         logger.info(f"[NetCash-Manual] Comprobantes: {num_comprobantes}, Monto: ${monto_total:,.2f}")
-        logger.info(f"[NetCash-Manual] Beneficiario: {beneficiario}, Ligas: {num_ligas}")
+        logger.info(f"[NetCash-Manual] Beneficiario: {beneficiario}, IDMEX: {idmex_beneficiario}, Ligas: {num_ligas}")
         
         try:
+            update_data = {
+                "origen_montos": "manual_cliente",
+                "num_comprobantes_declarado": num_comprobantes,
+                "monto_total_declarado": monto_total,
+                "beneficiario_declarado": beneficiario,
+                "ligas_solicitadas": num_ligas,
+                "updated_at": datetime.now(timezone.utc)
+            }
+            
+            # Agregar IDMEX del beneficiario si existe
+            if idmex_beneficiario:
+                update_data["idmex_beneficiario_declarado"] = idmex_beneficiario
+            
             result = await db[COLLECTION_NAME].update_one(
                 {"id": solicitud_id},
-                {
-                    "$set": {
-                        "origen_montos": "manual_cliente",
-                        "num_comprobantes_declarado": num_comprobantes,
-                        "monto_total_declarado": monto_total,
-                        "beneficiario_declarado": beneficiario,
-                        "ligas_solicitadas": num_ligas,
-                        "updated_at": datetime.now(timezone.utc)
-                    }
-                }
+                {"$set": update_data}
             )
             
             if result.modified_count > 0:
