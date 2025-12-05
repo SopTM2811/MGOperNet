@@ -1627,27 +1627,21 @@ class TelegramNetCashHandlers:
             mensaje += "📝 **Paso 3:** Beneficiario\n\n"
             
             if beneficiarios and len(beneficiarios) > 0:
-                mensaje += "🔁 **Beneficiarios frecuentes:**\n\n"
+                mensaje += "He encontrado beneficiarios frecuentes:\n\n"
+                
+                # Guardar beneficiarios en contexto con índice
+                context.user_data['beneficiarios_lista'] = {}
                 for idx, benef in enumerate(beneficiarios, 1):
-                    mensaje += f"{idx}. {benef.get('alias_mostrar')}\n"
+                    nombre = benef.get('nombre_beneficiario', '')
+                    mensaje += f"{idx}. {nombre}\n"
+                    # Guardar en contexto para selección por número
+                    context.user_data['beneficiarios_lista'][str(idx)] = benef
                 
-                mensaje += "\nPuedes elegir uno de la lista presionando el botón, "
-                mensaje += "o escribir el nombre de un beneficiario nuevo."
+                mensaje += "\n**Si quieres usar uno, responde solo con el número.**\n"
+                mensaje += "**Si es un beneficiario nuevo, escribe el nombre completo** (nombre y dos apellidos).\n\n"
+                mensaje += "Ejemplo: SERGIO CORTES LEYVA"
                 
-                # Crear botones para beneficiarios frecuentes
-                keyboard = []
-                for benef in beneficiarios:
-                    button_text = benef.get('alias_mostrar')[:35] + "..." if len(benef.get('alias_mostrar', '')) > 35 else benef.get('alias_mostrar')
-                    callback_data = f"nc_manual_benef_freq_{benef.get('id')}"
-                    # Guardar en contexto para recuperar después
-                    context.user_data[f"benef_freq_{benef.get('id')}"] = benef
-                    keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
-                
-                # Botón para capturar uno nuevo
-                keyboard.append([InlineKeyboardButton("➕ Capturar beneficiario nuevo", callback_data="nc_manual_benef_nuevo")])
-                
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
             else:
                 # No hay frecuentes, pedir captura manual directa
                 await self._pedir_beneficiario_manual_directo(update, context)
