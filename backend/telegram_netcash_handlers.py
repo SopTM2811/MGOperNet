@@ -1862,14 +1862,11 @@ class TelegramNetCashHandlers:
     async def _preguntar_guardar_frecuente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Pregunta al usuario si quiere guardar el beneficiario como frecuente"""
         beneficiario = context.user_data.get('nc_manual_beneficiario')
-        clabe = context.user_data.get('nc_manual_clabe')
+        idmex_beneficiario = context.user_data.get('nc_manual_idmex_beneficiario')
         
         mensaje = f"✅ Datos del beneficiario capturados correctamente.\n\n"
         mensaje += f"**Beneficiario:** {beneficiario}\n"
-        if clabe:
-            mensaje += f"**CLABE:** {clabe}\n\n"
-        else:
-            mensaje += f"**CLABE:** (No proporcionada)\n\n"
+        mensaje += f"**IDMEX:** {idmex_beneficiario}\n\n"
         
         mensaje += "💾 ¿Quieres guardar este beneficiario como frecuente para futuras operaciones?\n\n"
         mensaje += "Esto te permitirá seleccionarlo rápidamente la próxima vez."
