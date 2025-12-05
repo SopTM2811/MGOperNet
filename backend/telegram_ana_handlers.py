@@ -332,6 +332,18 @@ class TelegramAnaHandlers:
                 await update.message.reply_text(mensaje, parse_mode='Markdown')
                 logger.info(f"[Ana] Folio {folio_mbco} asignado exitosamente a solicitud {solicitud_id}")
                 
+                # P2: Registrar en colección de aprendizaje si fue captura manual
+                try:
+                    if solicitud.get("modo_captura") == "manual_por_fallo_ocr":
+                        logger.info(f"[Ana-P2] Registrando validación de captura manual en learning")
+                        await netcash_pdf_learning_service.registrar_caso_aprendizaje(
+                            solicitud=solicitud,
+                            validado_por_ana=True,
+                            estado_validacion_ana="aprobado"
+                        )
+                except Exception as e:
+                    logger.warning(f"[Ana-P2] No se pudo registrar en learning: {str(e)}")
+                
                 # NUEVO: Procesar operación de tesorería inmediatamente
                 try:
                     logger.info(f"[Ana] Iniciando proceso de tesorería para operación {solicitud_id}")
