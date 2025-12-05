@@ -24,6 +24,7 @@ import aiohttp
 from netcash_service import netcash_service
 from netcash_models import SolicitudCreate, SolicitudUpdate, CanalOrigen, CanalMetadata
 from cuenta_deposito_service import cuenta_deposito_service
+from beneficiarios_frecuentes_service import beneficiarios_frecuentes_service
 
 logger = logging.getLogger(__name__)
 
