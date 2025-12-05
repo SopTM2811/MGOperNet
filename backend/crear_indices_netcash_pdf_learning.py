@@ -43,7 +43,7 @@ async def crear_indices():
     print("✅ Índice creado: es_caso_entrenamiento")
     
     # 5. Índice en fecha (descendente para queries recientes)
-    await collection.create_index("fecha", direction=-1)
+    await collection.create_index([("fecha", -1)])
     print("✅ Índice creado: fecha (descendente)")
     
     # 6. Índice compuesto para queries comunes
