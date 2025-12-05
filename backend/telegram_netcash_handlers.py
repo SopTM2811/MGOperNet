@@ -34,6 +34,15 @@ NC_ESPERANDO_IDMEX = 22  # Paso 2b: IDMEX (si no usó frecuente)
 NC_ESPERANDO_LIGAS = 23  # Paso 3: Ligas
 NC_ESPERANDO_CONFIRMACION = 24  # Paso 4: Confirmación
 
+# Estados para captura manual por fallo OCR
+NC_MANUAL_NUM_COMPROBANTES = 30  # Captura manual: Número de comprobantes
+NC_MANUAL_MONTO_TOTAL = 31  # Captura manual: Monto total
+NC_MANUAL_ELEGIR_BENEFICIARIO = 32  # Captura manual: Elegir beneficiario (frecuente o nuevo)
+NC_MANUAL_CAPTURAR_BENEFICIARIO = 33  # Captura manual: Capturar nombre beneficiario nuevo
+NC_MANUAL_CAPTURAR_CLABE = 34  # Captura manual: Capturar CLABE (opcional)
+NC_MANUAL_GUARDAR_FRECUENTE = 35  # Captura manual: Preguntar si guardar como frecuente
+NC_MANUAL_NUM_LIGAS = 36  # Captura manual: Número de ligas
+
 
 class TelegramNetCashHandlers:
     """Clase con todos los handlers para NetCash V1 en Telegram - FLUJO REORDENADO"""
