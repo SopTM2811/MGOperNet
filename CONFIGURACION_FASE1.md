@@ -138,7 +138,7 @@ tail -f /var/log/supervisor/frontend.err.log
 
 Abre tu navegador y ve a:
 ```
-https://netcash-bugs-fix.preview.emergentagent.com
+https://pdf-capture-4.preview.emergentagent.com
 ```
 
 ---
