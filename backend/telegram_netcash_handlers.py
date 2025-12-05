@@ -2020,6 +2020,7 @@ class TelegramNetCashHandlers:
             logger.info(f"[NC Manual] Beneficiario: {beneficiario}, IDMEX: {idmex_beneficiario}")
             
             # Guardar en el servicio
+            logger.info(f"[Netcash-P0] Iniciando guardado captura manual para {solicitud_id}")
             guardado = await netcash_service.guardar_datos_captura_manual(
                 solicitud_id=solicitud_id,
                 num_comprobantes=num_comprobantes,
@@ -2030,11 +2031,14 @@ class TelegramNetCashHandlers:
             )
             
             if not guardado:
+                logger.error(f"[Netcash-P0][ERROR] No se pudo guardar captura manual para {solicitud_id}")
                 await update.message.reply_text(
                     "❌ Error guardando los datos. Por favor contacta a soporte.",
                     parse_mode="Markdown"
                 )
                 return ConversationHandler.END
+            
+            logger.info(f"[Netcash-P0] ✅ Datos de captura manual guardados correctamente")
             
             # Mostrar resumen al usuario
             mensaje = "✅ **Datos capturados correctamente**\n\n"
@@ -2050,10 +2054,45 @@ class TelegramNetCashHandlers:
             
             await update.message.reply_text(mensaje, parse_mode="Markdown")
             
+            # ⭐ NUEVO: Notificar a Ana después de completar captura manual
+            try:
+                logger.info(f"[Netcash-P0] Notificando a Ana sobre captura manual completada")
+                
+                # Obtener solicitud actualizada
+                solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+                
+                if solicitud:
+                    # Obtener usuario (cliente)
+                    from motor.motor_asyncio import AsyncIOMotorClient
+                    import os
+                    mongo_url = os.getenv('MONGO_URL')
+                    db_name = os.getenv('DB_NAME', 'netcash_mbco')
+                    client_db = AsyncIOMotorClient(mongo_url)
+                    db = client_db[db_name]
+                    
+                    cliente_id = solicitud.get("cliente_id")
+                    usuario = await db.usuarios_netcash.find_one({"cliente_id": cliente_id}, {"_id": 0})
+                    
+                    # Importar handlers de Ana
+                    from telegram_ana_handlers import telegram_ana_handlers
+                    
+                    # Notificar a Ana
+                    await telegram_ana_handlers.notificar_nueva_solicitud_para_mbco(solicitud, usuario)
+                    
+                    logger.info(f"[Netcash-P0] ✅ Solicitud {solicitud_id} actualizada y enviada a Ana")
+                else:
+                    logger.error(f"[Netcash-P0][ERROR] No se pudo obtener solicitud {solicitud_id} para notificar a Ana")
+                    
+            except Exception as e_ana:
+                logger.error(f"[Netcash-P0][ERROR] No se pudo notificar a Ana: {str(e_ana)}")
+                import traceback
+                logger.error(traceback.format_exc())
+                # No bloquear el flujo por error de notificación
+            
             # Limpiar contexto
             context.user_data.clear()
             
-            logger.info(f"[NC Manual] ✅ Captura manual completada exitosamente para {solicitud_id}")
+            logger.info(f"[Netcash-P0] ✅ Captura manual completada exitosamente para {solicitud_id}")
             
             return ConversationHandler.END
             
