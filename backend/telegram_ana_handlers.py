@@ -16,6 +16,9 @@ from telegram.ext import ContextTypes, ConversationHandler
 from netcash_service import netcash_service
 from motor.motor_asyncio import AsyncIOMotorClient
 
+# P2: Servicio de aprendizaje
+from netcash_pdf_learning_service import netcash_pdf_learning_service
+
 logger = logging.getLogger(__name__)
 
 # Conexión MongoDB
