@@ -30,6 +30,9 @@ from decimal import Decimal
 from banco_specific_parsers import banco_parser_factory
 from ocr_confidence_validator import ocr_confidence_validator
 
+# Servicio de aprendizaje (P2)
+from netcash_pdf_learning_service import netcash_pdf_learning_service
+
 from netcash_models import (
     SolicitudNetCash, SolicitudCreate, SolicitudUpdate, ResumenCliente,
     CanalOrigen, EstadoSolicitud, ValidacionCampo,
