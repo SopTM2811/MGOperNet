@@ -1896,13 +1896,13 @@ class TelegramNetCashHandlers:
             if guardar:
                 # Obtener datos del beneficiario
                 beneficiario = context.user_data.get('nc_manual_beneficiario')
-                clabe = context.user_data.get('nc_manual_clabe')
+                idmex_beneficiario = context.user_data.get('nc_manual_idmex_beneficiario')
                 
                 # Obtener cliente info
                 solicitud = await netcash_service.obtener_solicitud(solicitud_id)
                 cliente_id = solicitud.get("cliente_id")
                 
-                # Obtener IDMEX del cliente
+                # Obtener IDMEX del cliente (para la asociación)
                 from motor.motor_asyncio import AsyncIOMotorClient
                 import os
                 mongo_url = os.getenv('MONGO_URL')
@@ -1911,15 +1911,15 @@ class TelegramNetCashHandlers:
                 db = client[db_name]
                 
                 cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
-                idmex = cliente.get("idmex") if cliente else None
+                idmex_cliente = cliente.get("idmex") if cliente else None
                 
-                if idmex:
-                    # Crear beneficiario frecuente
+                if idmex_cliente:
+                    # Crear beneficiario frecuente con IDMEX del beneficiario
                     benef_creado = await beneficiarios_frecuentes_service.crear_beneficiario_frecuente(
-                        idmex=idmex,
+                        idmex=idmex_cliente,  # IDMEX del cliente para buscar sus frecuentes
                         cliente_id=cliente_id,
                         nombre_beneficiario=beneficiario,
-                        clabe=clabe
+                        idmex_beneficiario=idmex_beneficiario  # IDMEX del beneficiario
                     )
                     
                     if benef_creado:
