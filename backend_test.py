@@ -1162,16 +1162,40 @@ class BackendTester:
         logger.info("🔍 Test P0: FLUJO DE CAPTURA MANUAL POR FALLO OCR")
         
         try:
+            # ==================== SETUP: CREAR CLIENTE DE PRUEBA ====================
+            logger.info("   🔧 SETUP: Creando cliente de prueba...")
+            
+            # Crear cliente de prueba si no existe
+            if not self.cliente_id:
+                cliente_prueba = {
+                    "nombre": "CLIENTE PRUEBA MANUAL OCR",
+                    "email": "cliente.manual@test.com",
+                    "pais": "MX",
+                    "prefijo_telefono": "+52",
+                    "telefono": "3398765432",
+                    "telegram_id": "test_manual_ocr",
+                    "porcentaje_comision_cliente": 1.0,
+                    "canal_preferido": "Telegram",
+                    "propietario": "M",
+                    "rfc": "CPMOCR850315ABC",
+                    "notas": "Cliente de prueba para captura manual OCR",
+                    "estado": "activo"
+                }
+                
+                async with self.session.post(f"{BACKEND_URL}/clientes", json=cliente_prueba) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        self.cliente_id = data.get('id')
+                        logger.info(f"   ✅ Cliente de prueba creado: {self.cliente_id}")
+                    else:
+                        logger.error(f"   ❌ Error creando cliente de prueba: {response.status}")
+                        return False
+            
             # ==================== CASO 1: BENEFICIARIO NUEVO ====================
             logger.info("   📋 CASO 1: OCR falla → Cliente captura TODO manualmente (beneficiario NUEVO)")
             
             # PASO 1: Crear solicitud NetCash de prueba con estado borrador
             logger.info("   📝 PASO 1: Creando solicitud NetCash de prueba...")
-            
-            # Usar cliente de prueba existente
-            if not self.cliente_id:
-                logger.error("   ❌ No hay cliente_id disponible")
-                return False
             
             # Crear solicitud directamente en MongoDB
             solicitud_id = f"nc-test-manual-{int(datetime.now(timezone.utc).timestamp())}"
