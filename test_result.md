@@ -529,6 +529,72 @@ backend:
           
           El proceso automatizado de Tesorería está listo para producción.
 
+  - task: "NetCash - Flujo de captura manual por fallo OCR"
+    implemented: true
+    working: true
+    file: "/app/backend/netcash_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implementado flujo de captura manual de datos cuando el OCR no puede leer correctamente 
+          un comprobante NetCash. Incluye método guardar_datos_captura_manual() y soporte para 
+          beneficiarios frecuentes.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TESTING P0 COMPLETADO EXITOSAMENTE: Flujo de captura manual por fallo OCR funcionando correctamente.
+          
+          CASO 1 - BENEFICIARIO NUEVO:
+          • ✅ Solicitud NetCash creada con estado 'borrador'
+          • ✅ Marcada con modo_captura: "manual_por_fallo_ocr" y origen_montos: "pendiente_manual"
+          • ✅ Datos capturados manualmente:
+            - num_comprobantes_declarado: 2
+            - monto_total_declarado: $125,000.00
+            - beneficiario_declarado: "JUAN CARLOS PEREZ GOMEZ"
+            - clabe_declarada: "646180139409481462"
+            - ligas_solicitadas: 3
+          • ✅ Método netcash_service.guardar_datos_captura_manual() funciona correctamente
+          • ✅ Todos los campos se guardaron correctamente en BD
+          • ✅ origen_montos actualizado a "manual_cliente"
+          
+          CASO 2 - BENEFICIARIO FRECUENTE:
+          • ✅ Beneficiario frecuente creado en netcash_beneficiarios_frecuentes:
+            - idmex: "1234567890"
+            - cliente_id: "test_cliente_p0"
+            - nombre_beneficiario: "MARIA RODRIGUEZ SANCHEZ"
+            - clabe: "058680000012912655"
+            - activo: true
+          • ✅ beneficiarios_frecuentes_service.obtener_beneficiarios_frecuentes() funciona correctamente
+          • ✅ actualizar_ultima_vez_usado() funciona correctamente
+          • ✅ Solicitud creada con id_beneficiario_frecuente
+          • ✅ Datos guardados usando beneficiario frecuente:
+            - beneficiario_declarado: nombre del beneficiario frecuente
+            - clabe_declarada: CLABE del beneficiario frecuente
+            - id_beneficiario_frecuente: presente
+          
+          VALIDACIONES CRÍTICAS CONFIRMADAS:
+          ✅ Método guardar_datos_captura_manual() funciona correctamente
+          ✅ Servicio beneficiarios_frecuentes_service funciona (crear, obtener, actualizar)
+          ✅ Todos los campos se persisten correctamente en MongoDB
+          ✅ No hay errores de sintaxis o imports faltantes
+          ✅ El flujo NO rompe el flujo normal de NetCash
+          
+          CAMPOS VERIFICADOS EN BD:
+          • modo_captura
+          • origen_montos
+          • num_comprobantes_declarado
+          • monto_total_declarado
+          • beneficiario_declarado
+          • clabe_declarada
+          • ligas_solicitadas
+          • id_beneficiario_frecuente (cuando aplica)
+          
+          El flujo de captura manual está completamente funcional y listo para producción.
+
 frontend:
   - task: "Web modo espejo - Solo lectura para operaciones de Telegram"
     implemented: true
