@@ -2009,11 +2009,12 @@ class TelegramNetCashHandlers:
             num_comprobantes = context.user_data.get('nc_manual_num_comprobantes')
             monto_total = context.user_data.get('nc_manual_monto_total')
             beneficiario = context.user_data.get('nc_manual_beneficiario')
-            clabe = context.user_data.get('nc_manual_clabe')
+            idmex_beneficiario = context.user_data.get('nc_manual_idmex_beneficiario')
             id_benef_frecuente = context.user_data.get('nc_manual_id_beneficiario_frecuente')
             
             logger.info(f"[NC Manual] Guardando datos capturados manualmente para {solicitud_id}")
             logger.info(f"[NC Manual] Comprobantes: {num_comprobantes}, Monto: ${monto_total:,.2f}, Ligas: {num_ligas}")
+            logger.info(f"[NC Manual] Beneficiario: {beneficiario}, IDMEX: {idmex_beneficiario}")
             
             # Guardar en el servicio
             guardado = await netcash_service.guardar_datos_captura_manual(
@@ -2021,7 +2022,8 @@ class TelegramNetCashHandlers:
                 num_comprobantes=num_comprobantes,
                 monto_total=monto_total,
                 beneficiario=beneficiario,
-                num_ligas=num_ligas
+                num_ligas=num_ligas,
+                idmex_beneficiario=idmex_beneficiario
             )
             
             if not guardado:
@@ -2031,17 +2033,14 @@ class TelegramNetCashHandlers:
                 )
                 return ConversationHandler.END
             
-            # Actualizar también beneficiario e IDMEX si es necesario
-            # (Esto lo manejará Ana en la validación)
-            
             # Mostrar resumen al usuario
             mensaje = "✅ **Datos capturados correctamente**\n\n"
             mensaje += "📋 **Resumen de tu operación:**\n\n"
             mensaje += f"• Número de comprobantes: {num_comprobantes}\n"
             mensaje += f"• Monto total: ${monto_total:,.2f}\n"
             mensaje += f"• Beneficiario: {beneficiario}\n"
-            if clabe:
-                mensaje += f"• CLABE: {clabe}\n"
+            if idmex_beneficiario:
+                mensaje += f"• IDMEX del beneficiario: {idmex_beneficiario}\n"
             mensaje += f"• Número de ligas: {num_ligas}\n\n"
             mensaje += "📌 **Importante:** Tu operación será revisada por nuestro equipo antes de procesarse.\n\n"
             mensaje += "Te notificaremos cuando Ana valide tu información."
