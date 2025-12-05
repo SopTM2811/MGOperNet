@@ -177,26 +177,40 @@ class ESPIRALParser(BancoParser):
                 except ValueError:
                     continue
         
-        # 2. Buscar CLABE (18 dígitos)
-        patron_clabe = r'(?:CLABE|Cuenta)[:\s]*(\d{18})'
-        match_clabe = re.search(patron_clabe, texto, re.IGNORECASE)
-        if match_clabe:
-            resultado['clabe_ordenante'] = match_clabe.group(1)
-            logger.info(f"[ESPIRALParser] ✅ CLABE encontrada: {resultado['clabe_ordenante']}")
+        # 2. Buscar CLABE (18 dígitos) - patrones específicos de ESPIRAL
+        patrones_clabe = [
+            r'Cuenta\s+de\s+destino[:\s]*(\d{18})',  # Formato real ESPIRAL
+            r'CLABE\s+receptora[:\s]*(\d{18})',
+            r'(?:CLABE|Cuenta)[:\s]*(\d{18})'
+        ]
         
-        # Si no encontramos CLABE con patrón, buscar cualquier secuencia de 18 dígitos
+        for patron in patrones_clabe:
+            match_clabe = re.search(patron, texto, re.IGNORECASE)
+            if match_clabe:
+                resultado['clabe_ordenante'] = match_clabe.group(1)
+                logger.info(f"[ESPIRALParser] ✅ CLABE encontrada: {resultado['clabe_ordenante']}")
+                break
+        
+        # Si no encontramos CLABE con patrones específicos, buscar cualquier secuencia de 18 dígitos
         if not resultado['clabe_ordenante']:
             match_clabe_generico = re.search(r'\b(\d{18})\b', texto)
             if match_clabe_generico:
                 resultado['clabe_ordenante'] = match_clabe_generico.group(1)
                 logger.info(f"[ESPIRALParser] ✅ CLABE encontrada (genérico): {resultado['clabe_ordenante']}")
         
-        # 3. Buscar beneficiario
-        patron_beneficiario = r'Beneficiario[:\s]+([A-ZÁ-Ú\s]+(?:SA|SC|CV)?)'
-        match_beneficiario = re.search(patron_beneficiario, texto, re.IGNORECASE)
-        if match_beneficiario:
-            resultado['beneficiario_reportado'] = match_beneficiario.group(1).strip()
-            logger.info(f"[ESPIRALParser] ✅ Beneficiario: {resultado['beneficiario_reportado']}")
+        # 3. Buscar beneficiario - patrones específicos de ESPIRAL
+        patrones_beneficiario = [
+            r'Nombre\s+destinatario[:\s]+([A-ZÁ-Ú\s]+(?:SA|SC|CV)?)',  # Formato real ESPIRAL
+            r'Beneficiario[:\s]+([A-ZÁ-Ú\s]+(?:SA|SC|CV)?)',
+            r'Destinatario[:\s]+([A-ZÁ-Ú\s]+(?:SA|SC|CV)?)'
+        ]
+        
+        for patron in patrones_beneficiario:
+            match_beneficiario = re.search(patron, texto, re.IGNORECASE)
+            if match_beneficiario:
+                resultado['beneficiario_reportado'] = match_beneficiario.group(1).strip()
+                logger.info(f"[ESPIRALParser] ✅ Beneficiario: {resultado['beneficiario_reportado']}")
+                break
         
         return resultado
 
