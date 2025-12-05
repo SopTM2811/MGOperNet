@@ -1,0 +1,51 @@
+{
+  "id": "learn_94432da0504a",
+  "id_operacion": "nc-ejemplo-001",
+  "idmex": null,
+  "banco_probable": "ALBO",
+  "fecha": "2025-12-05T06:07:12.012000",
+  "modo_captura": "manual_por_fallo_ocr",
+  "origen_montos": "manual_cliente",
+  "metadata_pdf": {
+    "num_comprobantes": 2,
+    "comprobantes": [
+      {
+        "nombre_archivo": "comprobante_albo_001.pdf",
+        "hash_pdf": "sha256:abc123def456789...",
+        "tamanio_bytes": 0,
+        "tiene_texto": false,
+        "es_valido": false
+      },
+      {
+        "nombre_archivo": "comprobante_albo_002.pdf",
+        "hash_pdf": "sha256:xyz789uvw456123...",
+        "tamanio_bytes": 0,
+        "tiene_texto": true,
+        "es_valido": false
+      }
+    ]
+  },
+  "datos_robot": {
+    "monto_detectado": null,
+    "beneficiario_detectado": null,
+    "estado_validacion_robot": "monto_cero",
+    "banco_detectado": "ALBO",
+    "es_confiable": false,
+    "advertencias": [
+      "Banco: ALBO - Monto = $0.00"
+    ]
+  },
+  "datos_finales": {
+    "monto_total_real": 150000.0,
+    "beneficiario_real": "SERGIO CORTES LEYVA",
+    "id_beneficiario_frecuente": "bf_a1b2c3d4",
+    "validado_por_ana": false,
+    "estado_validacion_ana": null,
+    "num_ligas": 5
+  },
+  "es_caso_entrenamiento": true,
+  "cliente_id": "CLI_00123",
+  "cliente_nombre": "JUAN PEREZ GOMEZ",
+  "folio_mbco": "23456-209-M-11",
+  "created_at": "2025-12-05T06:07:12.012000"
+}
