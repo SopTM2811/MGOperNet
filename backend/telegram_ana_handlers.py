@@ -75,10 +75,43 @@ class TelegramAnaHandlers:
             # Construir mensaje
             cliente_nombre = solicitud.get("cliente_nombre", "N/A")
             
+            # ⭐ NUEVO P1: Detectar origen de datos (OCR vs Manual)
+            modo_captura = solicitud.get("modo_captura", "ocr_ok")
+            origen_montos = solicitud.get("origen_montos", "robot")
+            validacion_ocr = solicitud.get("validacion_ocr", {})
+            id_benef_frecuente = solicitud.get("id_beneficiario_frecuente")
+            
             mensaje = "🧾 **Nueva solicitud NetCash lista para MBco**\n\n"
             mensaje += f"📋 **Folio NetCash:** {folio_mbco}\n"
             mensaje += f"🧑‍💼 **Cliente:** {cliente_nombre}\n"
+            
+            # ⭐ NUEVO P1: Indicador de origen de datos
+            if modo_captura == "manual_por_fallo_ocr":
+                mensaje += "\n⚠️ **CAPTURA MANUAL** - OCR no pudo leer comprobante\n"
+                mensaje += f"📊 **Origen datos:** Manual (capturado por cliente)\n"
+                
+                # Mostrar motivo del fallo OCR
+                if validacion_ocr.get("motivo_fallo"):
+                    mensaje += f"❌ **Motivo fallo OCR:** {validacion_ocr.get('motivo_fallo')}\n"
+                
+                # Mostrar advertencias si existen
+                if validacion_ocr.get("advertencias"):
+                    advertencias = validacion_ocr.get("advertencias")
+                    if isinstance(advertencias, list) and len(advertencias) > 0:
+                        mensaje += f"⚠️ **Advertencias:** {', '.join(advertencias[:2])}\n"
+                
+                mensaje += "\n"
+            else:
+                mensaje += f"✅ **Origen datos:** Robot (OCR confiable)\n\n"
+            
             mensaje += f"👤 **Beneficiario:** {beneficiario}\n"
+            
+            # ⭐ NUEVO P1: Indicar si es beneficiario frecuente
+            if id_benef_frecuente:
+                mensaje += f"🔁 **Beneficiario frecuente:** SÍ (id: {id_benef_frecuente})\n"
+            else:
+                mensaje += f"🆕 **Beneficiario frecuente:** NO (nuevo)\n"
+            
             mensaje += f"🆔 **IDMEX:** {idmex}\n"
             mensaje += f"💰 **Total depósitos:** ${total_depositos:,.2f}\n"
             mensaje += f"📊 **Comisión NetCash (1%):** ${comision_netcash:,.2f}\n"
