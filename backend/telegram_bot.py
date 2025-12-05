@@ -1207,7 +1207,7 @@ class TelegramBotNetCash:
         self.nc_handlers = TelegramNetCashHandlers(self)
         
         # Importar handlers de Ana (admin MBco) y Tesorería
-        from telegram_ana_handlers import init_ana_handlers, ANA_ESPERANDO_FOLIO_MBCO
+        from telegram_ana_handlers import init_ana_handlers, ANA_ESPERANDO_FOLIO_MBCO, ANA_ESPERANDO_MOTIVO_RECHAZO
         from telegram_tesoreria_handlers import init_tesoreria_handlers
         
         self.ana_handlers = init_ana_handlers(self)
