@@ -416,6 +416,12 @@ class TelegramNetCashHandlers:
                     nombre_archivo
                 )
             
+                # ⭐ NUEVO: Detectar si requiere captura manual por fallo OCR
+                if razon == "requiere_captura_manual":
+                    logger.warning(f"[NC Telegram] OCR NO confiable para solicitud {solicitud_id} - Iniciando captura manual")
+                    await self._iniciar_captura_manual(update, context, solicitud_id)
+                    return NC_MANUAL_NUM_COMPROBANTES
+            
                 # Obtener solicitud actualizada para contar comprobantes
                 solicitud = await netcash_service.obtener_solicitud(solicitud_id)
                 comprobantes = solicitud.get("comprobantes", [])
