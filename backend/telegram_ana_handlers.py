@@ -26,6 +26,7 @@ db = client[db_name]
 
 # Estados del flujo de Ana
 ANA_ESPERANDO_FOLIO_MBCO = 100
+ANA_ESPERANDO_MOTIVO_RECHAZO = 101  # P1: Estado para capturar motivo de rechazo
 
 class TelegramAnaHandlers:
     """Handlers para el flujo de Ana (admin MBco)"""
