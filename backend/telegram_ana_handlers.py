@@ -598,6 +598,21 @@ class TelegramAnaHandlers:
             
             logger.info(f"[ANA_RECHAZO] ✅ Solicitud {solicitud_id} rechazada. Motivo: {motivo}")
             
+            # P2: Registrar en colección de aprendizaje si fue captura manual
+            try:
+                if solicitud.get("modo_captura") == "manual_por_fallo_ocr":
+                    logger.info(f"[Ana-P2] Registrando rechazo de captura manual en learning")
+                    # Actualizar solicitud con estado rechazado
+                    solicitud["estado"] = "rechazada"
+                    solicitud["validado_por_ana"] = False
+                    await netcash_pdf_learning_service.registrar_caso_aprendizaje(
+                        solicitud=solicitud,
+                        validado_por_ana=True,
+                        estado_validacion_ana="rechazado"
+                    )
+            except Exception as e:
+                logger.warning(f"[Ana-P2] No se pudo registrar rechazo en learning: {str(e)}")
+            
             # Notificar al cliente
             telegram_chat_id = solicitud.get("canal_metadata", {}).get("telegram_chat_id")
             
