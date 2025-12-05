@@ -639,6 +639,18 @@ class NetCashService:
             
             if result.modified_count > 0:
                 logger.info(f"[NetCash-Manual] ✅ Datos guardados correctamente")
+                
+                # P2: Registrar en colección de aprendizaje
+                try:
+                    solicitud = await self.obtener_solicitud(solicitud_id)
+                    if solicitud:
+                        await netcash_pdf_learning_service.registrar_caso_aprendizaje(
+                            solicitud=solicitud,
+                            validado_por_ana=False
+                        )
+                except Exception as e:
+                    logger.warning(f"[NetCash-Manual] No se pudo registrar en learning: {str(e)}")
+                
                 return True
             else:
                 logger.error(f"[NetCash-Manual] ❌ No se pudo guardar (solicitud no encontrada?)")
