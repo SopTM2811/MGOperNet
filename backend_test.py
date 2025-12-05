@@ -1389,9 +1389,43 @@ class BackendTester:
             
             solicitud_id_2 = f"nc-test-frecuente-{int(datetime.now(timezone.utc).timestamp())}"
             
-            solicitud_data_2 = solicitud_data.copy()
-            solicitud_data_2["id"] = solicitud_id_2
-            solicitud_data_2["id_beneficiario_frecuente"] = beneficiario_id
+            # Create a new document structure to avoid duplicate key error
+            solicitud_data_2 = {
+                "id": solicitud_id_2,
+                "folio_mbco": None,
+                "canal": "telegram",
+                "cliente_id": self.cliente_id,
+                "cliente_nombre": "CLIENTE DE PRUEBA MANUAL",
+                "beneficiario_reportado": None,
+                "idmex_reportado": None,
+                "cantidad_ligas_reportada": None,
+                "comprobantes": [],
+                "estado": "borrador",
+                "validacion": {
+                    "cliente": {"valido": False, "razon": "No validado"},
+                    "beneficiario": {"valido": False, "razon": "No validado"},
+                    "idmex": {"valido": False, "razon": "No validado"},
+                    "ligas": {"valido": False, "razon": "No validado"},
+                    "comprobante": {"valido": False, "razon": "No validado"}
+                },
+                "monto_depositado_cliente": None,
+                "porcentaje_comision_cliente": None,
+                "monto_comision_mbco": None,
+                "monto_capital_proveedor": None,
+                "canal_metadata": {},
+                "legacy": False,
+                "id_beneficiario_frecuente": beneficiario_id,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+                "estado_historico": [
+                    {
+                        "estado": "borrador",
+                        "en": datetime.now(timezone.utc),
+                        "por": "sistema",
+                        "notas": "Creada desde telegram para test beneficiario frecuente"
+                    }
+                ]
+            }
             
             await self.db.solicitudes_netcash.insert_one(solicitud_data_2)
             logger.info(f"   ✅ Solicitud con beneficiario frecuente creada: {solicitud_id_2}")
