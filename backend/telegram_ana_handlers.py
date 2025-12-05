@@ -480,6 +480,155 @@ class TelegramAnaHandlers:
         return ConversationHandler.END
 
 
+    
+    # ==================== P1: RECHAZAR OPERACIÓN ====================
+    
+    async def iniciar_rechazo_operacion(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handler cuando Ana presiona [Rechazar operación]
+        """
+        query = update.callback_query
+        await query.answer()
+        
+        telegram_id = query.from_user.id
+        
+        # Verificar permisos
+        logger.info(f"[ANA_RECHAZO] Callback Rechazar desde chat_id={telegram_id}")
+        
+        from usuarios_repo import usuarios_repo
+        usuario = await usuarios_repo.obtener_usuario_por_telegram_id(telegram_id)
+        
+        if not usuario or not usuario.get("activo"):
+            await query.edit_message_text("❌ No tienes permisos para esta acción.")
+            return ConversationHandler.END
+        
+        puede_asignar = usuario.get("permisos", {}).get("puede_asignar_folio_mbco", False)
+        
+        if not puede_asignar:
+            await query.edit_message_text("❌ No tienes permisos para esta acción.")
+            return ConversationHandler.END
+        
+        # Extraer solicitud_id del callback_data
+        solicitud_id = query.data.replace("ana_rechazar_", "")
+        
+        # Guardar solicitud_id en contexto
+        context.user_data['ana_solicitud_rechazar'] = solicitud_id
+        
+        logger.info(f"[ANA_RECHAZO] Iniciando rechazo de solicitud {solicitud_id}")
+        
+        # Pedir motivo del rechazo
+        mensaje = "❌ **Rechazar operación**\n\n"
+        mensaje += "Por favor escribe el **motivo del rechazo**.\n\n"
+        mensaje += "Este mensaje se enviará al cliente.\n\n"
+        mensaje += "**Ejemplos:**\n"
+        mensaje += "• Comprobantes no válidos\n"
+        mensaje += "• Montos no coinciden\n"
+        mensaje += "• Beneficiario incorrecto\n"
+        mensaje += "• Datos incompletos"
+        
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
+        
+        return ANA_ESPERANDO_MOTIVO_RECHAZO
+    
+    async def recibir_motivo_rechazo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir el motivo del rechazo"""
+        solicitud_id = context.user_data.get('ana_solicitud_rechazar')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Por favor intenta de nuevo.")
+            return ConversationHandler.END
+        
+        motivo = update.message.text.strip()
+        
+        if not motivo or len(motivo) < 5:
+            await update.message.reply_text(
+                "❌ El motivo debe tener al menos 5 caracteres.\n\n"
+                "Por favor escribe un motivo claro del rechazo.",
+                parse_mode="Markdown"
+            )
+            return ANA_ESPERANDO_MOTIVO_RECHAZO
+        
+        try:
+            # Obtener solicitud
+            from netcash_service import netcash_service
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            
+            if not solicitud:
+                await update.message.reply_text("❌ Error: Solicitud no encontrada.")
+                return ConversationHandler.END
+            
+            # Actualizar estado a rechazada
+            from motor.motor_asyncio import AsyncIOMotorClient
+            import os
+            from datetime import datetime, timezone
+            
+            mongo_url = os.getenv('MONGO_URL')
+            db_name = os.getenv('DB_NAME', 'netcash_mbco')
+            client = AsyncIOMotorClient(mongo_url)
+            db = client[db_name]
+            
+            await db.solicitudes_netcash.update_one(
+                {"id": solicitud_id},
+                {
+                    "$set": {
+                        "estado": "rechazada",
+                        "motivo_rechazo": motivo,
+                        "rechazada_por": update.effective_user.first_name,
+                        "fecha_rechazo": datetime.now(timezone.utc),
+                        "validado_por_ana": False
+                    }
+                }
+            )
+            
+            logger.info(f"[ANA_RECHAZO] ✅ Solicitud {solicitud_id} rechazada. Motivo: {motivo}")
+            
+            # Notificar al cliente
+            telegram_chat_id = solicitud.get("canal_metadata", {}).get("telegram_chat_id")
+            
+            if telegram_chat_id:
+                try:
+                    folio = solicitud.get("folio_mbco", solicitud_id)
+                    mensaje_cliente = f"❌ **Operación NetCash rechazada**\n\n"
+                    mensaje_cliente += f"📋 **Folio:** {folio}\n\n"
+                    mensaje_cliente += f"**Motivo:** {motivo}\n\n"
+                    mensaje_cliente += "Por favor contacta a tu ejecutivo para más información."
+                    
+                    await self.bot.app.bot.send_message(
+                        chat_id=telegram_chat_id,
+                        text=mensaje_cliente,
+                        parse_mode="Markdown"
+                    )
+                    
+                    logger.info(f"[ANA_RECHAZO] Cliente notificado en chat_id={telegram_chat_id}")
+                except Exception as e:
+                    logger.error(f"[ANA_RECHAZO] Error notificando al cliente: {str(e)}")
+            
+            # Confirmar a Ana
+            mensaje_ana = f"✅ **Operación rechazada correctamente**\n\n"
+            mensaje_ana += f"📋 **Solicitud:** {solicitud_id}\n"
+            mensaje_ana += f"❌ **Motivo:** {motivo}\n\n"
+            if telegram_chat_id:
+                mensaje_ana += "El cliente ha sido notificado."
+            else:
+                mensaje_ana += "⚠️ No se pudo notificar al cliente (sin chat_id)."
+            
+            await update.message.reply_text(mensaje_ana, parse_mode="Markdown")
+            
+            # Limpiar contexto
+            context.user_data.clear()
+            
+            return ConversationHandler.END
+            
+        except Exception as e:
+            logger.error(f"[ANA_RECHAZO] Error rechazando solicitud: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            await update.message.reply_text(
+                "❌ Error al procesar el rechazo. Por favor intenta de nuevo."
+            )
+            return ConversationHandler.END
+
+
 # Instancia global (se inicializa desde telegram_bot.py)
 telegram_ana_handlers = None
 
