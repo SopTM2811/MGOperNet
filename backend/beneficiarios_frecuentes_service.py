@@ -66,6 +66,7 @@ class BeneficiariosFrecuentesService:
         idmex: str,
         cliente_id: str,
         nombre_beneficiario: str,
+        idmex_beneficiario: Optional[str] = None,
         clabe: Optional[str] = None,
         banco: Optional[str] = None
     ) -> Optional[Dict]:
@@ -73,10 +74,11 @@ class BeneficiariosFrecuentesService:
         Crea un nuevo beneficiario frecuente
         
         Args:
-            idmex: IDMEX del cliente
+            idmex: IDMEX del cliente (para asociar al cliente)
             cliente_id: ID interno del cliente
             nombre_beneficiario: Nombre completo del beneficiario
-            clabe: CLABE del beneficiario (opcional)
+            idmex_beneficiario: IDMEX del beneficiario (persona física)
+            clabe: CLABE del beneficiario (opcional, legacy)
             banco: Nombre del banco (opcional)
         
         Returns:
@@ -102,18 +104,17 @@ class BeneficiariosFrecuentesService:
             # Generar ID único
             beneficiario_id = f"bf_{uuid4().hex[:8]}"
             
-            # Calcular terminación de CLABE
+            # Calcular terminación de CLABE si existe
             terminacion = clabe[-4:] if clabe and len(clabe) >= 4 else None
             
-            # Crear alias para mostrar
+            # Crear alias para mostrar (solo nombre, sin CLABE)
             alias_mostrar = f"{nombre_beneficiario}"
-            if terminacion:
-                alias_mostrar += f" – terminación {terminacion}"
             
             beneficiario = {
                 "id": beneficiario_id,
                 "cliente_id": cliente_id,
-                "idmex": idmex,
+                "idmex": idmex,  # IDMEX del cliente
+                "idmex_beneficiario": idmex_beneficiario,  # IDMEX del beneficiario
                 "nombre_beneficiario": nombre_beneficiario.upper(),
                 "alias_mostrar": alias_mostrar,
                 "clabe": clabe,
