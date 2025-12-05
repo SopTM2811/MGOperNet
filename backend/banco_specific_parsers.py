@@ -144,10 +144,10 @@ class ESPIRALParser(BancoParser):
         """
         Parsea comprobante de ESPIRAL/Fondeadora
         
-        ESPIRAL suele tener formato:
-        - "Importe: $X,XXX.XX"
-        - "CLABE: XXXXXXXXXXXXXXXXXX"
-        - "Beneficiario: NOMBRE"
+        Formatos detectados:
+        - "Importe transferido: 190000.00 MXN"
+        - "Cuenta de destino: XXXXXXXXXXXXXXXXXX"
+        - "Nombre destinatario: NOMBRE"
         """
         logger.info("[ESPIRALParser] Parseando comprobante de ESPIRAL/Fondeadora")
         
@@ -158,10 +158,11 @@ class ESPIRALParser(BancoParser):
             'beneficiario_reportado': None
         }
         
-        # 1. Buscar importe/monto
+        # 1. Buscar importe/monto (patrones basados en comprobantes reales)
         patrones_monto = [
+            r'Importe\s+transferido[:\s]+(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*MXN',  # Formato real ESPIRAL
             r'Importe[:\s]+\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
-            r'Monto[:\s]+\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'Monto\s+total[:\s]+\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
             r'Total[:\s]+\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)'
         ]
         
