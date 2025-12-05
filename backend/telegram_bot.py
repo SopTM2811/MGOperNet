@@ -1245,7 +1245,21 @@ class TelegramBotNetCash:
                 NC_ESPERANDO_CONFIRMACION: [
                     CallbackQueryHandler(self.nc_handlers.confirmar_operacion, pattern="^nc_confirmar_"),
                     CallbackQueryHandler(self.nc_handlers.corregir_datos, pattern="^nc_corregir_")
-                ]
+                ],
+                # Estados de captura manual por fallo OCR
+                NC_MANUAL_NUM_COMPROBANTES: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_num_comprobantes_manual)],
+                NC_MANUAL_MONTO_TOTAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_monto_total_manual)],
+                NC_MANUAL_ELEGIR_BENEFICIARIO: [
+                    CallbackQueryHandler(self.nc_handlers.seleccionar_beneficiario_frecuente_manual, pattern="^nc_manual_benef_freq_"),
+                    CallbackQueryHandler(self.nc_handlers.iniciar_captura_beneficiario_nuevo, pattern="^nc_manual_benef_nuevo$"),
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_beneficiario_nuevo_manual)
+                ],
+                NC_MANUAL_CAPTURAR_BENEFICIARIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_beneficiario_nuevo_manual)],
+                NC_MANUAL_CAPTURAR_CLABE: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_clabe_manual)],
+                NC_MANUAL_GUARDAR_FRECUENTE: [
+                    CallbackQueryHandler(self.nc_handlers.procesar_guardar_frecuente, pattern="^nc_manual_guardar_(si|no)$")
+                ],
+                NC_MANUAL_NUM_LIGAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_num_ligas_manual)]
             },
             fallbacks=[
                 CallbackQueryHandler(self.nc_handlers.cancelar_operacion, pattern="^nc_cancelar$"),
