@@ -1465,3 +1465,577 @@ class TelegramNetCashHandlers:
                     InlineKeyboardButton("⬅️ Volver al menú", callback_data="nc_menu_principal")
                 ]])
             )
+
+    
+    # ==================== FLUJO DE CAPTURA MANUAL POR FALLO OCR ====================
+    
+    async def _iniciar_captura_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE, solicitud_id: str):
+        """
+        Inicia el flujo de captura manual cuando el OCR falla
+        
+        Args:
+            update: Update de Telegram
+            context: Contexto de la conversación
+            solicitud_id: ID de la solicitud
+        """
+        logger.info(f"[NC Manual] Iniciando captura manual para solicitud {solicitud_id}")
+        
+        mensaje = "⚠️ **Tuvimos dificultad para leer algunos datos de tu comprobante.**\n\n"
+        mensaje += "Para poder continuar con tu operación, necesito que me proporciones la siguiente información:\n\n"
+        mensaje += "📝 **Paso 1:** ¿Cuántos comprobantes estás enviando en total?\n\n"
+        mensaje += "Por favor envíame solo el número.\n\n"
+        mensaje += "**Ejemplo:** 3"
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown")
+    
+    async def recibir_num_comprobantes_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir el número de comprobantes en captura manual"""
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Validar que sea un número
+            num_str = update.message.text.strip()
+            try:
+                num_comprobantes = int(num_str)
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Por favor envía solo un número.\n\n**Ejemplo:** 3",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_NUM_COMPROBANTES
+            
+            # Validar que sea mayor a 0
+            if num_comprobantes <= 0:
+                await update.message.reply_text(
+                    "❌ El número de comprobantes debe ser mayor a 0.\n\n**Ejemplo:** 3",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_NUM_COMPROBANTES
+            
+            # Guardar en contexto
+            context.user_data['nc_manual_num_comprobantes'] = num_comprobantes
+            
+            logger.info(f"[NC Manual] Número de comprobantes capturado: {num_comprobantes}")
+            
+            # Siguiente pregunta: Monto total
+            mensaje = f"✅ {num_comprobantes} comprobante(s) registrado(s).\n\n"
+            mensaje += "📝 **Paso 2:** ¿Cuál es el monto TOTAL que amparan todos los comprobantes juntos?\n\n"
+            mensaje += "Envíame el monto sin símbolos ni comas.\n\n"
+            mensaje += "**Ejemplos:**\n"
+            mensaje += "• 50000\n"
+            mensaje += "• 125000.50\n"
+            mensaje += "• 1000000"
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+            return NC_MANUAL_MONTO_TOTAL
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error procesando número de comprobantes: {str(e)}")
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Por favor intenta de nuevo."
+            )
+            return NC_MANUAL_NUM_COMPROBANTES
+    
+    async def recibir_monto_total_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir el monto total en captura manual"""
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Validar que sea un número
+            monto_str = update.message.text.strip().replace(',', '').replace('$', '')
+            try:
+                monto_total = float(monto_str)
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Por favor envía solo el monto numérico.\n\n**Ejemplos:** 50000 o 125000.50",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_MONTO_TOTAL
+            
+            # Validar que sea mayor a 0
+            if monto_total <= 0:
+                await update.message.reply_text(
+                    "❌ El monto debe ser mayor a 0.\n\n**Ejemplo:** 50000",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_MONTO_TOTAL
+            
+            # Guardar en contexto
+            context.user_data['nc_manual_monto_total'] = monto_total
+            
+            logger.info(f"[NC Manual] Monto total capturado: ${monto_total:,.2f}")
+            
+            # Siguiente paso: Elegir beneficiario (frecuente o nuevo)
+            await self._mostrar_beneficiarios_manual(update, context, solicitud_id)
+            
+            return NC_MANUAL_ELEGIR_BENEFICIARIO
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error procesando monto total: {str(e)}")
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Por favor intenta de nuevo."
+            )
+            return NC_MANUAL_MONTO_TOTAL
+    
+    async def _mostrar_beneficiarios_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE, solicitud_id: str):
+        """
+        Muestra los beneficiarios frecuentes o pregunta por uno nuevo
+        
+        Args:
+            update: Update de Telegram
+            context: Contexto de la conversación
+            solicitud_id: ID de la solicitud
+        """
+        try:
+            # Obtener solicitud para obtener cliente info
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            cliente_id = solicitud.get("cliente_id")
+            
+            # Obtener cliente para obtener IDMEX
+            from motor.motor_asyncio import AsyncIOMotorClient
+            import os
+            mongo_url = os.getenv('MONGO_URL')
+            db_name = os.getenv('DB_NAME', 'netcash_mbco')
+            client = AsyncIOMotorClient(mongo_url)
+            db = client[db_name]
+            
+            cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
+            
+            if not cliente or not cliente.get("idmex"):
+                # No hay IDMEX, ir directo a captura manual
+                logger.warning(f"[NC Manual] Cliente sin IDMEX, ir directo a captura manual")
+                await self._pedir_beneficiario_manual_directo(update, context)
+                return
+            
+            idmex = cliente.get("idmex")
+            
+            # Buscar beneficiarios frecuentes
+            beneficiarios = await beneficiarios_frecuentes_service.obtener_beneficiarios_frecuentes(idmex, limite=3)
+            
+            monto_total = context.user_data.get('nc_manual_monto_total', 0)
+            
+            mensaje = f"✅ Monto total registrado: **${monto_total:,.2f}**\n\n"
+            mensaje += "📝 **Paso 3:** Beneficiario\n\n"
+            
+            if beneficiarios and len(beneficiarios) > 0:
+                mensaje += "🔁 **Beneficiarios frecuentes:**\n\n"
+                for idx, benef in enumerate(beneficiarios, 1):
+                    mensaje += f"{idx}. {benef.get('alias_mostrar')}\n"
+                
+                mensaje += "\nPuedes elegir uno de la lista presionando el botón, "
+                mensaje += "o escribir el nombre de un beneficiario nuevo."
+                
+                # Crear botones para beneficiarios frecuentes
+                keyboard = []
+                for benef in beneficiarios:
+                    button_text = benef.get('alias_mostrar')[:35] + "..." if len(benef.get('alias_mostrar', '')) > 35 else benef.get('alias_mostrar')
+                    callback_data = f"nc_manual_benef_freq_{benef.get('id')}"
+                    # Guardar en contexto para recuperar después
+                    context.user_data[f"benef_freq_{benef.get('id')}"] = benef
+                    keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+                
+                # Botón para capturar uno nuevo
+                keyboard.append([InlineKeyboardButton("➕ Capturar beneficiario nuevo", callback_data="nc_manual_benef_nuevo")])
+                
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            else:
+                # No hay frecuentes, pedir captura manual directa
+                await self._pedir_beneficiario_manual_directo(update, context)
+                
+        except Exception as e:
+            logger.error(f"[NC Manual] Error mostrando beneficiarios: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            await update.message.reply_text(
+                "❌ Error al consultar beneficiarios. Continuaremos con captura manual."
+            )
+            await self._pedir_beneficiario_manual_directo(update, context)
+    
+    async def _pedir_beneficiario_manual_directo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Pide el nombre del beneficiario directamente (sin frecuentes)"""
+        monto_total = context.user_data.get('nc_manual_monto_total', 0)
+        
+        mensaje = f"✅ Monto total registrado: **${monto_total:,.2f}**\n\n"
+        mensaje += "📝 **Paso 3:** Escribe el nombre completo del beneficiario que debe aparecer en las ligas.\n\n"
+        mensaje += "El nombre debe tener:\n"
+        mensaje += "• Mínimo 3 palabras (nombre + dos apellidos)\n"
+        mensaje += "• Sin números\n\n"
+        mensaje += "**Ejemplo:** JUAN CARLOS PÉREZ GÓMEZ"
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown")
+    
+    async def seleccionar_beneficiario_frecuente_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler cuando el usuario selecciona un beneficiario frecuente en captura manual"""
+        query = update.callback_query
+        await query.answer()
+        
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await query.edit_message_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Extraer ID del beneficiario del callback_data
+            benef_id = query.data.replace("nc_manual_benef_freq_", "")
+            
+            # Recuperar datos del contexto
+            benef_data = context.user_data.get(f"benef_freq_{benef_id}")
+            
+            if not benef_data:
+                await query.edit_message_text("❌ Error recuperando datos. Por favor intenta de nuevo.")
+                return NC_MANUAL_ELEGIR_BENEFICIARIO
+            
+            # Guardar en contexto
+            context.user_data['nc_manual_beneficiario'] = benef_data.get('nombre_beneficiario')
+            context.user_data['nc_manual_clabe'] = benef_data.get('clabe')
+            context.user_data['nc_manual_id_beneficiario_frecuente'] = benef_id
+            
+            # Actualizar última vez usado
+            await beneficiarios_frecuentes_service.actualizar_ultima_vez_usado(benef_id)
+            
+            logger.info(f"[NC Manual] Beneficiario frecuente seleccionado: {benef_data.get('nombre_beneficiario')}")
+            
+            # Siguiente paso: Número de ligas
+            await self._pedir_num_ligas_manual(query, context)
+            
+            return NC_MANUAL_NUM_LIGAS
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error seleccionando beneficiario frecuente: {str(e)}")
+            await query.edit_message_text("❌ Error procesando tu selección. Intenta de nuevo.")
+            return NC_MANUAL_ELEGIR_BENEFICIARIO
+    
+    async def iniciar_captura_beneficiario_nuevo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para iniciar captura de beneficiario nuevo"""
+        query = update.callback_query
+        await query.answer()
+        
+        mensaje = "📝 **Captura de beneficiario nuevo**\n\n"
+        mensaje += "Escribe el nombre completo del beneficiario.\n\n"
+        mensaje += "El nombre debe tener:\n"
+        mensaje += "• Mínimo 3 palabras (nombre + dos apellidos)\n"
+        mensaje += "• Sin números\n\n"
+        mensaje += "**Ejemplo:** JUAN CARLOS PÉREZ GÓMEZ"
+        
+        await query.edit_message_text(mensaje, parse_mode="Markdown")
+        
+        return NC_MANUAL_CAPTURAR_BENEFICIARIO
+    
+    async def recibir_beneficiario_nuevo_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir el nombre del beneficiario nuevo en captura manual"""
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            beneficiario = update.message.text.strip().upper()
+            
+            # Validar beneficiario (mínimo 3 palabras, sin números)
+            import re
+            palabras = re.findall(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ]+", beneficiario)
+            
+            if len(palabras) < 3:
+                await update.message.reply_text(
+                    f"❌ El beneficiario debe tener mínimo 3 palabras (nombre + 2 apellidos).\n\n"
+                    f"Detectadas: {len(palabras)} palabra(s)\n\n"
+                    f"**Ejemplo:** JUAN CARLOS PÉREZ GÓMEZ",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_CAPTURAR_BENEFICIARIO
+            
+            if re.search(r'\d', beneficiario):
+                await update.message.reply_text(
+                    "❌ El nombre del beneficiario no debe contener números.\n\n"
+                    "**Ejemplo:** JUAN CARLOS PÉREZ GÓMEZ",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_CAPTURAR_BENEFICIARIO
+            
+            # Guardar en contexto
+            context.user_data['nc_manual_beneficiario'] = beneficiario
+            
+            logger.info(f"[NC Manual] Beneficiario nuevo capturado: {beneficiario}")
+            
+            # Preguntar por CLABE (opcional)
+            mensaje = f"✅ Beneficiario registrado: **{beneficiario}**\n\n"
+            mensaje += "📝 **Paso 4 (opcional):** ¿Deseas capturar la CLABE donde se van a aplicar los depósitos?\n\n"
+            mensaje += "Esto ayuda a que futuras operaciones sean más rápidas.\n\n"
+            mensaje += "Puedes:\n"
+            mensaje += "• Enviar la CLABE de 18 dígitos, o\n"
+            mensaje += "• Escribir **omitir** para continuar sin CLABE"
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+            return NC_MANUAL_CAPTURAR_CLABE
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error procesando beneficiario nuevo: {str(e)}")
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Por favor intenta de nuevo."
+            )
+            return NC_MANUAL_CAPTURAR_BENEFICIARIO
+    
+    async def recibir_clabe_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir CLABE en captura manual"""
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            clabe_input = update.message.text.strip().lower()
+            
+            # Si el usuario escribe "omitir", continuar sin CLABE
+            if clabe_input in ['omitir', 'skip', 'no', 'ninguna']:
+                context.user_data['nc_manual_clabe'] = None
+                logger.info(f"[NC Manual] Usuario omitió captura de CLABE")
+                
+                # Preguntar si quiere guardar como frecuente
+                await self._preguntar_guardar_frecuente(update, context)
+                return NC_MANUAL_GUARDAR_FRECUENTE
+            
+            # Validar que sea una CLABE de 18 dígitos
+            import re
+            clabe_limpia = re.sub(r'\s+', '', clabe_input)
+            
+            if not re.match(r'^\d{18}$', clabe_limpia):
+                await update.message.reply_text(
+                    "❌ La CLABE debe tener exactamente 18 dígitos.\n\n"
+                    "Puedes:\n"
+                    "• Enviar la CLABE de 18 dígitos, o\n"
+                    "• Escribir **omitir** para continuar sin CLABE",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_CAPTURAR_CLABE
+            
+            # Guardar en contexto
+            context.user_data['nc_manual_clabe'] = clabe_limpia
+            
+            logger.info(f"[NC Manual] CLABE capturada: {clabe_limpia}")
+            
+            # Preguntar si quiere guardar como frecuente
+            await self._preguntar_guardar_frecuente(update, context)
+            
+            return NC_MANUAL_GUARDAR_FRECUENTE
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error procesando CLABE: {str(e)}")
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Por favor intenta de nuevo."
+            )
+            return NC_MANUAL_CAPTURAR_CLABE
+    
+    async def _preguntar_guardar_frecuente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Pregunta al usuario si quiere guardar el beneficiario como frecuente"""
+        beneficiario = context.user_data.get('nc_manual_beneficiario')
+        clabe = context.user_data.get('nc_manual_clabe')
+        
+        mensaje = f"✅ Datos del beneficiario capturados correctamente.\n\n"
+        mensaje += f"**Beneficiario:** {beneficiario}\n"
+        if clabe:
+            mensaje += f"**CLABE:** {clabe}\n\n"
+        else:
+            mensaje += f"**CLABE:** (No proporcionada)\n\n"
+        
+        mensaje += "💾 ¿Quieres guardar este beneficiario como frecuente para futuras operaciones?\n\n"
+        mensaje += "Esto te permitirá seleccionarlo rápidamente la próxima vez."
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ Sí, guardar como frecuente", callback_data="nc_manual_guardar_si")],
+            [InlineKeyboardButton("➡️ No, continuar sin guardar", callback_data="nc_manual_guardar_no")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+    
+    async def procesar_guardar_frecuente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para procesar la decisión de guardar como frecuente"""
+        query = update.callback_query
+        await query.answer()
+        
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await query.edit_message_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            guardar = query.data == "nc_manual_guardar_si"
+            
+            if guardar:
+                # Obtener datos del beneficiario
+                beneficiario = context.user_data.get('nc_manual_beneficiario')
+                clabe = context.user_data.get('nc_manual_clabe')
+                
+                # Obtener cliente info
+                solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+                cliente_id = solicitud.get("cliente_id")
+                
+                # Obtener IDMEX del cliente
+                from motor.motor_asyncio import AsyncIOMotorClient
+                import os
+                mongo_url = os.getenv('MONGO_URL')
+                db_name = os.getenv('DB_NAME', 'netcash_mbco')
+                client = AsyncIOMotorClient(mongo_url)
+                db = client[db_name]
+                
+                cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
+                idmex = cliente.get("idmex") if cliente else None
+                
+                if idmex:
+                    # Crear beneficiario frecuente
+                    benef_creado = await beneficiarios_frecuentes_service.crear_beneficiario_frecuente(
+                        idmex=idmex,
+                        cliente_id=cliente_id,
+                        nombre_beneficiario=beneficiario,
+                        clabe=clabe
+                    )
+                    
+                    if benef_creado:
+                        context.user_data['nc_manual_id_beneficiario_frecuente'] = benef_creado.get('id')
+                        logger.info(f"[NC Manual] Beneficiario guardado como frecuente: {benef_creado.get('id')}")
+                        await query.edit_message_text(
+                            "✅ Beneficiario guardado como frecuente.\n\nContinuando...",
+                            parse_mode="Markdown"
+                        )
+                    else:
+                        await query.edit_message_text(
+                            "⚠️ No se pudo guardar como frecuente, pero continuaremos con tu operación.",
+                            parse_mode="Markdown"
+                        )
+                else:
+                    await query.edit_message_text(
+                        "⚠️ No se pudo guardar (cliente sin IDMEX), pero continuaremos.",
+                        parse_mode="Markdown"
+                    )
+            else:
+                logger.info(f"[NC Manual] Usuario decidió NO guardar como frecuente")
+                await query.edit_message_text(
+                    "✅ Entendido. Continuando sin guardar...",
+                    parse_mode="Markdown"
+                )
+            
+            # Siguiente paso: Número de ligas
+            await self._pedir_num_ligas_manual(query, context, is_callback=False)
+            
+            return NC_MANUAL_NUM_LIGAS
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error procesando guardar frecuente: {str(e)}")
+            await query.edit_message_text("❌ Error. Continuaremos con tu operación.")
+            await self._pedir_num_ligas_manual(query, context, is_callback=False)
+            return NC_MANUAL_NUM_LIGAS
+    
+    async def _pedir_num_ligas_manual(self, update_or_query, context: ContextTypes.DEFAULT_TYPE, is_callback: bool = True):
+        """Pide el número de ligas en captura manual"""
+        mensaje = "📝 **Paso final:** ¿Cuántas ligas NetCash necesitas?\n\n"
+        mensaje += "Envíame solo el número (debe ser mayor a 0).\n\n"
+        mensaje += "**Ejemplo:** 5"
+        
+        if is_callback:
+            await update_or_query.message.reply_text(mensaje, parse_mode="Markdown")
+        else:
+            # Es un query de callback
+            await update_or_query.message.reply_text(mensaje, parse_mode="Markdown")
+    
+    async def recibir_num_ligas_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir número de ligas en captura manual"""
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        if not solicitud_id:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Validar que sea un número
+            ligas_str = update.message.text.strip()
+            try:
+                num_ligas = int(ligas_str)
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Por favor envía solo un número.\n\n**Ejemplo:** 5",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_NUM_LIGAS
+            
+            # Validar que sea mayor a 0
+            if num_ligas <= 0:
+                await update.message.reply_text(
+                    "❌ El número de ligas debe ser mayor a 0.\n\n**Ejemplo:** 5",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_NUM_LIGAS
+            
+            # Guardar todos los datos capturados manualmente
+            num_comprobantes = context.user_data.get('nc_manual_num_comprobantes')
+            monto_total = context.user_data.get('nc_manual_monto_total')
+            beneficiario = context.user_data.get('nc_manual_beneficiario')
+            clabe = context.user_data.get('nc_manual_clabe')
+            id_benef_frecuente = context.user_data.get('nc_manual_id_beneficiario_frecuente')
+            
+            logger.info(f"[NC Manual] Guardando datos capturados manualmente para {solicitud_id}")
+            logger.info(f"[NC Manual] Comprobantes: {num_comprobantes}, Monto: ${monto_total:,.2f}, Ligas: {num_ligas}")
+            
+            # Guardar en el servicio
+            guardado = await netcash_service.guardar_datos_captura_manual(
+                solicitud_id=solicitud_id,
+                num_comprobantes=num_comprobantes,
+                monto_total=monto_total,
+                beneficiario=beneficiario,
+                num_ligas=num_ligas
+            )
+            
+            if not guardado:
+                await update.message.reply_text(
+                    "❌ Error guardando los datos. Por favor contacta a soporte.",
+                    parse_mode="Markdown"
+                )
+                return ConversationHandler.END
+            
+            # Actualizar también beneficiario e IDMEX si es necesario
+            # (Esto lo manejará Ana en la validación)
+            
+            # Mostrar resumen al usuario
+            mensaje = "✅ **Datos capturados correctamente**\n\n"
+            mensaje += "📋 **Resumen de tu operación:**\n\n"
+            mensaje += f"• Número de comprobantes: {num_comprobantes}\n"
+            mensaje += f"• Monto total: ${monto_total:,.2f}\n"
+            mensaje += f"• Beneficiario: {beneficiario}\n"
+            if clabe:
+                mensaje += f"• CLABE: {clabe}\n"
+            mensaje += f"• Número de ligas: {num_ligas}\n\n"
+            mensaje += "📌 **Importante:** Tu operación será revisada por nuestro equipo antes de procesarse.\n\n"
+            mensaje += "Te notificaremos cuando Ana valide tu información."
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            
+            # Limpiar contexto
+            context.user_data.clear()
+            
+            logger.info(f"[NC Manual] ✅ Captura manual completada exitosamente para {solicitud_id}")
+            
+            return ConversationHandler.END
+            
+        except Exception as e:
+            logger.error(f"[NC Manual] Error procesando número de ligas: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            await update.message.reply_text(
+                "❌ Error procesando tu información. Por favor contacta a soporte."
+            )
+            return ConversationHandler.END
+
