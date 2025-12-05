@@ -1813,8 +1813,8 @@ class TelegramNetCashHandlers:
             )
             return NC_MANUAL_ELEGIR_BENEFICIARIO
     
-    async def recibir_clabe_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handler para recibir CLABE en captura manual"""
+    async def recibir_idmex_beneficiario_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handler para recibir IDMEX del beneficiario en captura manual"""
         solicitud_id = context.user_data.get('nc_solicitud_id')
         
         if not solicitud_id:
@@ -1822,35 +1822,30 @@ class TelegramNetCashHandlers:
             return ConversationHandler.END
         
         try:
-            clabe_input = update.message.text.strip().lower()
+            idmex_beneficiario = update.message.text.strip()
             
-            # Si el usuario escribe "omitir", continuar sin CLABE
-            if clabe_input in ['omitir', 'skip', 'no', 'ninguna']:
-                context.user_data['nc_manual_clabe'] = None
-                logger.info(f"[NC Manual] Usuario omitió captura de CLABE")
-                
-                # Preguntar si quiere guardar como frecuente
-                await self._preguntar_guardar_frecuente(update, context)
-                return NC_MANUAL_GUARDAR_FRECUENTE
-            
-            # Validar que sea una CLABE de 18 dígitos
-            import re
-            clabe_limpia = re.sub(r'\s+', '', clabe_input)
-            
-            if not re.match(r'^\d{18}$', clabe_limpia):
+            # Validar que no esté vacío
+            if not idmex_beneficiario or len(idmex_beneficiario) < 6:
                 await update.message.reply_text(
-                    "❌ La CLABE debe tener exactamente 18 dígitos.\n\n"
-                    "Puedes:\n"
-                    "• Enviar la CLABE de 18 dígitos, o\n"
-                    "• Escribir **omitir** para continuar sin CLABE",
+                    "❌ El IDMEX debe tener al menos 6 caracteres.\n\n"
+                    "Por favor escribe el IDMEX del beneficiario.",
                     parse_mode="Markdown"
                 )
-                return NC_MANUAL_CAPTURAR_CLABE
+                return NC_MANUAL_CAPTURAR_IDMEX_BENEFICIARIO
+            
+            # Validar largo máximo razonable
+            if len(idmex_beneficiario) > 20:
+                await update.message.reply_text(
+                    "❌ El IDMEX no puede tener más de 20 caracteres.\n\n"
+                    "Por favor verifica e intenta de nuevo.",
+                    parse_mode="Markdown"
+                )
+                return NC_MANUAL_CAPTURAR_IDMEX_BENEFICIARIO
             
             # Guardar en contexto
-            context.user_data['nc_manual_clabe'] = clabe_limpia
+            context.user_data['nc_manual_idmex_beneficiario'] = idmex_beneficiario
             
-            logger.info(f"[NC Manual] CLABE capturada: {clabe_limpia}")
+            logger.info(f"[NC Manual] IDMEX del beneficiario capturado: {idmex_beneficiario}")
             
             # Preguntar si quiere guardar como frecuente
             await self._preguntar_guardar_frecuente(update, context)
@@ -1858,11 +1853,11 @@ class TelegramNetCashHandlers:
             return NC_MANUAL_GUARDAR_FRECUENTE
             
         except Exception as e:
-            logger.error(f"[NC Manual] Error procesando CLABE: {str(e)}")
+            logger.error(f"[NC Manual] Error procesando IDMEX: {str(e)}")
             await update.message.reply_text(
                 "❌ Error procesando tu información. Por favor intenta de nuevo."
             )
-            return NC_MANUAL_CAPTURAR_CLABE
+            return NC_MANUAL_CAPTURAR_IDMEX_BENEFICIARIO
     
     async def _preguntar_guardar_frecuente(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Pregunta al usuario si quiere guardar el beneficiario como frecuente"""
