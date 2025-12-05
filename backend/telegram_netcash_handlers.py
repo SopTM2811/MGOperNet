@@ -1610,16 +1610,17 @@ class TelegramNetCashHandlers:
             
             cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
             
-            if not cliente or not cliente.get("idmex"):
-                # No hay IDMEX, ir directo a captura manual
-                logger.warning(f"[NC Manual] Cliente sin IDMEX, ir directo a captura manual")
-                await self._pedir_beneficiario_manual_directo(update, context)
-                return
+            # Obtener telegram_chat_id de la solicitud
+            telegram_chat_id = solicitud.get("canal_metadata", {}).get("telegram_chat_id")
             
-            idmex = cliente.get("idmex")
+            # Usar IDMEX del cliente si existe, sino usar telegram_id como llave alternativa
+            idmex_cliente = cliente.get("idmex") if cliente else None
+            llave_busqueda = idmex_cliente if idmex_cliente else f"tg_{telegram_chat_id}"
+            
+            logger.info(f"[NC Manual-BenefFrec] Buscando beneficiarios frecuentes con llave: {llave_busqueda}")
             
             # Buscar beneficiarios frecuentes
-            beneficiarios = await beneficiarios_frecuentes_service.obtener_beneficiarios_frecuentes(idmex, limite=3)
+            beneficiarios = await beneficiarios_frecuentes_service.obtener_beneficiarios_frecuentes(llave_busqueda, limite=3)
             
             monto_total = context.user_data.get('nc_manual_monto_total', 0)
             
