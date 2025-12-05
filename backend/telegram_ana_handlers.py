@@ -121,7 +121,8 @@ class TelegramAnaHandlers:
             
             # Botones
             keyboard = [
-                [InlineKeyboardButton("📝 Asignar folio MBco", callback_data=f"ana_asignar_folio_{solicitud_id}")],
+                [InlineKeyboardButton("✅ Validar y asignar folio MBco", callback_data=f"ana_asignar_folio_{solicitud_id}")],
+                [InlineKeyboardButton("❌ Rechazar operación", callback_data=f"ana_rechazar_{solicitud_id}")],
                 [InlineKeyboardButton("🌐 Ver en la web", url=f"https://app.example.com/solicitud/{solicitud_id}")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
