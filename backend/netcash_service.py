@@ -24,6 +24,11 @@ from typing import Optional, Dict, List, Tuple
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+from decimal import Decimal
+
+# Servicios de OCR mejorado
+from banco_specific_parsers import banco_parser_factory
+from ocr_confidence_validator import ocr_confidence_validator
 
 from netcash_models import (
     SolicitudNetCash, SolicitudCreate, SolicitudUpdate, ResumenCliente,
