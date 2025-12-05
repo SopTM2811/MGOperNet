@@ -390,20 +390,38 @@ class NetCashService:
                 }
             }
             
+            # ⭐ NUEVO: Determinar si requiere captura manual
+            # Si algún comprobante tiene OCR no confiable, marcar la solicitud
+            update_fields = {
+                "updated_at": datetime.now(timezone.utc),
+                "monto_depositado_cliente": monto_detectado  # Actualizar monto si se detectó
+            }
+            
+            # Si este es el primer comprobante y el OCR no es confiable, activar modo manual
+            if not es_confiable and len(comprobantes_existentes) == 0:
+                logger.warning(f"[NetCash-OCR] ⚠️ Activando modo captura manual")
+                update_fields["modo_captura"] = "manual_por_fallo_ocr"
+                update_fields["origen_montos"] = "pendiente_manual"  # Se actualizará cuando el usuario responda
+                update_fields["validacion_ocr"] = {
+                    "es_confiable": es_confiable,
+                    "motivo_fallo": motivo_fallo,
+                    "advertencias": advertencias,
+                    "banco_detectado": datos_parseados.get('banco')
+                }
+            
             # Agregar a la solicitud
             result = await db[COLLECTION_NAME].update_one(
                 {"id": solicitud_id},
                 {
                     "$push": {"comprobantes": comprobante_detalle},
-                    "$set": {
-                        "updated_at": datetime.now(timezone.utc),
-                        "monto_depositado_cliente": monto_detectado  # Actualizar monto si se detectó
-                    }
+                    "$set": update_fields
                 }
             )
             
-            logger.info(f"[NetCash] ✅ Comprobante agregado: válido={es_valido}, monto={monto_detectado}")
-            return True, None  # Agregado exitosamente (válido o inválido, pero no duplicado)
+            logger.info(f"[NetCash] ✅ Comprobante agregado: válido={es_valido}, monto={monto_detectado}, ocr_confiable={es_confiable}")
+            
+            # Retornar información adicional para que el bot pueda actuar
+            return True, ("requiere_captura_manual" if not es_confiable and len(comprobantes_existentes) == 0 else None)
             
         except Exception as e:
             logger.error(f"[NetCash] Error agregando comprobante: {str(e)}")
