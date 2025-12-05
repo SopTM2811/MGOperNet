@@ -328,18 +328,44 @@ class NetCashService:
             # Extraer texto para detectar datos
             texto = self.validador_comprobantes.extraer_texto_comprobante(archivo_url, mime_type)
             
-            # Intentar extraer CLABE y beneficiario del comprobante
-            clabes_detectadas = self._extraer_clabes_del_texto(texto)
-            cuenta_detectada = None
-            monto_detectado = None
+            # ⭐ NUEVO: Usar parsers específicos por banco
+            logger.info(f"[NetCash-OCR] Usando parser específico por banco...")
+            datos_parseados = banco_parser_factory.parsear_comprobante(texto)
             
-            if clabes_detectadas:
+            # ⭐ NUEVO: Validar confianza del OCR
+            capital_esperado = solicitud.get('monto_ligas')  # Puede ser None si aún no se ha declarado
+            es_confiable, motivo_fallo, advertencias = ocr_confidence_validator.validar_confianza_ocr(
+                datos_ocr=datos_parseados,
+                capital_esperado=Decimal(str(capital_esperado)) if capital_esperado else None
+            )
+            
+            logger.info(f"[NetCash-OCR] Confianza OCR: {es_confiable}")
+            if not es_confiable:
+                logger.warning(f"[NetCash-OCR] ⚠️ OCR NO confiable - Motivo: {motivo_fallo}")
+                logger.warning(f"[NetCash-OCR] Advertencias: {advertencias}")
+            
+            # Extraer datos del parseo
+            cuenta_detectada = None
+            monto_detectado = datos_parseados.get('monto_detectado')
+            
+            if datos_parseados.get('clabe_ordenante'):
                 cuenta_detectada = {
-                    "clabe": clabes_detectadas[0] if clabes_detectadas else None
+                    "clabe": datos_parseados.get('clabe_ordenante'),
+                    "beneficiario": datos_parseados.get('beneficiario_reportado')
                 }
             
-            # Intentar extraer monto
-            monto_detectado = self._extraer_monto_del_texto(texto)
+            # Fallback: si el parser específico no encontró datos, usar método anterior
+            if not monto_detectado:
+                logger.info(f"[NetCash-OCR] Parser no encontró monto, usando método fallback...")
+                monto_detectado = self._extraer_monto_del_texto(texto)
+            
+            if not cuenta_detectada or not cuenta_detectada.get('clabe'):
+                logger.info(f"[NetCash-OCR] Parser no encontró CLABE, usando método fallback...")
+                clabes_detectadas = self._extraer_clabes_del_texto(texto)
+                if clabes_detectadas:
+                    cuenta_detectada = {
+                        "clabe": clabes_detectadas[0] if clabes_detectadas else None
+                    }
             
             # Crear detalle del comprobante (con hash para detección de duplicados)
             comprobante_detalle = {
