@@ -1274,6 +1274,10 @@ class BackendTester:
             # PASO 4: Llamar al método guardar_datos_captura_manual
             logger.info("   💾 PASO 4: Llamando a netcash_service.guardar_datos_captura_manual()...")
             
+            # Add backend directory to path
+            import sys
+            sys.path.append('/app/backend')
+            
             from netcash_service import NetCashService
             netcash_service = NetCashService()
             
