@@ -1270,12 +1270,18 @@ class TelegramBotNetCash:
             ]
         )
         
-        # Conversation handler para Ana (asignación de folio MBco)
+        # Conversation handler para Ana (asignación de folio MBco y rechazo)
         conv_handler_ana = ConversationHandler(
-            entry_points=[CallbackQueryHandler(self.ana_handlers.iniciar_asignacion_folio, pattern="^ana_asignar_folio_")],
+            entry_points=[
+                CallbackQueryHandler(self.ana_handlers.iniciar_asignacion_folio, pattern="^ana_asignar_folio_"),
+                CallbackQueryHandler(self.ana_handlers.iniciar_rechazo_operacion, pattern="^ana_rechazar_")
+            ],
             states={
                 ANA_ESPERANDO_FOLIO_MBCO: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, self.ana_handlers.recibir_folio_mbco)
+                ],
+                ANA_ESPERANDO_MOTIVO_RECHAZO: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.ana_handlers.recibir_motivo_rechazo)
                 ]
             },
             fallbacks=[
