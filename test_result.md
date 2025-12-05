@@ -757,6 +757,49 @@ agent_communication:
       El flujo NetCash V1 está listo para producción con las mejoras implementadas.
   - agent: "testing"
     message: |
+      ✅ TESTING P0 FLUJO CAPTURA MANUAL POR FALLO OCR COMPLETADO EXITOSAMENTE
+      
+      🎯 OBJETIVO DEL TEST:
+      Verificar implementación del flujo de captura manual de datos cuando el OCR no puede 
+      leer correctamente un comprobante NetCash, incluyendo soporte para beneficiarios frecuentes.
+      
+      📋 CASOS DE PRUEBA EJECUTADOS:
+      
+      CASO 1 - BENEFICIARIO NUEVO:
+      • ✅ Solicitud NetCash creada con estado 'borrador'
+      • ✅ Marcada con modo_captura: "manual_por_fallo_ocr"
+      • ✅ Datos manuales capturados: 2 comprobantes, $125,000.00, "JUAN CARLOS PEREZ GOMEZ", CLABE "646180139409481462", 3 ligas
+      • ✅ Método netcash_service.guardar_datos_captura_manual() funciona correctamente
+      • ✅ Todos los campos persistidos en MongoDB correctamente
+      
+      CASO 2 - BENEFICIARIO FRECUENTE:
+      • ✅ Beneficiario frecuente creado: "MARIA RODRIGUEZ SANCHEZ", CLABE "058680000012912655"
+      • ✅ beneficiarios_frecuentes_service.obtener_beneficiarios_frecuentes() retorna beneficiario
+      • ✅ actualizar_ultima_vez_usado() funciona correctamente
+      • ✅ Solicitud con id_beneficiario_frecuente creada y datos guardados
+      
+      🔧 SERVICIOS BACKEND VERIFICADOS:
+      • ✅ NetCashService.guardar_datos_captura_manual() - Funcional
+      • ✅ BeneficiariosFrecuentesService - Crear, obtener, actualizar - Funcional
+      • ✅ MongoDB persistencia - Todos los campos guardados correctamente
+      • ✅ No errores de sintaxis o imports faltantes
+      • ✅ Flujo NO rompe operación normal de NetCash
+      
+      📊 CAMPOS VERIFICADOS EN BD:
+      • modo_captura: "manual_por_fallo_ocr"
+      • origen_montos: "manual_cliente" (actualizado al guardar)
+      • num_comprobantes_declarado: 2
+      • monto_total_declarado: 125000.00
+      • beneficiario_declarado: Nombre del beneficiario
+      • clabe_declarada: CLABE correspondiente
+      • ligas_solicitadas: 3
+      • id_beneficiario_frecuente: ID cuando se usa beneficiario frecuente
+      
+      🎉 RESULTADO: FLUJO DE CAPTURA MANUAL COMPLETAMENTE FUNCIONAL
+      Ambos casos (beneficiario nuevo y frecuente) funcionan correctamente.
+      Sistema listo para manejar fallos de OCR con captura manual de datos.
+  - agent: "testing"
+    message: |
       🔍 TESTING ESPECÍFICO USUARIO 1570668456 (daniel G) - COMANDO /start
       
       📋 ESCENARIO REPORTADO:
