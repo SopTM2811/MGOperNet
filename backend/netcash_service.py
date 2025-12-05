@@ -380,7 +380,14 @@ class NetCashService:
                     "texto_extraido_chars": len(texto) if texto else 0
                 },
                 "cuenta_detectada": cuenta_detectada,
-                "monto_detectado": monto_detectado
+                "monto_detectado": monto_detectado,
+                # ⭐ NUEVO: Datos de validación OCR
+                "ocr_data": {
+                    "banco_detectado": datos_parseados.get('banco'),
+                    "es_confiable": es_confiable,
+                    "motivo_fallo": motivo_fallo if not es_confiable else None,
+                    "advertencias": advertencias
+                }
             }
             
             # Agregar a la solicitud
