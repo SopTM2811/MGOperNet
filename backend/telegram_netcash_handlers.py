@@ -1969,6 +1969,14 @@ class TelegramNetCashHandlers:
             # Es un query de callback
             await update_or_query.message.reply_text(mensaje, parse_mode="Markdown")
     
+    async def _pedir_num_ligas_manual_directo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Pide el número de ligas directamente (sin query)"""
+        mensaje = "📝 **Paso final:** ¿Cuántas ligas NetCash necesitas?\n\n"
+        mensaje += "Envíame solo el número (debe ser mayor a 0).\n\n"
+        mensaje += "**Ejemplo:** 5"
+        
+        await update.message.reply_text(mensaje, parse_mode="Markdown")
+    
     async def recibir_num_ligas_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handler para recibir número de ligas en captura manual"""
         solicitud_id = context.user_data.get('nc_solicitud_id')
