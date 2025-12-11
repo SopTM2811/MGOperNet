@@ -665,7 +665,7 @@ async def confirmar_operacion(operacion_id: str):
 # RUTAS DE CLIENTES
 # ============================================
 
-@api_router.get("/clientes", response_model=List[Cliente])
+@api_router.get("/clientes")
 async def obtener_clientes():
     """
     Obtiene todos los clientes.
@@ -674,7 +674,9 @@ async def obtener_clientes():
     
     for cliente in clientes:
         if isinstance(cliente.get('fecha_alta'), str):
-            cliente['fecha_alta'] = datetime.fromisoformat(cliente['fecha_alta'])
+            cliente['fecha_alta'] = datetime.fromisoformat(cliente['fecha_alta']).isoformat()
+        elif isinstance(cliente.get('fecha_alta'), datetime):
+            cliente['fecha_alta'] = cliente['fecha_alta'].isoformat()
     
     return clientes
 
