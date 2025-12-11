@@ -955,10 +955,15 @@ class TelegramBotNetCash:
         mensaje += "📧 gestion.ngdl@gmail.com\n"
         mensaje += "📱 +52 33 1218 6685"
         
+        # Agregar botón de volver al menú
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        keyboard = [[InlineKeyboardButton("🏠 Volver al menú principal", callback_data="nc_menu_principal")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         if hasattr(update, 'callback_query') and update.callback_query:
-            await update.callback_query.edit_message_text(mensaje, parse_mode="Markdown")
+            await update.callback_query.edit_message_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
         else:
-            await update.message.reply_text(mensaje, parse_mode="Markdown")
+            await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
     
     async def ver_cuenta_pagos(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Muestra la cuenta para realizar pagos"""
