@@ -390,15 +390,66 @@ def _mapear_estado_solicitud(estado_telegram: str) -> str:
 async def obtener_operacion(operacion_id: str):
     """
     Obtiene una operación específica por ID.
+    Busca en ambas colecciones (web y Telegram) para vista unificada.
     """
+    # Primero buscar en operaciones web
     operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+    origen = "web"
+    
+    if not operacion:
+        # Buscar en solicitudes Telegram
+        operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+        origen = "telegram"
+        
+        if operacion:
+            # Normalizar campos de Telegram a estructura web
+            operacion = {
+                "id": operacion.get("id"),
+                "folio_mbco": operacion.get("folio_mbco"),
+                "cliente_id": operacion.get("cliente_id"),
+                "cliente_nombre": operacion.get("cliente_nombre"),
+                "titular_nombre_completo": operacion.get("beneficiario_reportado"),
+                "titular_idmex": operacion.get("idmex_reportado") or operacion.get("idmex_beneficiario_declarado"),
+                "numero_ligas": operacion.get("cantidad_ligas_reportada", 0),
+                "comprobantes": operacion.get("comprobantes", []),
+                "estado": _mapear_estado_solicitud(operacion.get("estado", "borrador")),
+                "fecha_creacion": operacion.get("created_at"),
+                "monto_depositado_cliente": operacion.get("monto_depositado_cliente", 0),
+                "monto_total_comprobantes": operacion.get("monto_depositado_cliente", 0),
+                "comision_cobrada": operacion.get("comision_cliente", 0),
+                "porcentaje_comision_usado": operacion.get("comision_cliente_porcentaje", 1.0),
+                "origen": "telegram",
+                "origen_operacion": "telegram",
+                "modo_captura": operacion.get("modo_captura", "ocr_ok"),
+                "telegram_id": operacion.get("telegram_id"),
+                "idmex_beneficiario_declarado": operacion.get("idmex_beneficiario_declarado"),
+                # Calcular monto si no está definido
+                "calculos": None
+            }
+            
+            # Calcular monto de comprobantes
+            if not operacion["monto_depositado_cliente"]:
+                comprobantes = operacion.get("comprobantes", [])
+                monto_total = sum(
+                    c.get("monto_detectado", 0) or c.get("monto", 0)
+                    for c in comprobantes 
+                    if c.get("es_valido") and not c.get("es_duplicado")
+                )
+                operacion["monto_depositado_cliente"] = monto_total
+                operacion["monto_total_comprobantes"] = monto_total
     
     if not operacion:
         raise HTTPException(status_code=404, detail="Operación no encontrada")
     
+    # Marcar origen
+    operacion["origen"] = origen
+    
     # Convertir timestamps
     if isinstance(operacion.get('fecha_creacion'), str):
-        operacion['fecha_creacion'] = datetime.fromisoformat(operacion['fecha_creacion'])
+        try:
+            operacion['fecha_creacion'] = datetime.fromisoformat(operacion['fecha_creacion'].replace('Z', '+00:00'))
+        except:
+            pass
     
     return operacion
 
