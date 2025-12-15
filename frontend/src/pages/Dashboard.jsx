@@ -142,13 +142,13 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white py-8">
-      <div className="container mx-auto px-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-12">
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header - Responsive */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
           <div>
             <h1 
-              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 tracking-tight"
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight"
               style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               data-testid="dashboard-title"
             >
