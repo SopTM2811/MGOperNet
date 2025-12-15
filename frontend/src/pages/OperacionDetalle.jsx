@@ -621,17 +621,17 @@ const OperacionDetalle = () => {
                       </div>
                     </div>
 
-                    {/* Sección 4: Resultado - Utilidad neta */}
+                    {/* Sección 4: Resultado - Capital NetCash */}
                     <div>
                       <h3 className="text-sm font-semibold text-slate-700 mb-3">4️⃣ Resultado</h3>
                       <div className="bg-green-50 rounded-lg p-4 border-2 border-green-400">
-                        <Label className="text-slate-600 text-sm">Utilidad neta MBco</Label>
+                        <Label className="text-slate-600 text-sm">Capital NetCash (a dispersar)</Label>
                         <p className="text-4xl font-bold text-green-700">
-                          ${(operacion.utilidad_neta || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          ${utilidadNeta.toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                         <p className="text-sm text-slate-600 mt-2">
-                          Comisión cliente (${operacion.comision_cobrada.toLocaleString('es-MX', {minimumFractionDigits: 2})}) 
-                          - Costo DNS (${(operacion.costo_proveedor_monto || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})})
+                          Monto depositado (${montoTotalComprobantes.toLocaleString('es-MX', {minimumFractionDigits: 2})}) 
+                          - Comisión cliente (${(operacion.comision_cobrada || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})})
                         </p>
                       </div>
                     </div>
@@ -639,7 +639,7 @@ const OperacionDetalle = () => {
                     {/* Nota importante */}
                     <div className="mt-4 text-xs text-slate-600 bg-yellow-50 p-3 rounded border border-yellow-200">
                       <p className="font-semibold mb-1">⚠️ INFORMACIÓN CONFIDENCIAL</p>
-                      <p>Los datos de costo proveedor DNS y utilidad neta NO deben mostrarse al cliente en ningún reporte, PDF o comunicación externa.</p>
+                      <p>Los datos de costo proveedor DNS NO deben mostrarse al cliente en ningún reporte, PDF o comunicación externa.</p>
                     </div>
 
                     {puedeConfirmar && (
