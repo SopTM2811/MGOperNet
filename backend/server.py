@@ -356,10 +356,19 @@ def _mapear_estado_solicitud(estado_telegram: str) -> str:
         "lista_para_mbco": "ESPERANDO_CODIGO_SISTEMA",
         "enviada_tesoreria": "ESPERANDO_TESORERIA",
         "completada": "COMPLETADO",
-        "rechazada": "RECHAZADO",
-        "cancelada": "CANCELADO",
+        "rechazada": "CANCELADA_POR_INACTIVIDAD",
+        "cancelada": "CANCELADA_POR_INACTIVIDAD",
+        # Estados adicionales del bot de Telegram
+        "esperando_validacion_ana": "VALIDANDO_COMPROBANTES",
+        "ESPERANDO_VALIDACION_ANA": "VALIDANDO_COMPROBANTES",
+        "enviado_a_tesoreria": "ESPERANDO_TESORERIA",
+        "ENVIADO_A_TESORERIA": "ESPERANDO_TESORERIA",
+        "orden_interna_generada": "ESPERANDO_CODIGO_SISTEMA",
+        "ORDEN_INTERNA_GENERADA": "ESPERANDO_CODIGO_SISTEMA",
+        "dispersada_proveedor": "COMPLETADO",
+        "DISPERSADA_PROVEEDOR": "COMPLETADO",
     }
-    return mapeo.get(estado_telegram, estado_telegram.upper())
+    return mapeo.get(estado_telegram, "ESPERANDO_COMPROBANTES")
 
 
 @api_router.get("/operaciones/{operacion_id}", response_model=OperacionNetCash)
