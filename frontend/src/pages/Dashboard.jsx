@@ -57,6 +57,27 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteClick = (e, operacion) => {
+    e.stopPropagation();
+    setOperacionToDelete(operacion);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!operacionToDelete) return;
+    
+    try {
+      await axios.delete(`${API}/operaciones/${operacionToDelete.id}`);
+      toast.success('Operación eliminada correctamente');
+      setShowDeleteDialog(false);
+      setOperacionToDelete(null);
+      cargarOperaciones(); // Recargar lista
+    } catch (error) {
+      console.error('Error eliminando operación:', error);
+      toast.error('Error al eliminar la operación');
+    }
+  };
+
   const calcularStats = (ops) => {
     const total = ops.length;
     const completadas = ops.filter(op => op.estado === 'COMPLETADO').length;
