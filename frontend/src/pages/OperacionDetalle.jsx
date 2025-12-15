@@ -589,7 +589,7 @@ const OperacionDetalle = () => {
                             ${operacion.comision_cobrada.toLocaleString('es-MX', {minimumFractionDigits: 2})}
                           </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            ${operacion.monto_total_comprobantes.toLocaleString('es-MX')} × {operacion.porcentaje_comision_usado || 1.0}%
+                            ${montoTotalComprobantes.toLocaleString('es-MX')} × {operacion.porcentaje_comision_usado || 1.0}%
                           </p>
                         </div>
                       </div>
@@ -615,7 +615,7 @@ const OperacionDetalle = () => {
                             ${(operacion.costo_proveedor_monto || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
                           </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            ${operacion.monto_total_comprobantes.toLocaleString('es-MX')} × 0.375%
+                            ${montoTotalComprobantes.toLocaleString('es-MX')} × 0.375%
                           </p>
                         </div>
                       </div>
