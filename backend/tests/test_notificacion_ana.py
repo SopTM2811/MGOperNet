@@ -186,7 +186,7 @@ class TestNotificacionAna:
         ana_sin_telegram = self.ana_user_mock.copy()
         ana_sin_telegram['telegram_id'] = None
         
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             mock_usuarios_repo.obtener_usuario_por_rol = AsyncMock(return_value=ana_sin_telegram)
             
             try:
@@ -197,7 +197,7 @@ class TestNotificacionAna:
                 raise
         
         # Test 3c: Token de Telegram no configurado
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             with patch.dict(os.environ, {}, clear=True):  # Limpiar variables de entorno
                 mock_usuarios_repo.obtener_usuario_por_rol = AsyncMock(return_value=self.ana_user_mock)
                 
@@ -209,7 +209,7 @@ class TestNotificacionAna:
                     raise
         
         # Test 3d: Error en llamada HTTP
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             with patch('httpx.AsyncClient') as mock_httpx_client:
                 with patch.dict(os.environ, {'TELEGRAM_BOT_TOKEN': 'test_token_123'}):
                     
@@ -235,7 +235,7 @@ class TestNotificacionAna:
         """Test 4: Validación detallada del contenido del mensaje"""
         logger.info("🔍 Test 4: Validación detallada del contenido del mensaje...")
         
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             with patch('httpx.AsyncClient') as mock_httpx_client:
                 with patch.dict(os.environ, {'TELEGRAM_BOT_TOKEN': 'test_token_123'}):
                     
@@ -292,7 +292,7 @@ class TestNotificacionAna:
         solicitud_manual = self.solicitud_test.copy()
         solicitud_manual['modo_captura'] = 'manual_por_fallo_ocr'
         
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             with patch('httpx.AsyncClient') as mock_httpx_client:
                 with patch.dict(os.environ, {'TELEGRAM_BOT_TOKEN': 'test_token_123'}):
                     
