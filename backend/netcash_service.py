@@ -1451,12 +1451,20 @@ class NetCashService:
     
     async def _notificar_ana_solicitud_lista(self, solicitud: Dict):
         """
-        Notifica a Ana cuando una solicitud queda lista para MBco
+        Notifica a Ana cuando una solicitud queda lista para MBco.
+        
+        NOTA: Usa directamente la API de Telegram (httpx) para evitar
+        dependencias circulares con telegram_ana_handlers que puede no
+        estar inicializado cuando se llama desde el motor.
         
         Args:
             solicitud: Dict con los datos de la solicitud
         """
+        import httpx
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        
         folio_mbco = solicitud.get('folio_mbco', 'N/A')
+        solicitud_id = solicitud.get('id')
         
         logger.info(f"[NOTIF_ANA] ========== INICIO NOTIFICACIÓN A ANA ==========")
         logger.info(f"[NOTIF_ANA] Solicitud: {folio_mbco}")
@@ -1469,37 +1477,93 @@ class NetCashService:
         
         if not ana:
             logger.error(f"[NOTIF_ANA] ERROR: No se encontró usuario con rol 'admin_netcash' en el catálogo")
-            logger.error(f"[NOTIF_ANA] Verificar que existe usuario con rol_negocio='admin_netcash' y activo=true")
             return
         
         logger.info(f"[NOTIF_ANA] Usuario encontrado: {ana.get('nombre')}")
-        logger.info(f"[NOTIF_ANA] Activo: {ana.get('activo')}")
-        logger.info(f"[NOTIF_ANA] Telegram ID: {ana.get('telegram_id')}")
-        
-        if not ana.get("telegram_id"):
-            logger.error(f"[NOTIF_ANA] ERROR: Usuario {ana.get('nombre')} (admin_netcash) no tiene telegram_id configurado")
-            logger.error(f"[NOTIF_ANA] Actualizar campo telegram_id en la colección usuarios_netcash")
-            return
         
         telegram_id = ana.get("telegram_id")
-        logger.info(f"[NOTIF_ANA] Intentando notificar a Ana | folio_mbco={folio_mbco} | chat_id={telegram_id}")
+        if not telegram_id:
+            logger.error(f"[NOTIF_ANA] ERROR: Usuario {ana.get('nombre')} no tiene telegram_id configurado")
+            return
         
-        # Importar handlers y enviar notificación
-        from telegram_ana_handlers import telegram_ana_handlers
+        logger.info(f"[NOTIF_ANA] Preparando mensaje para Ana | chat_id={telegram_id}")
         
-        if not telegram_ana_handlers:
-            logger.error(f"[NOTIF_ANA] ERROR: telegram_ana_handlers no inicializado, notificación no enviada")
+        # Construir el mensaje (mismo formato que en telegram_ana_handlers)
+        cliente_nombre = solicitud.get("cliente_nombre", "N/A")
+        beneficiario = solicitud.get("beneficiario_reportado", "N/A")
+        idmex = solicitud.get("idmex_reportado", "N/A")
+        num_ligas = solicitud.get("cantidad_ligas_reportada", 0)
+        
+        # Calcular totales
+        comprobantes = solicitud.get("comprobantes", [])
+        total_depositos = sum(
+            c.get("monto_detectado", 0) 
+            for c in comprobantes 
+            if c.get("es_valido") and not c.get("es_duplicado")
+        )
+        
+        comision_netcash = solicitud.get("comision_cliente", total_depositos * 0.01)
+        monto_ligas = total_depositos - comision_netcash
+        
+        created_at = solicitud.get("created_at")
+        fecha_str = created_at.strftime("%d/%m/%Y %H:%M") if created_at else "N/A"
+        
+        # Detectar origen de datos
+        modo_captura = solicitud.get("modo_captura", "ocr_ok")
+        
+        mensaje = "🧾 *Nueva solicitud NetCash lista para MBco*\n\n"
+        mensaje += f"📋 *Folio NetCash:* {folio_mbco}\n"
+        mensaje += f"🧑‍💼 *Cliente:* {cliente_nombre}\n"
+        
+        if modo_captura == "manual_por_fallo_ocr":
+            mensaje += "\n⚠️ *CAPTURA MANUAL* - OCR no pudo leer comprobante\n"
+            mensaje += f"📊 *Origen datos:* Manual (capturado por cliente)\n\n"
+        else:
+            mensaje += f"✅ *Origen datos:* Robot (OCR confiable)\n\n"
+        
+        mensaje += f"👤 *Beneficiario:* {beneficiario}\n"
+        mensaje += f"🆔 *IDMEX:* {idmex}\n"
+        mensaje += f"💰 *Total depósitos:* ${total_depositos:,.2f}\n"
+        mensaje += f"📊 *Comisión NetCash (1%):* ${comision_netcash:,.2f}\n"
+        mensaje += f"💸 *Monto a enviar (ligas):* ${monto_ligas:,.2f}\n"
+        mensaje += f"🔗 *Número de ligas:* {num_ligas}\n"
+        mensaje += f"📅 *Fecha creación:* {fecha_str}\n"
+        
+        # Botones inline
+        inline_keyboard = [
+            [{"text": "✅ Validar y asignar folio MBco", "callback_data": f"ana_asignar_folio_{solicitud_id}"}],
+            [{"text": "❌ Rechazar operación", "callback_data": f"ana_rechazar_{solicitud_id}"}]
+        ]
+        
+        # Enviar usando API directa de Telegram
+        telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        if not telegram_token:
+            logger.error(f"[NOTIF_ANA] ERROR: TELEGRAM_BOT_TOKEN no configurado")
             return
         
         try:
-            await telegram_ana_handlers.notificar_nueva_solicitud_para_mbco(solicitud, ana)
-            logger.info(f"[NOTIF_ANA] ✅ Notificación enviada exitosamente a {ana.get('nombre')} (chat_id={telegram_id})")
-            logger.info(f"[NOTIF_ANA] ========== FIN NOTIFICACIÓN A ANA ==========")
+            async with httpx.AsyncClient() as client:
+                url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+                payload = {
+                    "chat_id": telegram_id,
+                    "text": mensaje,
+                    "parse_mode": "Markdown",
+                    "reply_markup": {"inline_keyboard": inline_keyboard}
+                }
+                
+                response = await client.post(url, json=payload, timeout=30.0)
+                
+                if response.status_code == 200:
+                    logger.info(f"[NOTIF_ANA] ✅ Mensaje enviado exitosamente a Ana (chat_id={telegram_id})")
+                else:
+                    logger.error(f"[NOTIF_ANA] ERROR: Telegram API respondió {response.status_code}: {response.text}")
+                    
         except Exception as e:
             logger.error(f"[NOTIF_ANA] ERROR enviando notificación: {str(e)}")
             import traceback
             logger.error(f"[NOTIF_ANA] Traceback: {traceback.format_exc()}")
-            logger.error(f"[NOTIF_ANA] ========== FIN NOTIFICACIÓN A ANA (CON ERROR) ==========")
+        
+        logger.info(f"[NOTIF_ANA] ========== FIN NOTIFICACIÓN A ANA ==========")
 
 
 # Instancia global del servicio
