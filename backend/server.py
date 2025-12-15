@@ -645,6 +645,83 @@ async def agregar_datos_titular(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.delete("/operaciones/{operacion_id}")
+async def eliminar_operacion(operacion_id: str):
+    """
+    Elimina una operación de la base de datos.
+    Funciona tanto para operaciones web como de Telegram.
+    """
+    try:
+        # Primero intentar eliminar de operaciones (web)
+        result_web = await db.operaciones.delete_one({"id": operacion_id})
+        
+        if result_web.deleted_count > 0:
+            logger.info(f"Operación web eliminada: {operacion_id}")
+            return {"success": True, "message": "Operación eliminada correctamente", "origen": "web"}
+        
+        # Si no estaba en operaciones, buscar en solicitudes_netcash (Telegram)
+        result_telegram = await db.solicitudes_netcash.delete_one({"id": operacion_id})
+        
+        if result_telegram.deleted_count > 0:
+            logger.info(f"Solicitud Telegram eliminada: {operacion_id}")
+            return {"success": True, "message": "Solicitud eliminada correctamente", "origen": "telegram"}
+        
+        raise HTTPException(status_code=404, detail="Operación no encontrada")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error eliminando operación: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/operaciones/{operacion_id}/comprobantes/{comprobante_idx}")
+async def eliminar_comprobante(operacion_id: str, comprobante_idx: int):
+    """
+    Elimina un comprobante específico de una operación.
+    """
+    try:
+        # Primero buscar en operaciones web
+        operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        collection = db.operaciones
+        
+        if not operacion:
+            # Buscar en solicitudes Telegram
+            operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+            collection = db.solicitudes_netcash
+        
+        if not operacion:
+            raise HTTPException(status_code=404, detail="Operación no encontrada")
+        
+        comprobantes = operacion.get("comprobantes", [])
+        
+        if comprobante_idx < 0 or comprobante_idx >= len(comprobantes):
+            raise HTTPException(status_code=400, detail="Índice de comprobante inválido")
+        
+        # Eliminar el comprobante del array
+        comprobantes.pop(comprobante_idx)
+        
+        # Actualizar en la base de datos
+        await collection.update_one(
+            {"id": operacion_id},
+            {"$set": {"comprobantes": comprobantes}}
+        )
+        
+        logger.info(f"Comprobante {comprobante_idx} eliminado de operación {operacion_id}")
+        
+        return {
+            "success": True,
+            "message": "Comprobante eliminado correctamente",
+            "comprobantes_restantes": len(comprobantes)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error eliminando comprobante: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/operaciones/{operacion_id}/calcular")
 async def calcular_operacion(
     operacion_id: str,
