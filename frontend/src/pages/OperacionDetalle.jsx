@@ -436,16 +436,29 @@ const OperacionDetalle = () => {
                                 </div>
                               )}
                             </div>
-                            {comp.file_url && (
-                              <Button
-                                size="sm"
-                                className="mt-3 bg-blue-600 hover:bg-blue-700 text-white shadow-md"
-                                onClick={() => window.open(comp.file_url, '_blank')}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Ver comprobante
-                              </Button>
-                            )}
+                            <div className="flex gap-2 mt-3">
+                              {comp.file_url && (
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                                  onClick={() => window.open(comp.file_url, '_blank')}
+                                >
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  Ver comprobante
+                                </Button>
+                              )}
+                              {!esSoloLectura && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                  onClick={() => handleDeleteComprobanteClick(idx, comp)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           <Badge variant={comp.es_valido ? 'success' : 'destructive'}>
                             {comp.es_valido ? 'Válido' : 'Inválido'}
