@@ -125,6 +125,26 @@ const OperacionDetalle = () => {
     }
   };
 
+  const handleDeleteComprobanteClick = (idx, comp) => {
+    setComprobanteToDelete({ idx, comp });
+    setShowDeleteComprobante(true);
+  };
+
+  const handleConfirmDeleteComprobante = async () => {
+    if (comprobanteToDelete === null) return;
+    
+    try {
+      await axios.delete(`${API}/operaciones/${id}/comprobantes/${comprobanteToDelete.idx}`);
+      toast.success('Comprobante eliminado correctamente');
+      setShowDeleteComprobante(false);
+      setComprobanteToDelete(null);
+      cargarOperacion();
+    } catch (error) {
+      console.error('Error eliminando comprobante:', error);
+      toast.error('Error al eliminar el comprobante');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center">
