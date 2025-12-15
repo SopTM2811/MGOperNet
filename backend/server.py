@@ -596,17 +596,18 @@ async def calcular_operacion(
             comision_cliente_porcentaje=comision_cliente_porcentaje
         )
         
-        # Actualizar operación con los campos calculados
+        # Actualizar operación con los campos calculados (nombres alineados con CalculosNetCash)
         await db.operaciones.update_one(
             {"id": operacion_id},
             {
                 "$set": {
-                    "monto_total_comprobantes": calculos_dict["monto_total_comprobantes"],
-                    "porcentaje_comision_usado": calculos_dict["porcentaje_comision_cliente"],
-                    "comision_cobrada": calculos_dict["importe_comision_cliente"],
-                    "costo_proveedor_pct": calculos_dict["porcentaje_costo_proveedor_dns"] / 100,
-                    "costo_proveedor_monto": calculos_dict["importe_costo_proveedor_dns"],
-                    "utilidad_neta": calculos_dict["utilidad_neta"],
+                    "monto_depositado_cliente": calculos_dict["monto_depositado_cliente"],
+                    "porcentaje_comision_usado": calculos_dict["comision_cliente_porcentaje"],
+                    "comision_cobrada": calculos_dict["comision_cliente_cobrada"],
+                    "costo_proveedor_pct": calculos_dict["comision_proveedor_porcentaje"] / 100,
+                    "costo_proveedor_monto": calculos_dict["comision_proveedor"],
+                    "capital_netcash": calculos_dict["capital_netcash"],
+                    "total_egreso": calculos_dict["total_egreso"],
                     "calculos": calculos_dict
                 }
             }
