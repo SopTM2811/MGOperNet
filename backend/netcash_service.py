@@ -79,10 +79,14 @@ class NetCashService:
             timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
             solicitud_id = f"nc-{timestamp}"
             
+            # Generar folio secuencial NC-XXXXXX
+            folio_mbco = await self._generar_folio_mbco()
+            logger.info(f"[NetCash] Folio generado: {folio_mbco}")
+            
             # Crear solicitud base
             solicitud = {
                 "id": solicitud_id,
-                "folio_mbco": None,  # Se genera al llegar a lista_para_mbc
+                "folio_mbco": folio_mbco,  # Ahora se genera al crear
                 "canal": datos.canal.value,
                 "cliente_id": datos.cliente_id,
                 "cliente_nombre": datos.cliente_nombre,
