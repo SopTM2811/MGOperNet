@@ -233,58 +233,118 @@ const Dashboard = () => {
                     <div className="flex items-start justify-between gap-4">
                       <div 
                         className="flex-1 cursor-pointer"
-                        onClick={() => navigate(`/operacion/${operacion.id}`)}
+                        onClick={() => handleOperacionClick(operacion)}
                       >
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          {/* Folio o ID */}
                           {operacion.folio_mbco ? (
                             <div className="flex items-center gap-2">
                               <Badge className="bg-blue-600 text-white font-semibold text-base px-3 py-1">
                                 {operacion.folio_mbco}
                               </Badge>
                               <code className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500">
-                                {operacion.id.substring(0, 8)}...
+                                {operacion.id.substring(0, 12)}...
                               </code>
                             </div>
                           ) : (
                             <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                              {operacion.id.substring(0, 8)}...
+                              {operacion.id.substring(0, 15)}...
                             </code>
                           )}
+                          
+                          {/* Badge de estado */}
                           {getEstadoBadge(operacion.estado)}
+                          
+                          {/* Badge de origen */}
+                          {operacion.origen === 'telegram' ? (
+                            <Badge variant="outline" className="border-blue-400 text-blue-600">
+                              📱 Telegram
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-slate-400 text-slate-600">
+                              🖥️ Web
+                            </Badge>
+                          )}
+                          
+                          {/* Badge de modo captura */}
+                          {operacion.modo_captura === 'manual_por_fallo_ocr' && (
+                            <Badge variant="outline" className="border-amber-400 text-amber-600">
+                              ✋ Manual
+                            </Badge>
+                          )}
+                          
                           {operacion.codigo_operacion_sistema && (
                             <Badge variant="outline">
                               {operacion.codigo_operacion_sistema}
                             </Badge>
                           )}
                         </div>
+                        
+                        {/* Información principal */}
                         <div className="text-sm text-slate-600">
                           <span className="font-medium">Cliente:</span> {operacion.cliente_nombre || 'Sin nombre'}
                           {' • '}
                           <span className="font-medium">Fecha:</span> {formatFecha(operacion.fecha_creacion)}
                         </div>
-                        {operacion.calculos && (
+                        
+                        {/* Titular/Beneficiario */}
+                        {operacion.titular_nombre_completo && (
                           <div className="text-sm text-slate-600 mt-1">
-                            <span className="font-medium">Capital:</span> ${operacion.calculos.capital_netcash.toLocaleString('es-MX')}
-                            {' • '}
-                            <span className="font-medium">Depositado:</span> ${operacion.calculos.monto_depositado_cliente.toLocaleString('es-MX')}
+                            <span className="font-medium">Beneficiario:</span> {operacion.titular_nombre_completo}
+                            {operacion.titular_idmex && (
+                              <span className="text-slate-500"> (IDMEX: {operacion.titular_idmex})</span>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Montos - soporta ambas estructuras */}
+                        {(operacion.calculos || operacion.monto_depositado_cliente || operacion.monto_total_comprobantes) && (
+                          <div className="text-sm text-slate-600 mt-1">
+                            <span className="font-medium">Monto:</span> $
+                            {(operacion.calculos?.monto_depositado_cliente || 
+                              operacion.monto_depositado_cliente || 
+                              operacion.monto_total_comprobantes || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                            {operacion.calculos?.capital_netcash && (
+                              <>
+                                {' • '}
+                                <span className="font-medium">Capital:</span> $
+                                {operacion.calculos.capital_netcash.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                              </>
+                            )}
+                            {operacion.numero_ligas && (
+                              <>
+                                {' • '}
+                                <span className="font-medium">Ligas:</span> {operacion.numero_ligas}
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Comprobantes */}
+                        {operacion.comprobantes?.length > 0 && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            📄 {operacion.comprobantes.length} comprobante(s)
                           </div>
                         )}
                       </div>
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOperacionSeleccionada(operacion);
-                          setShowComprobantes(true);
-                        }}
-                        className="shrink-0"
-                        data-testid={`upload-btn-${operacion.id}`}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Subir comprobantes
-                      </Button>
+                      {/* Botón de acción - solo para operaciones web */}
+                      {operacion.origen !== 'telegram' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOperacionSeleccionada(operacion);
+                            setShowComprobantes(true);
+                          }}
+                          className="shrink-0"
+                          data-testid={`upload-btn-${operacion.id}`}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Subir comprobantes
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
