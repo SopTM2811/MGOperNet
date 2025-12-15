@@ -22,7 +22,8 @@ async def notificar_ana_telegram(operacion: Dict[str, Any]) -> bool:
     try:
         folio = operacion.get("folio_mbco", "N/A")
         cliente = operacion.get("cliente_nombre", "N/A")
-        monto_total = operacion.get("monto_total_comprobantes", 0)
+        # Soporte para ambos nombres de campo (compatibilidad hacia atrás)
+        monto_total = operacion.get("monto_depositado_cliente", 0) or operacion.get("monto_total_comprobantes", 0)
         fecha = operacion.get("fecha_creacion", "N/A")
         operacion_id = operacion.get("id", "")
         
