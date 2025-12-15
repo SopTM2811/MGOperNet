@@ -73,45 +73,59 @@ const Clientes = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <HomeIcon className="h-5 w-5 text-slate-600" />
-              </button>
-              <h1 className="text-2xl font-bold" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
-                Clientes NetCash
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => navigate('/alta-cliente-telegram')}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <User className="h-4 w-4" />
-                Alta Telegram
-              </Button>
-              <Button
-                onClick={() => setShowNuevoCliente(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Nuevo Cliente
-              </Button>
-            </div>
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header - Mismo diseño que Dashboard */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
+          <div>
+            <h1 
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight"
+              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+            >
+              Clientes NetCash
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 font-light">Gestión de clientes y sus operaciones</p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Dash</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/alta-cliente-telegram')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <User className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Alta Telegram</span>
+            </Button>
+            <Button
+              onClick={() => setShowNuevoCliente(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-sm"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nuevo Cliente</span>
+              <span className="sm:hidden">Nuevo</span>
+            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-6 py-8">
         {/* Search */}
         <Card className="mb-6">
           <CardContent className="pt-6">
