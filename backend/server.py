@@ -261,12 +261,16 @@ async def root():
 @api_router.get("/operaciones", response_model=List[OperacionNetCash])
 async def obtener_operaciones():
     """
-    Obtiene todas las operaciones NetCash.
+    Obtiene todas las operaciones NetCash UNIFICADAS.
+    Combina operaciones manuales (web) y solicitudes de Telegram.
     """
-    operaciones = await db.operaciones.find({}, {"_id": 0}).to_list(1000)
+    operaciones_unificadas = []
     
-    # Convertir timestamps ISO a datetime
-    for op in operaciones:
+    # 1. Obtener operaciones manuales (web)
+    operaciones_web = await db.operaciones.find({}, {"_id": 0}).to_list(1000)
+    
+    for op in operaciones_web:
+        # Convertir timestamps ISO a datetime
         if isinstance(op.get('fecha_creacion'), str):
             op['fecha_creacion'] = datetime.fromisoformat(op['fecha_creacion'])
         for field in ['timestamp_confirmacion_cliente', 'timestamp_codigo_sistema', 
@@ -274,8 +278,75 @@ async def obtener_operaciones():
                       'timestamp_entrega_cliente']:
             if op.get(field) and isinstance(op[field], str):
                 op[field] = datetime.fromisoformat(op[field])
+        
+        # Marcar origen
+        op['origen'] = op.get('origen', 'web')
+        operaciones_unificadas.append(op)
     
-    return operaciones
+    # 2. Obtener solicitudes de Telegram
+    solicitudes_telegram = await db.solicitudes_netcash.find({}, {"_id": 0}).to_list(1000)
+    
+    for sol in solicitudes_telegram:
+        # Mapear campos de solicitud a estructura de operación
+        operacion_normalizada = {
+            "id": sol.get("id"),
+            "folio_mbco": sol.get("folio_mbco"),
+            "cliente_id": sol.get("cliente_id"),
+            "cliente_nombre": sol.get("cliente_nombre"),
+            "titular_nombre_completo": sol.get("beneficiario_reportado"),
+            "titular_idmex": sol.get("idmex_reportado"),
+            "numero_ligas": sol.get("cantidad_ligas_reportada", 0),
+            "comprobantes": sol.get("comprobantes", []),
+            "estado": _mapear_estado_solicitud(sol.get("estado", "borrador")),
+            "fecha_creacion": sol.get("created_at"),
+            "monto_depositado_cliente": sol.get("monto_depositado_cliente", 0),
+            "monto_total_comprobantes": sol.get("monto_depositado_cliente", 0),
+            "comision_cobrada": sol.get("comision_cliente", 0),
+            "porcentaje_comision_usado": sol.get("comision_cliente_porcentaje", 1.0),
+            "origen": "telegram",
+            "modo_captura": sol.get("modo_captura", "ocr_ok"),
+            # Campos adicionales de Telegram
+            "telegram_id": sol.get("telegram_id"),
+            "idmex_beneficiario_declarado": sol.get("idmex_beneficiario_declarado"),
+        }
+        
+        # Calcular monto si hay comprobantes válidos
+        if not operacion_normalizada["monto_depositado_cliente"]:
+            comprobantes = sol.get("comprobantes", [])
+            monto_total = sum(
+                c.get("monto_detectado", 0) or c.get("monto", 0)
+                for c in comprobantes 
+                if c.get("es_valido") and not c.get("es_duplicado")
+            )
+            operacion_normalizada["monto_depositado_cliente"] = monto_total
+            operacion_normalizada["monto_total_comprobantes"] = monto_total
+        
+        operaciones_unificadas.append(operacion_normalizada)
+    
+    # Ordenar por fecha de creación (más recientes primero)
+    operaciones_unificadas.sort(
+        key=lambda x: x.get('fecha_creacion') or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True
+    )
+    
+    return operaciones_unificadas
+
+
+def _mapear_estado_solicitud(estado_telegram: str) -> str:
+    """Mapea estados de solicitud Telegram a estados de operación web"""
+    mapeo = {
+        "borrador": "ESPERANDO_COMPROBANTES",
+        "pendiente_comprobantes": "ESPERANDO_COMPROBANTES",
+        "pendiente_datos": "ESPERANDO_DATOS_TITULAR",
+        "pendiente_confirmacion": "ESPERANDO_CONFIRMACION_CLIENTE",
+        "pendiente_validacion_admin": "VALIDANDO_COMPROBANTES",
+        "lista_para_mbco": "ESPERANDO_CODIGO_SISTEMA",
+        "enviada_tesoreria": "ESPERANDO_TESORERIA",
+        "completada": "COMPLETADO",
+        "rechazada": "RECHAZADO",
+        "cancelada": "CANCELADO",
+    }
+    return mapeo.get(estado_telegram, estado_telegram.upper())
 
 
 @api_router.get("/operaciones/{operacion_id}", response_model=OperacionNetCash)
