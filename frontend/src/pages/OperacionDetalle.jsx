@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, User, Calculator, Check, FileText, Clock, Mail, Phone, MessageCircle, Lock } from 'lucide-react';
+import { ArrowLeft, User, Calculator, Check, FileText, Clock, Mail, Phone, MessageCircle, Lock, Trash2, Home as HomeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ComprobantesUpload from '@/components/ComprobantesUpload';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -19,6 +29,8 @@ const OperacionDetalle = () => {
   const [operacion, setOperacion] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showDeleteComprobante, setShowDeleteComprobante] = useState(false);
+  const [comprobanteToDelete, setComprobanteToDelete] = useState(null);
   
   // Formulario titular
   const [titular, setTitular] = useState({
