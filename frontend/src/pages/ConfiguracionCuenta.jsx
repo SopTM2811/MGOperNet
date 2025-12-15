@@ -170,6 +170,14 @@ export default function ConfiguracionCuenta() {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
+              onClick={() => navigate("/")}
+              className="bg-white hover:bg-slate-50 text-slate-700"
+            >
+              <HomeIcon className="h-4 w-4 mr-2" />
+              Inicio
+            </Button>
+            <Button
+              variant="ghost"
               size="icon"
               onClick={() => navigate("/dashboard")}
             >
