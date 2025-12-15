@@ -228,6 +228,7 @@ const UsuariosNetCash = () => {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 };
