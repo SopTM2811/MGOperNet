@@ -258,11 +258,12 @@ async def root():
     }
 
 
-@api_router.get("/operaciones", response_model=List[OperacionNetCash])
+@api_router.get("/operaciones")
 async def obtener_operaciones():
     """
     Obtiene todas las operaciones NetCash UNIFICADAS.
     Combina operaciones manuales (web) y solicitudes de Telegram.
+    Retorna lista de diccionarios sin validación estricta de modelo.
     """
     operaciones_unificadas = []
     
