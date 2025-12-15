@@ -738,6 +738,35 @@ const OperacionDetalle = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Diálogo de confirmación para eliminar comprobante */}
+      <AlertDialog open={showDeleteComprobante} onOpenChange={setShowDeleteComprobante}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este comprobante?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente el comprobante 
+              {comprobanteToDelete && (
+                <span className="font-semibold"> #{comprobanteToDelete.idx + 1}</span>
+              )}
+              {comprobanteToDelete?.comp?.monto && (
+                <span> con monto de <span className="font-semibold">
+                  ${comprobanteToDelete.comp.monto.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                </span></span>
+              )}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="hover:bg-slate-100">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteComprobante}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Sí, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
