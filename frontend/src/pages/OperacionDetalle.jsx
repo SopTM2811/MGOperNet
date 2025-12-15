@@ -193,33 +193,36 @@ const OperacionDetalle = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8">
       <div className="container mx-auto px-6 max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex gap-2 mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap gap-2 mb-4">
             <Button
               variant="outline"
               onClick={() => navigate('/')}
-              className="bg-white hover:bg-slate-50 text-slate-700"
+              className="bg-white hover:bg-slate-50 text-slate-700 text-sm"
+              size="sm"
               data-testid="home-btn"
             >
-              <HomeIcon className="h-4 w-4 mr-2" />
-              Inicio
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
             </Button>
             <Button
               variant="ghost"
               onClick={() => navigate('/dashboard')}
-              className="text-slate-600 hover:text-slate-800"
+              className="text-slate-600 hover:text-slate-800 text-sm"
+              size="sm"
               data-testid="back-btn"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Dashboard
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Volver al Dashboard</span>
+              <span className="sm:hidden">Dashboard</span>
             </Button>
           </div>
           
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                 <h1 
-                  className="text-4xl font-bold"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-bold"
                   style={{ fontFamily: 'Cormorant Garamond, serif' }}
                   data-testid="operation-title"
                 >
@@ -227,17 +230,17 @@ const OperacionDetalle = () => {
                 </h1>
                 {/* Badge de origen */}
                 {operacion.origen === 'telegram' && (
-                  <Badge variant="outline" className="border-blue-400 text-blue-600">
+                  <Badge variant="outline" className="border-blue-400 text-blue-600 text-xs">
                     📱 Telegram
                   </Badge>
                 )}
                 {operacion.modo_captura === 'manual_por_fallo_ocr' && (
-                  <Badge variant="outline" className="border-amber-400 text-amber-600">
-                    ✋ Captura Manual
+                  <Badge variant="outline" className="border-amber-400 text-amber-600 text-xs">
+                    ✋ Manual
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {operacion.folio_mbco && (
                   <Badge className="bg-blue-600 text-white font-semibold text-lg px-4 py-1">
                     {operacion.folio_mbco}
