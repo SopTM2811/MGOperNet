@@ -323,11 +323,23 @@ async def obtener_operaciones():
         
         operaciones_unificadas.append(operacion_normalizada)
     
+    # Función auxiliar para normalizar fechas para ordenamiento
+    def get_fecha_para_sort(x):
+        fecha = x.get('fecha_creacion')
+        if fecha is None:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        if isinstance(fecha, str):
+            try:
+                fecha = datetime.fromisoformat(fecha.replace('Z', '+00:00'))
+            except:
+                return datetime.min.replace(tzinfo=timezone.utc)
+        # Si no tiene timezone, agregar UTC
+        if fecha.tzinfo is None:
+            fecha = fecha.replace(tzinfo=timezone.utc)
+        return fecha
+    
     # Ordenar por fecha de creación (más recientes primero)
-    operaciones_unificadas.sort(
-        key=lambda x: x.get('fecha_creacion') or datetime.min.replace(tzinfo=timezone.utc),
-        reverse=True
-    )
+    operaciones_unificadas.sort(key=get_fecha_para_sort, reverse=True)
     
     return operaciones_unificadas
 
