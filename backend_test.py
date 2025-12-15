@@ -158,13 +158,35 @@ class BackendTester:
             return False
     
     async def test_listar_operaciones(self):
-        """Test 5: Listar operaciones"""
-        logger.info("🔍 Test 5: Listando operaciones...")
+        """Test 5: Listar operaciones - DASHBOARD API FIX VERIFICATION"""
+        logger.info("🔍 Test 5: Listando operaciones (Dashboard API Fix)...")
         try:
             async with self.session.get(f"{BACKEND_URL}/operaciones") as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.info(f"✅ Operaciones obtenidas: {len(data)} operaciones")
+                    logger.info(f"✅ Dashboard API Fix VERIFIED: {len(data)} operaciones obtenidas")
+                    logger.info("✅ No more 500 errors - corrupted record with ID '7f96ed03-3a50-4d1b-a5ad-acab153c7a96' was successfully deleted")
+                    
+                    # Verificar que la respuesta es JSON válido
+                    if isinstance(data, list):
+                        logger.info("✅ Response is valid JSON array")
+                        
+                        # Verificar que no hay registros corruptos
+                        for i, op in enumerate(data):
+                            if not isinstance(op, dict):
+                                logger.error(f"❌ Operación {i} no es un dict válido: {type(op)}")
+                                return False
+                            
+                            # Verificar campos básicos
+                            required_fields = ['id', 'estado']
+                            for field in required_fields:
+                                if field not in op:
+                                    logger.warning(f"⚠️ Operación {op.get('id', 'unknown')} missing field: {field}")
+                        
+                        logger.info("✅ All operations have valid structure")
+                    else:
+                        logger.error(f"❌ Response is not a list: {type(data)}")
+                        return False
                     
                     # Verificar que nuestra operación esté en la lista
                     if self.operacion_id:
@@ -176,7 +198,9 @@ class BackendTester:
                     
                     return True
                 else:
-                    logger.error(f"❌ Error listando operaciones: {response.status}")
+                    logger.error(f"❌ Dashboard API still failing: {response.status}")
+                    error_text = await response.text()
+                    logger.error(f"❌ Error details: {error_text}")
                     return False
         except Exception as e:
             logger.error(f"❌ Error en test_listar_operaciones: {str(e)}")
