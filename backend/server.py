@@ -618,7 +618,7 @@ async def calcular_operacion(
         return {
             "success": True,
             "operacion_id": operacion_id,
-            "calculos": calculos.model_dump()
+            "calculos": calculos_dict
         }
         
     except HTTPException:
