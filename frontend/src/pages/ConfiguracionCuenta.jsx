@@ -152,7 +152,7 @@ export default function ConfiguracionCuenta() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Cargando configuración...</p>
@@ -162,40 +162,43 @@ export default function ConfiguracionCuenta() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+        {/* Header - Mismo diseño que Dashboard */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
+          <div>
+            <h1 
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight"
+              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+            >
+              Configuración de Cuenta
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 font-light">Gestiona la cuenta donde los clientes depositan</p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
               variant="outline"
-              onClick={() => navigate("/")}
-              className="bg-white hover:bg-slate-50 text-slate-700"
+              onClick={() => navigate('/')}
+              className="border-slate-300 text-sm"
+              size="sm"
             >
-              <HomeIcon className="h-4 w-4 mr-2" />
-              Inicio
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
             </Button>
             <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="border-slate-300 text-sm"
+              size="sm"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                Configuración de Cuenta de Depósito
-              </h1>
-              <p className="text-sm text-slate-600 mt-1">
-                Gestiona la cuenta donde los clientes depositan para operaciones NetCash
-              </p>
-            </div>
           </div>
         </div>
 
         {/* Cuenta Activa */}
-        <Card className="border-2 border-green-200 bg-green-50">
+        <Card className="border-2 border-green-200 bg-green-50 mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
