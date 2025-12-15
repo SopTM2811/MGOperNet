@@ -221,27 +221,42 @@ async def verificar_duplicado_por_hash(file_hash: str) -> dict:
 
 
 async def generar_folio_mbco() -> str:
-    """Genera un folio secuencial para operaciones NetCash (ej: NC-000123)"""
-    # Buscar el último folio usado
-    ultima_operacion = await db.operaciones.find_one(
+    """
+    Genera un folio secuencial para operaciones NetCash (ej: NC-000123).
+    Busca en AMBAS colecciones para mantener secuencia global.
+    """
+    ultimo_numero = 0
+    
+    # Buscar el último folio en operaciones (web)
+    ultima_web = await db.operaciones.find_one(
         {"folio_mbco": {"$exists": True, "$ne": None}},
         {"_id": 0, "folio_mbco": 1},
         sort=[("folio_mbco", -1)]
     )
     
-    if ultima_operacion and ultima_operacion.get("folio_mbco"):
-        # Extraer el número del último folio (ej: "NC-000123" -> 123)
+    if ultima_web and ultima_web.get("folio_mbco"):
         try:
-            ultimo_numero = int(ultima_operacion["folio_mbco"].split("-")[1])
-            nuevo_numero = ultimo_numero + 1
+            num_web = int(ultima_web["folio_mbco"].split("-")[1])
+            ultimo_numero = max(ultimo_numero, num_web)
         except (IndexError, ValueError):
-            # Si hay error parseando, empezar desde 1
-            nuevo_numero = 1
-    else:
-        # Primera operación
-        nuevo_numero = 1
+            pass
     
-    # Formatear con 6 dígitos (ej: NC-000001)
+    # Buscar el último folio en solicitudes_netcash (Telegram)
+    ultima_telegram = await db.solicitudes_netcash.find_one(
+        {"folio_mbco": {"$exists": True, "$ne": None}},
+        {"_id": 0, "folio_mbco": 1},
+        sort=[("folio_mbco", -1)]
+    )
+    
+    if ultima_telegram and ultima_telegram.get("folio_mbco"):
+        try:
+            num_telegram = int(ultima_telegram["folio_mbco"].split("-")[1])
+            ultimo_numero = max(ultimo_numero, num_telegram)
+        except (IndexError, ValueError):
+            pass
+    
+    # Generar nuevo folio
+    nuevo_numero = ultimo_numero + 1
     return f"NC-{nuevo_numero:06d}"
 
 
