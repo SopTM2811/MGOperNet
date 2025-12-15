@@ -58,6 +58,45 @@ class NetCashService:
     def __init__(self):
         self.validador_comprobantes = ValidadorComprobantes()
     
+    async def _generar_folio_mbco(self) -> str:
+        """
+        Genera un folio secuencial para operaciones NetCash (ej: NC-000123).
+        Busca en AMBAS colecciones para mantener secuencia global.
+        """
+        ultimo_numero = 0
+        
+        # Buscar el último folio en operaciones (web)
+        ultima_web = await db.operaciones.find_one(
+            {"folio_mbco": {"$exists": True, "$ne": None}},
+            {"_id": 0, "folio_mbco": 1},
+            sort=[("folio_mbco", -1)]
+        )
+        
+        if ultima_web and ultima_web.get("folio_mbco"):
+            try:
+                num_web = int(ultima_web["folio_mbco"].split("-")[1])
+                ultimo_numero = max(ultimo_numero, num_web)
+            except (IndexError, ValueError):
+                pass
+        
+        # Buscar el último folio en solicitudes_netcash (Telegram)
+        ultima_telegram = await db.solicitudes_netcash.find_one(
+            {"folio_mbco": {"$exists": True, "$ne": None}},
+            {"_id": 0, "folio_mbco": 1},
+            sort=[("folio_mbco", -1)]
+        )
+        
+        if ultima_telegram and ultima_telegram.get("folio_mbco"):
+            try:
+                num_telegram = int(ultima_telegram["folio_mbco"].split("-")[1])
+                ultimo_numero = max(ultimo_numero, num_telegram)
+            except (IndexError, ValueError):
+                pass
+        
+        # Generar nuevo folio
+        nuevo_numero = ultimo_numero + 1
+        return f"NC-{nuevo_numero:06d}"
+    
     # ==================== CREACIÓN Y ACTUALIZACIÓN ====================
     
     async def crear_solicitud(self, datos: SolicitudCreate) -> Optional[Dict]:
