@@ -87,8 +87,8 @@ class TestNotificacionAna:
         """Test 2: Verificar lógica de notificación con mocks completos"""
         logger.info("🔍 Test 2: Verificando lógica de notificación con mocks...")
         
-        # Mock del repositorio de usuarios
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        # Mock del repositorio de usuarios (importado dentro del método)
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             # Mock del cliente httpx
             with patch('httpx.AsyncClient') as mock_httpx_client:
                 # Mock de variables de entorno
