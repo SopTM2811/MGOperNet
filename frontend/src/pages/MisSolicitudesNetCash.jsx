@@ -94,10 +94,10 @@ const MisSolicitudesNetCash = () => {
           <Button
             variant="outline"
             onClick={() => navigate('/')}
-            className="border-slate-300"
+            className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver al inicio
+            <HomeIcon className="h-4 w-4 mr-2" />
+            Inicio
           </Button>
         </div>
 
