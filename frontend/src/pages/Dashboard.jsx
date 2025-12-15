@@ -148,52 +148,57 @@ const Dashboard = () => {
         <div className="flex justify-between items-center mb-12">
           <div>
             <h1 
-              className="text-4xl font-bold mb-2 tracking-tight"
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 tracking-tight"
               style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               data-testid="dashboard-title"
             >
               Dashboard NetCash
             </h1>
-            <p className="text-slate-600 font-light">Gestión de operaciones y monitoreo en tiempo real</p>
+            <p className="text-sm sm:text-base text-slate-600 font-light">Gestión de operaciones y monitoreo en tiempo real</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={() => navigate('/')}
               data-testid="home-nav-btn"
-              className="border-slate-300"
+              className="border-slate-300 text-sm"
+              size="sm"
             >
-              <HomeIcon className="h-4 w-4 mr-2" />
-              Inicio
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
             </Button>
             <Button
               variant="outline"
               onClick={() => navigate('/clientes')}
-              className="border-slate-300"
+              className="border-slate-300 text-sm"
+              size="sm"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Ver Clientes
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Ver Clientes</span>
             </Button>
             <Button
               variant="outline"
               onClick={() => navigate('/config/cuenta-deposito')}
-              className="border-slate-300"
+              className="border-slate-300 text-sm hidden md:flex"
+              size="sm"
             >
               Configuración Cuenta
             </Button>
             <Button
               onClick={() => setShowNuevaOperacion(true)}
-              className="bg-blue-600 hover:bg-blue-700 shadow-soft"
+              className="bg-blue-600 hover:bg-blue-700 shadow-soft text-sm"
               data-testid="new-operation-btn"
+              size="sm"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Operación
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nueva Operación</span>
+              <span className="sm:hidden">Nueva</span>
             </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards - Responsive grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <StatsCard
             title="Total"
             value={stats.total}
