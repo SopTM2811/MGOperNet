@@ -101,7 +101,13 @@ class OperacionNetCash(BaseModel):
     
     # Campos de origen y control de flujo
     origen_operacion: str = "web"  # "telegram" | "web" | "email"
+    origen: Optional[str] = None  # Campo simplificado para Dashboard unificado
+    modo_captura: Optional[str] = None  # "ocr_ok" | "manual_por_fallo_ocr"
     clave_operacion_mbcontrol: Optional[str] = None  # Clave del sistema MBControl (ej: 18434-138-D-11)
+    
+    # Campos adicionales de Telegram
+    telegram_id: Optional[str] = None
+    idmex_beneficiario_declarado: Optional[str] = None
     
     # Timestamp para control de inactividad
     ultimo_mensaje_cliente: Optional[datetime] = None
