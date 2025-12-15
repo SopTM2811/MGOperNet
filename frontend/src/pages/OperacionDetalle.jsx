@@ -560,7 +560,7 @@ const OperacionDetalle = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {(operacion.monto_total_comprobantes && operacion.comision_cobrada) ? (
+                {tieneCalculos ? (
                   <div className="space-y-6">
                     {/* Sección 1: Totales de operación */}
                     <div>
@@ -568,7 +568,7 @@ const OperacionDetalle = () => {
                       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                         <Label className="text-slate-600 text-sm">Monto total de comprobantes</Label>
                         <p className="text-3xl font-bold text-blue-700">
-                          ${operacion.monto_total_comprobantes.toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          ${montoTotalComprobantes.toLocaleString('es-MX', {minimumFractionDigits: 2})}
                         </p>
                       </div>
                     </div>
