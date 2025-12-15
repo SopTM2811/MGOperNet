@@ -93,6 +93,24 @@ const UsuariosNetCash = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/')}
+            className="bg-white hover:bg-slate-50 text-slate-700"
+          >
+            <HomeIcon className="h-4 w-4 mr-2" />
+            Inicio
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="text-slate-600 hover:text-slate-800"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver al Dashboard
+          </Button>
+        </div>
         <div className="flex items-center gap-3 mb-2">
           <Users className="w-8 h-8 text-blue-600" />
           <h1 className="text-3xl font-bold text-gray-900">Usuarios NetCash</h1>
