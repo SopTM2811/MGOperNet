@@ -11,6 +11,7 @@ import AltaClienteTelegram from "@/pages/AltaClienteTelegram";
 import ConfiguracionCuenta from "@/pages/ConfiguracionCuenta";
 import MisSolicitudesNetCash from "@/pages/MisSolicitudesNetCash";
 import UsuariosNetCash from "@/pages/UsuariosNetCash";
+import SolicitudNetCashDetalle from "@/pages/SolicitudNetCashDetalle";
 import { Toaster } from "@/components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +26,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/operacion/:id" element={<OperacionDetalle />} />
+          <Route path="/solicitud-netcash/:id" element={<SolicitudNetCashDetalle />} />
           <Route path="/pendientes-mbcontrol" element={<PendientesMBControl />} />
           <Route path="/alta-cliente-telegram" element={<AltaClienteTelegram />} />
           <Route path="/config/cuenta-deposito" element={<ConfiguracionCuenta />} />
