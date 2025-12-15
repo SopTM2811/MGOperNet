@@ -373,8 +373,8 @@ const Dashboard = () => {
                         )}
                       </div>
                       
-                      {/* Botones de acción */}
-                      <div className="flex flex-col gap-2 shrink-0">
+                      {/* Botones de acción - responsivos */}
+                      <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
                         {/* Botón subir comprobantes - solo para operaciones web */}
                         {operacion.origen !== 'telegram' && (
                           <Button
@@ -385,11 +385,11 @@ const Dashboard = () => {
                               setOperacionSeleccionada(operacion);
                               setShowComprobantes(true);
                             }}
-                            className="text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                            className="flex-1 sm:flex-initial text-slate-600 hover:text-slate-800 hover:bg-slate-100 text-xs sm:text-sm"
                             data-testid={`upload-btn-${operacion.id}`}
                           >
-                            <Upload className="h-4 w-4 mr-2" />
-                            Subir
+                            <Upload className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Subir</span>
                           </Button>
                         )}
                         
@@ -398,11 +398,11 @@ const Dashboard = () => {
                           variant="outline"
                           size="sm"
                           onClick={(e) => handleDeleteClick(e, operacion)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          className="flex-1 sm:flex-initial text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
                           data-testid={`delete-btn-${operacion.id}`}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Eliminar
+                          <Trash2 className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Eliminar</span>
                         </Button>
                       </div>
                     </div>
