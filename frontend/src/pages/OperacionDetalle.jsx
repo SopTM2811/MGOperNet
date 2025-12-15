@@ -247,12 +247,6 @@ const OperacionDetalle = () => {
             </Button>
           </div>
         </div>
-            </div>
-            <Badge variant="default" className="text-base px-4 py-2">
-              {operacion.estado.replace(/_/g, ' ')}
-            </Badge>
-          </div>
-        </div>
 
         {/* Mensaje informativo para modo espejo */}
         {esSoloLectura && (
