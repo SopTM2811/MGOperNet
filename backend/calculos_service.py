@@ -18,18 +18,26 @@ class CalculosService:
         """
         Calcula todos los montos de una operación NetCash.
         
-        FÓRMULAS CORRECTAS (según especificación del usuario):
-        - importe_comision_cliente = monto_total_comprobantes * porcentaje_comision_cliente / 100
-        - importe_costo_proveedor_dns = monto_total_comprobantes * 0.375 / 100
-        - utilidad_neta = importe_comision_cliente - importe_costo_proveedor_dns
+        FÓRMULAS (alineadas con modelo CalculosNetCash):
+        - comision_cliente_cobrada = monto_depositado_cliente * comision_cliente_porcentaje / 100
+        - comision_proveedor = monto_depositado_cliente * comision_proveedor_porcentaje / 100
+        - capital_netcash = monto_depositado_cliente - comision_cliente_cobrada
+        - total_egreso = capital_netcash + comision_proveedor
         
         Args:
-            monto_depositado_cliente: Monto total de comprobantes
+            monto_depositado_cliente: Monto total de comprobantes válidos
             comision_cliente_porcentaje: Porcentaje de comisión del cliente (default: 1.0%)
             costo_proveedor_dns_porcentaje: Porcentaje de costo proveedor DNS (default: 0.375%)
             
         Returns:
-            Diccionario con todos los cálculos
+            Diccionario con campos alineados al modelo CalculosNetCash:
+            - monto_depositado_cliente
+            - comision_cliente_porcentaje
+            - comision_cliente_cobrada
+            - comision_proveedor_porcentaje
+            - comision_proveedor
+            - capital_netcash
+            - total_egreso
         """
         try:
             # PASO 1: Calcular comisión cobrada al cliente
