@@ -108,14 +108,16 @@ class OperacionNetCash(BaseModel):
     timestamp_actualizacion: Optional[datetime] = None  # Para monitor de inactividad
     
     # Cálculos financieros básicos (guardados directamente en la operación)
-    monto_total_comprobantes: Optional[float] = None  # Suma de comprobantes válidos
-    comision_cobrada: Optional[float] = None  # Monto de comisión al cliente
+    # Nombres alineados con CalculosNetCash - mantenemos alias para compatibilidad
+    monto_depositado_cliente: Optional[float] = None  # Suma de comprobantes válidos
+    monto_total_comprobantes: Optional[float] = None  # ALIAS (deprecated) - usar monto_depositado_cliente
+    comision_cobrada: Optional[float] = None  # Monto de comisión al cliente (comision_cliente_cobrada)
     capital_netcash: Optional[float] = None  # Capital a dispersar (total - comisión)
+    total_egreso: Optional[float] = None  # Capital + comisión proveedor
     
     # Costo proveedor DNS (SOLO INTERNO - NUNCA MOSTRAR AL CLIENTE)
-    costo_proveedor_pct: float = 0.00375  # 0.375% del capital
-    costo_proveedor_monto: Optional[float] = None  # Capital * 0.00375
-    utilidad_neta: Optional[float] = None  # Comisión - Costo proveedor
+    costo_proveedor_pct: float = 0.00375  # 0.375% del capital (comision_proveedor_porcentaje)
+    costo_proveedor_monto: Optional[float] = None  # Capital * 0.00375 (comision_proveedor)
     
     # Cálculos financieros (objeto completo, opcional)
     calculos: Optional[CalculosNetCash] = None
