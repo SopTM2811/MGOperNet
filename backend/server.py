@@ -386,7 +386,7 @@ def _mapear_estado_solicitud(estado_telegram: str) -> str:
     return mapeo.get(estado_telegram, "ESPERANDO_COMPROBANTES")
 
 
-@api_router.get("/operaciones/{operacion_id}", response_model=OperacionNetCash)
+@api_router.get("/operaciones/{operacion_id}")
 async def obtener_operacion(operacion_id: str):
     """
     Obtiene una operación específica por ID.
