@@ -100,13 +100,8 @@ const Dashboard = () => {
   );
 
   const handleOperacionClick = (operacion) => {
-    if (operacion.origen === 'telegram') {
-      // Para operaciones de Telegram, navegar a vista de detalle de solicitud
-      navigate(`/solicitud-netcash/${operacion.id}`);
-    } else {
-      // Para operaciones web, navegar a vista de operación
-      navigate(`/operacion/${operacion.id}`);
-    }
+    // Todas las operaciones usan la misma vista de detalle
+    navigate(`/operacion/${operacion.id}`);
   };
 
   const getEstadoBadge = (estado) => {
