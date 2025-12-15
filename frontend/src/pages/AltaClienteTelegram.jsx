@@ -83,15 +83,23 @@ const AltaClienteTelegram = () => {
 
   return (
     <div className="container mx-auto p-6 max-w-2xl">
-      {/* Botón de regreso al menú principal */}
-      <div className="mb-6">
+      {/* Botón de regreso */}
+      <div className="mb-6 flex gap-2">
         <Button
           variant="outline"
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700"
+        >
+          <HomeIcon className="h-4 w-4" />
+          Inicio
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 text-slate-600 hover:text-slate-800"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver al menú principal
+          Volver al Dashboard
         </Button>
       </div>
 
