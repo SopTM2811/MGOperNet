@@ -61,8 +61,20 @@ const Dashboard = () => {
   const operacionesFiltradas = operaciones.filter(op => 
     op.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (op.cliente_nombre && op.cliente_nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (op.codigo_operacion_sistema && op.codigo_operacion_sistema.toLowerCase().includes(searchTerm.toLowerCase()))
+    (op.codigo_operacion_sistema && op.codigo_operacion_sistema.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (op.titular_nombre_completo && op.titular_nombre_completo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (op.folio_mbco && op.folio_mbco.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const handleOperacionClick = (operacion) => {
+    if (operacion.origen === 'telegram') {
+      // Para operaciones de Telegram, navegar a vista de detalle de solicitud
+      navigate(`/solicitud-netcash/${operacion.id}`);
+    } else {
+      // Para operaciones web, navegar a vista de operación
+      navigate(`/operacion/${operacion.id}`);
+    }
+  };
 
   const getEstadoBadge = (estado) => {
     const estadoMap = {
