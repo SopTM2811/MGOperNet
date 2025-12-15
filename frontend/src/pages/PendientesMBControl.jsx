@@ -98,33 +98,41 @@ const PendientesMBControl = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <HomeIcon className="h-5 w-5 text-slate-600" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
-                  Pendientes de Clave MBControl
-                </h1>
-                <p className="text-sm text-slate-600 mt-1">
-                  Operaciones que necesitan clave de operación MBControl
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header - Mismo diseño que Dashboard */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
+          <div>
+            <h1 
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight"
+              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+            >
+              Pendientes MBControl
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 font-light">Operaciones que necesitan clave de operación</p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-6 py-8">
         {/* Stats */}
         <Card className="mb-6">
           <CardContent className="pt-6">
