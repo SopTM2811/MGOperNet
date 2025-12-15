@@ -190,15 +190,45 @@ const OperacionDetalle = () => {
   const puedeConfirmar = !esSoloLectura && tieneCalculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-4 sm:py-8">
-      <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-wrap gap-2 mb-4">
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+        {/* Header - Mismo diseño que Dashboard */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+              <h1 
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight"
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+                data-testid="operation-title"
+              >
+                Operación NetCash
+              </h1>
+              {/* Badge de origen */}
+              {operacion.origen === 'telegram' && (
+                <Badge variant="outline" className="border-blue-400 text-blue-600 text-xs">
+                  📱 Telegram
+                </Badge>
+              )}
+              {operacion.modo_captura === 'manual_por_fallo_ocr' && (
+                <Badge variant="outline" className="border-amber-400 text-amber-600 text-xs">
+                  ✋ Manual
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {operacion.folio_mbco && (
+                <Badge className="bg-blue-600 text-white font-semibold text-sm sm:text-lg px-3 sm:px-4 py-1">
+                  {operacion.folio_mbco}
+                </Badge>
+              )}
+              <code className="text-xs sm:text-sm font-mono bg-slate-100 px-2 sm:px-3 py-1 rounded text-slate-500">{operacion.id}</code>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={() => navigate('/')}
-              className="bg-white hover:bg-slate-50 text-slate-700 text-sm"
+              className="border-slate-300 text-sm"
               size="sm"
               data-testid="home-btn"
             >
@@ -206,48 +236,17 @@ const OperacionDetalle = () => {
               <span className="hidden sm:inline">Inicio</span>
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => navigate('/dashboard')}
-              className="text-slate-600 hover:text-slate-800 text-sm"
+              className="border-slate-300 text-sm"
               size="sm"
               data-testid="back-btn"
             >
               <ArrowLeft className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Volver al Dashboard</span>
-              <span className="sm:hidden">Dashboard</span>
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
           </div>
-          
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                <h1 
-                  className="text-2xl sm:text-3xl lg:text-4xl font-bold"
-                  style={{ fontFamily: 'Cormorant Garamond, serif' }}
-                  data-testid="operation-title"
-                >
-                  Operación NetCash
-                </h1>
-                {/* Badge de origen */}
-                {operacion.origen === 'telegram' && (
-                  <Badge variant="outline" className="border-blue-400 text-blue-600 text-xs">
-                    📱 Telegram
-                  </Badge>
-                )}
-                {operacion.modo_captura === 'manual_por_fallo_ocr' && (
-                  <Badge variant="outline" className="border-amber-400 text-amber-600 text-xs">
-                    ✋ Manual
-                  </Badge>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {operacion.folio_mbco && (
-                  <Badge className="bg-blue-600 text-white font-semibold text-lg px-4 py-1">
-                    {operacion.folio_mbco}
-                  </Badge>
-                )}
-                <code className="text-sm font-mono bg-white px-3 py-1 rounded border text-slate-500">{operacion.id}</code>
-              </div>
+        </div>
             </div>
             <Badge variant="default" className="text-base px-4 py-2">
               {operacion.estado.replace(/_/g, ' ')}
