@@ -194,25 +194,49 @@ const OperacionDetalle = () => {
       <div className="container mx-auto px-6 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="mb-4"
-            data-testid="back-btn"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver al Dashboard
-          </Button>
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="bg-white hover:bg-slate-50 text-slate-700"
+              data-testid="home-btn"
+            >
+              <HomeIcon className="h-4 w-4 mr-2" />
+              Inicio
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard')}
+              className="text-slate-600 hover:text-slate-800"
+              data-testid="back-btn"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver al Dashboard
+            </Button>
+          </div>
           
           <div className="flex justify-between items-start">
             <div>
-              <h1 
-                className="text-4xl font-bold mb-2"
-                style={{ fontFamily: 'Cormorant Garamond, serif' }}
-                data-testid="operation-title"
-              >
-                Operación NetCash
-              </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 
+                  className="text-4xl font-bold"
+                  style={{ fontFamily: 'Cormorant Garamond, serif' }}
+                  data-testid="operation-title"
+                >
+                  Operación NetCash
+                </h1>
+                {/* Badge de origen */}
+                {operacion.origen === 'telegram' && (
+                  <Badge variant="outline" className="border-blue-400 text-blue-600">
+                    📱 Telegram
+                  </Badge>
+                )}
+                {operacion.modo_captura === 'manual_por_fallo_ocr' && (
+                  <Badge variant="outline" className="border-amber-400 text-amber-600">
+                    ✋ Captura Manual
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 {operacion.folio_mbco && (
                   <Badge className="bg-blue-600 text-white font-semibold text-lg px-4 py-1">
