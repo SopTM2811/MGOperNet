@@ -373,23 +373,38 @@ const Dashboard = () => {
                         )}
                       </div>
                       
-                      {/* Botón de acción - solo para operaciones web */}
-                      {operacion.origen !== 'telegram' && (
+                      {/* Botones de acción */}
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {/* Botón subir comprobantes - solo para operaciones web */}
+                        {operacion.origen !== 'telegram' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOperacionSeleccionada(operacion);
+                              setShowComprobantes(true);
+                            }}
+                            className="text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                            data-testid={`upload-btn-${operacion.id}`}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Subir
+                          </Button>
+                        )}
+                        
+                        {/* Botón eliminar */}
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOperacionSeleccionada(operacion);
-                            setShowComprobantes(true);
-                          }}
-                          className="shrink-0"
-                          data-testid={`upload-btn-${operacion.id}`}
+                          onClick={(e) => handleDeleteClick(e, operacion)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          data-testid={`delete-btn-${operacion.id}`}
                         >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Subir comprobantes
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -398,6 +413,33 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Diálogo de confirmación para eliminar */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta operación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la operación 
+              {operacionToDelete?.folio_mbco && (
+                <span className="font-semibold"> {operacionToDelete.folio_mbco}</span>
+              )}
+              {operacionToDelete?.cliente_nombre && (
+                <span> del cliente <span className="font-semibold">{operacionToDelete.cliente_nombre}</span></span>
+              )}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="hover:bg-slate-100">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Sí, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal Nueva Operación */}
       {showNuevaOperacion && (
