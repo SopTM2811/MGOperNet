@@ -91,42 +91,48 @@ const UsuariosNetCash = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <div className="flex gap-2 mb-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/')}
-            className="bg-white hover:bg-slate-50 text-slate-700"
-          >
-            <HomeIcon className="h-4 w-4 mr-2" />
-            Inicio
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="text-slate-600 hover:text-slate-800"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver al Dashboard
-          </Button>
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header - Mismo diseño que Dashboard */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
+          <div>
+            <h1 
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight"
+              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+            >
+              Usuarios NetCash
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 font-light">Catálogo de usuarios del sistema con roles y permisos</p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-3 mb-2">
-          <Users className="w-8 h-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Usuarios NetCash</h1>
-        </div>
-        <p className="text-gray-600">
-          Catálogo de usuarios del sistema con roles y permisos
-        </p>
-      </div>
 
-      {error && (
-        <Alert className="mb-6 bg-red-50 border-red-200">
-          <AlertDescription className="text-red-800">
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert className="mb-6 bg-red-50 border-red-200">
+            <AlertDescription className="text-red-800">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
 
       <div className="grid gap-4">
         {usuarios.map((usuario) => {
