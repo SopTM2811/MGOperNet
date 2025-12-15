@@ -1,107 +1,455 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to make the application's PDF/OCR processing more robust. When the automated OCR fails to read a payment receipt correctly, the system should not block the user. Instead, it should trigger a manual capture mode within the Telegram bot, asking the user a series of questions (number of receipts, total amount, beneficiary, number of links).
+The user's primary goal is to make the application's PDF/OCR processing more robust. When automated OCR fails, the system should trigger a manual capture mode in the Telegram bot. This mode should ask the user a series of questions: number of receipts, total amount, beneficiary, and number of links.
 
-This manually captured data must then be presented to the admin (Ana) for verification. Ana's interface should clearly distinguish between robot-parsed data and manually-entered data, allowing her to either approve and continue the flow or reject the operation with a reason.
+This flow was refined to include a frequent beneficiary system. The bot must first offer a numbered list of existing beneficiaries for the client. If the user selects one, the flow continues. If they type a new name, the bot must then ask for the new beneficiary's  as a mandatory step. The step to capture a CLABE was explicitly removed.
 
-Additionally, the OCR logic itself needs to be improved for specific banks like ALBO (to correctly identify the Monto total and ignore /bin/bash.00 commissions) and ESPIRAL/Fondeadora (to overcome sin texto legible errors).
+The manually captured data must then be presented to the admin (Ana) for verification, clearly distinguishing it from robot-parsed data. Ana should have Approve and Reject options.
 
-Finally, a new MongoDB collection, , should be created to log all OCR failures and manual interventions. This will serve as a training dataset for a third party to improve the parsing rules without impacting daily operations.
+A new MongoDB collection, , must log all OCR failures and manual interventions for future training.
 
-This new requirement builds upon the P4A feature, which automates the processing of email replies from the Treasury department.
+Additionally, the user reported and requested fixes for several unrelated issues:
+- UI bugs on the frontend (button contrast).
+- UX issues in the Telegram bot ( command missing a back button).
+- API/Data-related bugs causing the Clientes and Dashboard pages to fail.
+- A critical bug where, after a successful OCR operation (the normal flow), the admin (Ana) does not receive any notification, blocking the process.
 
 **User's preferred language**: español
 
 **what currently exists?**
-The application is a full-stack FastAPI/React/MongoDB application with a Telegram bot interface for clients and admins.
-
-During this session, several critical fixes and features were implemented in sequence:
-- **P0 (Bug Fixes):**
-  - Resolved a  in  by making a helper function .
-  - Fixed a subsequent  error in  by adding the correct database import and refactoring error handling to prevent duplicate messages to the admin.
-- **P1 (Feature):** Improved the  assignment flow for the admin, adding clearer confirmation messages and more flexible regex validation.
-- **P2 (Feature):** Corrected the Treasury email content by implementing logic to rename attached proof-of-payment files with the .
-- **P3 (Feature):** Implemented a previously missing Telegram notification to the Treasury user (Toño) upon successful processing of an order.
-- **P4A (Feature):** Built the backend logic to monitor email replies from Treasury, parse attached payment receipts, validate them against DB data, and either forward the confirmation to the DNS provider or reply to Treasury with specific errors.
-- **OCR Improvement (Backend):** The backend foundation for the OCR improvement feature has been laid. New services (, ) have been created, and the main  has been modified to use them to detect OCR failures and flag operations for manual data capture.
+The application is a full-stack FastAPI/React/MongoDB application. During this session, the agent successfully implemented:
+- **P0 (Manual Capture Flow):** A complete, multi-step conversation in the Telegram bot that triggers on OCR failure. It includes the refined logic for selecting from a numbered list of frequent beneficiaries or capturing a new one with a mandatory .
+- **P1 (Admin Validation):** The admin (Ana) now receives a detailed notification for manual entries, showing the source of the data and OCR failure reasons. She has buttons to Validate or Reject the operation.
+- **P2 (Learning Collection):** The  collection was created, and the application logic was updated to log records during OCR failures and admin interventions. Indexes were created for this collection.
+- **Bug Fixes:**
+    - The agent fixed a bug where saving a frequent beneficiary would fail for clients without an , and removed a confusing warning message.
+    - It fixed an issue where Ana was not being notified after the *manual* flow was completed.
+    - It resolved UI/UX issues on the Alta Cliente form and in the bot's  command.
+    - It fixed two critical data-related bugs that were causing the Clientes and Dashboard pages to crash, which involved correcting a Pydantic model serialization issue and removing two corrupted records from the  collection.
 
 **Last working item**:
-The agent was in the middle of implementing the comprehensive OCR improvement and manual-fallback feature. It successfully completed the backend portion, where  now integrates with new parser and validator services to detect OCR failures. The next step is to build the user-facing part of this feature.
+The user reported that in the **normal (successful OCR) flow**, after the client confirms their operation in the Telegram bot, the admin (Ana) is not receiving the required Telegram notification or email to proceed. This breaks the primary happy path workflow.
 
-- **Last item agent was working**: Implementing the manual data capture flow in the client-facing Telegram bot.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: both. The backend services will need unit/integration tests, and the frontend bot flow will require e2e testing, likely via the  or manual simulation.
-- **User Testing Done**: N
+-   **Last item agent was working**: Investigating why notifications to the admin (Ana) are not being sent upon successful completion of a standard (non-manual) operation in the Telegram bot.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: backend testing agent. The agent should create a test that simulates a successful OCR flow from a client and asserts that the notification service for Ana (both Telegram and email) is called correctly.
+-   **User Testing Done**: Y (The user discovered and reported this bug).
 
 **All Pending/In progress Issue list**:
-- There are no pending bugs. All pending work is related to completing the in-progress feature.
+-   **Issue 1**: Admin (Ana) is not notified on successful completion of a standard (non-manual) client operation in Telegram (P0, HIGHEST PRIORITY).
+-   **Issue 2**: Automated tests for the P4A feature are failing (P1).
+
+**Issues Detail:**
+-   **Issue 1: Admin notification failure in standard flow**
+    -   **Attempted fixes**: None. The agent had just started investigating the code related to the  state in .
+    -   **Next debug checklist**:
+        1.  Examine the  handler in .
+        2.  Trace the execution flow from this handler into the corresponding service method (likely  or similar).
+        3.  Verify if this service method correctly changes the operation's state and subsequently calls the methods responsible for notifying Ana (e.g.,  and the email service).
+        4.  Inspect the backend logs for any errors that occur immediately after a user confirms a successful operation.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical bug blocking the main operational happy path. Fixing it will restore the application's core functionality, allowing operations with successful OCR to be processed by the admin.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Blocked on other issue**: No.
+
+-   **Issue 2: Failing P4A automated tests**
+    -   **Attempted fixes**: The agent previously ran the tests located in  and they failed. The agent correctly diagnosed that the validation service was expecting data in a different format but did not proceed with a fix.
+    -   **Next debug checklist**:
+        1.  Re-run the tests using ============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.1, pluggy-1.6.0
+rootdir: /app
+plugins: anyio-4.11.0, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+backend/tests/test_p4a_validacion_comprobantes.py FFFFFF                 [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_p4a_caso_feliz_validaciones_ok ______________________
+
+solicitud_test = {'beneficiario_reportado': 'PROVEEDOR TEST SC', 'cantidad_ligas_reportada': 100, 'cliente_nombre': 'EMPRESA TEST SA DE CV', 'comision_dns_calculada': 371.25, ...}
+folio_concepto = '12345x678xDx99', mock_db = <MagicMock id='273911255381712'>
+mock_gmail_service = <MagicMock id='273911255032016'>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_p4a_caso_feliz_validacion0')
+
+    @pytest.mark.asyncio
+    async def test_p4a_caso_feliz_validaciones_ok(solicitud_test, folio_concepto, mock_db, mock_gmail_service, tmp_path):
+        """
+        Test 1: Caso feliz - Capital, comisión y concepto correctos
+    
+        Verifica que:
+        - Las validaciones pasan
+        - Se guarda el comprobante
+        - Se envía correo a DNS
+        - Se actualiza estado a "correo_enviado_a_proveedor"
+        - Se marca pagado_a_dns = True
+        """
+        print("\n🔍 Test P4A-1: Caso feliz (todas las validaciones OK)")
+    
+        # Crear PDF dummy con datos CORRECTOS
+        pdf_path = tmp_path / "comprobante_ok.pdf"
+        crear_pdf_dummy(
+            capital=99000.00,  # ✅ Correcto
+            comision=371.25,   # ✅ Correcto
+            concepto=folio_concepto,  # ✅ Correcto
+            output_path=str(pdf_path)
+        )
+    
+        print(f"   PDF creado: {pdf_path}")
+    
+        # Importar servicio de validación
+        from comprobante_pago_validator_service import comprobante_pago_validator
+    
+        # Ejecutar validación
+        es_valido, errores, datos_extraidos = comprobante_pago_validator.validar_comprobante(
+            pdf_path=str(pdf_path),
+            capital_esperado=Decimal('99000.00'),
+            comision_esperada=Decimal('371.25'),
+            folio_concepto=folio_concepto
+        )
+    
+        # Verificaciones
+>       assert es_valido is True, "La validación debe pasar"
+E       AssertionError: La validación debe pasar
+E       assert False is True
+
+backend/tests/test_p4a_validacion_comprobantes.py:166: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+🔍 Test P4A-1: Caso feliz (todas las validaciones OK)
+   PDF creado: /tmp/pytest-of-root/pytest-0/test_p4a_caso_feliz_validacion0/comprobante_ok.pdf
+------------------------------ Captured log call -------------------------------
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:104 [ComprobantePago-P4A] ❌ Diferencia en capital: esperado $99,000.00, comprobante $198.00 (diferencia: $98,802.00)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:113 [ComprobantePago-P4A] ❌ Diferencia en comisión: esperada $371.25, comprobante $99.00 (diferencia: $272.25)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:132 [ComprobantePago-P4A] ❌ Validación falló con 2 error(es)
+____________________________ test_p4a_error_capital ____________________________
+
+solicitud_test = {'beneficiario_reportado': 'PROVEEDOR TEST SC', 'cantidad_ligas_reportada': 100, 'cliente_nombre': 'EMPRESA TEST SA DE CV', 'comision_dns_calculada': 371.25, ...}
+folio_concepto = '12345x678xDx99', mock_db = <MagicMock id='273911244019728'>
+mock_gmail_service = <MagicMock id='273911244095056'>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_p4a_error_capital0')
+
+    @pytest.mark.asyncio
+    async def test_p4a_error_capital(solicitud_test, folio_concepto, mock_db, mock_gmail_service, tmp_path):
+        """
+        Test 2: Error en capital
+    
+        Verifica que:
+        - La validación falla por capital incorrecto
+        - Se genera error específico
+        - NO se envía correo a DNS
+        - Se responde a Tesorería con el error
+        """
+        print("\n🔍 Test P4A-2: Error en capital")
+    
+        # Crear PDF con capital INCORRECTO
+        pdf_path = tmp_path / "comprobante_capital_mal.pdf"
+        crear_pdf_dummy(
+            capital=98500.00,  # ❌ Incorrecto (esperado: 99000.00)
+            comision=371.25,   # ✅ Correcto
+            concepto=folio_concepto,  # ✅ Correcto
+            output_path=str(pdf_path)
+        )
+    
+        # Validar
+        from comprobante_pago_validator_service import comprobante_pago_validator
+    
+        es_valido, errores, datos_extraidos = comprobante_pago_validator.validar_comprobante(
+            pdf_path=str(pdf_path),
+            capital_esperado=Decimal('99000.00'),
+            comision_esperada=Decimal('371.25'),
+            folio_concepto=folio_concepto
+        )
+    
+        # Verificaciones
+        assert es_valido is False, "La validación debe fallar"
+>       assert len(errores) == 1, f"Debe haber exactamente 1 error, se encontraron {len(errores)}"
+E       AssertionError: Debe haber exactamente 1 error, se encontraron 2
+E       assert 2 == 1
+E        +  where 2 = len(['Diferencia en capital: esperado $99,000.00, comprobante $198.00 (diferencia: $98,802.00)', 'Diferencia en comisión: esperada $371.25, comprobante $99.00 (diferencia: $272.25)'])
+
+backend/tests/test_p4a_validacion_comprobantes.py:230: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+🔍 Test P4A-2: Error en capital
+------------------------------ Captured log call -------------------------------
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:104 [ComprobantePago-P4A] ❌ Diferencia en capital: esperado $99,000.00, comprobante $198.00 (diferencia: $98,802.00)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:113 [ComprobantePago-P4A] ❌ Diferencia en comisión: esperada $371.25, comprobante $99.00 (diferencia: $272.25)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:132 [ComprobantePago-P4A] ❌ Validación falló con 2 error(es)
+___________________________ test_p4a_error_comision ____________________________
+
+solicitud_test = {'beneficiario_reportado': 'PROVEEDOR TEST SC', 'cantidad_ligas_reportada': 100, 'cliente_nombre': 'EMPRESA TEST SA DE CV', 'comision_dns_calculada': 371.25, ...}
+folio_concepto = '12345x678xDx99'
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_p4a_error_comision0')
+
+    @pytest.mark.asyncio
+    async def test_p4a_error_comision(solicitud_test, folio_concepto, tmp_path):
+        """
+        Test 3: Error en comisión
+    
+        Verifica que se detecta comisión incorrecta
+        """
+        print("\n🔍 Test P4A-3: Error en comisión")
+    
+        # Crear PDF con comisión INCORRECTA
+        pdf_path = tmp_path / "comprobante_comision_mal.pdf"
+        crear_pdf_dummy(
+            capital=99000.00,  # ✅ Correcto
+            comision=350.00,   # ❌ Incorrecto (esperado: 371.25)
+            concepto=folio_concepto,  # ✅ Correcto
+            output_path=str(pdf_path)
+        )
+    
+        # Validar
+        from comprobante_pago_validator_service import comprobante_pago_validator
+    
+        es_valido, errores, datos_extraidos = comprobante_pago_validator.validar_comprobante(
+            pdf_path=str(pdf_path),
+            capital_esperado=Decimal('99000.00'),
+            comision_esperada=Decimal('371.25'),
+            folio_concepto=folio_concepto
+        )
+    
+        # Verificaciones
+        assert es_valido is False
+>       assert len(errores) == 1
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len(['Diferencia en capital: esperado $99,000.00, comprobante $198.00 (diferencia: $98,802.00)', 'Diferencia en comisión: esperada $371.25, comprobante $99.00 (diferencia: $272.25)'])
+
+backend/tests/test_p4a_validacion_comprobantes.py:296: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+🔍 Test P4A-3: Error en comisión
+------------------------------ Captured log call -------------------------------
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:104 [ComprobantePago-P4A] ❌ Diferencia en capital: esperado $99,000.00, comprobante $198.00 (diferencia: $98,802.00)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:113 [ComprobantePago-P4A] ❌ Diferencia en comisión: esperada $371.25, comprobante $99.00 (diferencia: $272.25)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:132 [ComprobantePago-P4A] ❌ Validación falló con 2 error(es)
+___________________________ test_p4a_error_concepto ____________________________
+
+solicitud_test = {'beneficiario_reportado': 'PROVEEDOR TEST SC', 'cantidad_ligas_reportada': 100, 'cliente_nombre': 'EMPRESA TEST SA DE CV', 'comision_dns_calculada': 371.25, ...}
+folio_concepto = '12345x678xDx99'
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_p4a_error_concepto0')
+
+    @pytest.mark.asyncio
+    async def test_p4a_error_concepto(solicitud_test, folio_concepto, tmp_path):
+        """
+        Test 4: Error en concepto
+    
+        Verifica que se detecta concepto incorrecto
+        """
+        print("\n🔍 Test P4A-4: Error en concepto")
+    
+        # Crear PDF con concepto INCORRECTO (con guiones en lugar de 'x')
+        pdf_path = tmp_path / "comprobante_concepto_mal.pdf"
+        concepto_incorrecto = '12345-678-D-99'  # ❌ Tiene guiones
+        crear_pdf_dummy(
+            capital=99000.00,  # ✅ Correcto
+            comision=371.25,   # ✅ Correcto
+            concepto=concepto_incorrecto,  # ❌ Incorrecto
+            output_path=str(pdf_path)
+        )
+    
+        # Validar
+        from comprobante_pago_validator_service import comprobante_pago_validator
+    
+        es_valido, errores, datos_extraidos = comprobante_pago_validator.validar_comprobante(
+            pdf_path=str(pdf_path),
+            capital_esperado=Decimal('99000.00'),
+            comision_esperada=Decimal('371.25'),
+            folio_concepto=folio_concepto  # Esperado: 12345x678xDx99
+        )
+    
+        # Verificaciones
+        assert es_valido is False
+        assert len(errores) == 1
+>       assert "concepto" in errores[0].lower()
+E       AssertionError: assert 'concepto' in 'no se encontraron movimientos relacionados con el folio 12345x678xdx99 en el comprobante.'
+E        +  where 'no se encontraron movimientos relacionados con el folio 12345x678xdx99 en el comprobante.' = <built-in method lower of str object at 0xf91eee685080>()
+E        +    where <built-in method lower of str object at 0xf91eee685080> = 'No se encontraron movimientos relacionados con el folio 12345x678xDx99 en el comprobante.'.lower
+
+backend/tests/test_p4a_validacion_comprobantes.py:337: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+🔍 Test P4A-4: Error en concepto
+------------------------------ Captured log call -------------------------------
+WARNING  comprobante_pago_validator_service:comprobante_pago_validator_service.py:227 [ComprobantePago-P4A] No se encontraron movimientos con folio exacto. Intentando búsqueda flexible...
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:79 [ComprobantePago-P4A] No se encontraron movimientos relacionados con el folio 12345x678xDx99 en el comprobante.
+_________________ test_p4a_error_combinado_capital_y_concepto __________________
+
+solicitud_test = {'beneficiario_reportado': 'PROVEEDOR TEST SC', 'cantidad_ligas_reportada': 100, 'cliente_nombre': 'EMPRESA TEST SA DE CV', 'comision_dns_calculada': 371.25, ...}
+folio_concepto = '12345x678xDx99'
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_p4a_error_combinado_capit0')
+
+    @pytest.mark.asyncio
+    async def test_p4a_error_combinado_capital_y_concepto(solicitud_test, folio_concepto, tmp_path):
+        """
+        Test 5: Error combinado (capital + concepto incorrectos)
+    
+        Verifica que se detectan MÚLTIPLES errores
+        """
+        print("\n🔍 Test P4A-5: Error combinado (capital + concepto)")
+    
+        # Crear PDF con capital Y concepto INCORRECTOS
+        pdf_path = tmp_path / "comprobante_multiple_errores.pdf"
+        concepto_incorrecto = '12345-678-D-99'
+        crear_pdf_dummy(
+            capital=98500.00,  # ❌ Incorrecto
+            comision=371.25,   # ✅ Correcto
+            concepto=concepto_incorrecto,  # ❌ Incorrecto
+            output_path=str(pdf_path)
+        )
+    
+        # Validar
+        from comprobante_pago_validator_service import comprobante_pago_validator
+    
+        es_valido, errores, datos_extraidos = comprobante_pago_validator.validar_comprobante(
+            pdf_path=str(pdf_path),
+            capital_esperado=Decimal('99000.00'),
+            comision_esperada=Decimal('371.25'),
+            folio_concepto=folio_concepto
+        )
+    
+        # Verificaciones
+        assert es_valido is False
+>       assert len(errores) == 2, f"Debe haber exactamente 2 errores, se encontraron {len(errores)}"
+E       AssertionError: Debe haber exactamente 2 errores, se encontraron 1
+E       assert 1 == 2
+E        +  where 1 = len(['No se encontraron movimientos relacionados con el folio 12345x678xDx99 en el comprobante.'])
+
+backend/tests/test_p4a_validacion_comprobantes.py:375: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+🔍 Test P4A-5: Error combinado (capital + concepto)
+------------------------------ Captured log call -------------------------------
+WARNING  comprobante_pago_validator_service:comprobante_pago_validator_service.py:227 [ComprobantePago-P4A] No se encontraron movimientos con folio exacto. Intentando búsqueda flexible...
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:79 [ComprobantePago-P4A] No se encontraron movimientos relacionados con el folio 12345x678xDx99 en el comprobante.
+__________________________ test_p4a_tolerancia_monto ___________________________
+
+folio_concepto = '12345x678xDx99'
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_p4a_tolerancia_monto0')
+
+    @pytest.mark.asyncio
+    async def test_p4a_tolerancia_monto(folio_concepto, tmp_path):
+        """
+        Test adicional: Verificar que la tolerancia de ±$0.01 funciona correctamente
+        """
+        print("\n🔍 Test P4A-Extra: Tolerancia de ±$0.01")
+    
+        from comprobante_pago_validator_service import comprobante_pago_validator
+    
+        # Caso 1: Diferencia de $0.01 debe pasar
+        pdf_path_1 = tmp_path / "comprobante_tolerancia_ok.pdf"
+        crear_pdf_dummy(
+            capital=99000.01,  # Diferencia de $0.01 ✅
+            comision=371.25,
+            concepto=folio_concepto,
+            output_path=str(pdf_path_1)
+        )
+    
+        es_valido, errores, _ = comprobante_pago_validator.validar_comprobante(
+            pdf_path=str(pdf_path_1),
+            capital_esperado=Decimal('99000.00'),
+            comision_esperada=Decimal('371.25'),
+            folio_concepto=folio_concepto
+        )
+    
+>       assert es_valido is True, "Diferencia de $0.01 debe pasar"
+E       AssertionError: Diferencia de $0.01 debe pasar
+E       assert False is True
+
+backend/tests/test_p4a_validacion_comprobantes.py:414: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+🔍 Test P4A-Extra: Tolerancia de ±$0.01
+------------------------------ Captured log call -------------------------------
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:104 [ComprobantePago-P4A] ❌ Diferencia en capital: esperado $99,000.00, comprobante $198.00 (diferencia: $98,802.00)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:113 [ComprobantePago-P4A] ❌ Diferencia en comisión: esperada $371.25, comprobante $99.00 (diferencia: $272.25)
+ERROR    comprobante_pago_validator_service:comprobante_pago_validator_service.py:132 [ComprobantePago-P4A] ❌ Validación falló con 2 error(es)
+=============================== warnings summary ===============================
+../root/.venv/lib/python3.11/site-packages/PyPDF2/__init__.py:21
+  /root/.venv/lib/python3.11/site-packages/PyPDF2/__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_p4a_validacion_comprobantes.py::test_p4a_caso_feliz_validaciones_ok
+FAILED backend/tests/test_p4a_validacion_comprobantes.py::test_p4a_error_capital
+FAILED backend/tests/test_p4a_validacion_comprobantes.py::test_p4a_error_comision
+FAILED backend/tests/test_p4a_validacion_comprobantes.py::test_p4a_error_concepto
+FAILED backend/tests/test_p4a_validacion_comprobantes.py::test_p4a_error_combinado_capital_y_concepto
+FAILED backend/tests/test_p4a_validacion_comprobantes.py::test_p4a_tolerancia_monto
+========================= 6 failed, 1 warning in 0.21s =========================.
+        2.  Analyze the exact assertion error or exception.
+        3.  Inspect the mock data being passed to the  in the test.
+        4.  Compare the mock data structure with the actual data structure the service expects.
+        5.  Adjust the mock data or the service logic to align them and make the tests pass.
+    -   **Why fix this issue and what will be achieved with the fix?**: It will ensure the P4A (Treasury email monitoring) feature has a solid regression test suite, preventing future changes from breaking its functionality.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Blocked on other issue**: Issue 1 (Admin notification failure).
 
 **In progress Task List**:
--   **Task 1**: Complete the OCR Improvement & Manual Fallback Feature (P0)
-
-**Task Detail:**
--   **Task 1: Complete the OCR Improvement & Manual Fallback Feature**
-    -   **Where to resume**: The backend changes are done. The work needs to resume in .
-        1.  After a document is uploaded, check the  document in MongoDB for the  field set by .
-        2.  If , initiate a new conversation flow with the client.
-        3.  Implement the state machine and handlers to ask the four required questions in order: number of receipts, total amount, beneficiary, and number of links.
-        4.  Implement input validation for numeric fields.
-        5.  On successful completion, call the new  method to save the user-provided data.
-    -   **What will be achieved with this?**: The application will have a robust fallback mechanism for when OCR fails, preventing user dead-ends and ensuring operations can still proceed with manual data entry, pending admin approval.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on something**: No.
+-   There are no in-progress tasks, only the bug fixes listed above.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-  - **(P1)** Implement Admin Validation for Manual Capture: Modify  so that when Ana views a request flagged as , she sees the data declared by the client and is presented with Approve or Reject options.
-  - **(P2)** Implement  Collection: Add logic to  and  to populate the new  collection whenever an OCR failure or manual admin validation occurs.
-  - **(P3)** Create Automated Tests for P4A: As requested by the user, create the 5 specific automated tests for the P4A email monitoring flow (happy path, error in capital, error in commission, error in concept, combined error).
-- **Future Tasks:**
-  - (P2) Implement Phase 2: Email Monitoring to detect DNS replies and close the operation loop.
-  - (P2) Implement Permission Gates in the frontend.
-  - (P2) Refactor frontend authentication to eliminate the hardcoded .
-  - Create a user editing module in the frontend.
-  - Refactor Treasury email recipients to be dynamically pulled from the user catalog.
-  - Implement Ver mis solicitudes functionality within the client's Telegram bot.
+-   **Upcoming Tasks:**
+    -   (P3) Create the 5 specific automated tests for the P4A email monitoring flow (happy path, error in capital, error in commission, error in concept, combined error). *Note: This is related to the failing tests in Issue 2.*
+-   **Future Tasks:**
+    -   Implement Phase 2: Email Monitoring to detect DNS replies and close the operation loop.
+    -   Implement Permission Gates in the frontend.
+    -   Refactor frontend authentication to eliminate the hardcoded .
+    -   Create a user editing module in the frontend.
+    -   Refactor Treasury email recipients to be dynamically pulled from the user catalog.
+    -   Implement Ver mis solicitudes functionality within the client's Telegram bot.
 
 **Completed work in this session**
-- **P0  bug**: Fixed  in .
-- **P0  bug**: Fixed  error in  and improved admin error messaging.
-- **P1  Flow**: Improved admin flow for assigning folios with better validation and UI messages.
-- **P2 Treasury Email Attachments**: Implemented logic to rename receipt attachments in the Treasury email to include the .
-- **P3 Treasury Telegram Notification**: Fixed and implemented the Telegram notification sent to the Treasury user when an order is processed.
-- **P4A Backend Implementation**: Built the complete backend logic for monitoring and processing email replies from Treasury, including validation of attachments and conditional emailing to DNS or back to Treasury.
-- **OCR Backend Foundation**: Created  and , and integrated them into  to detect OCR failures.
+-   **P0 - Manual Capture Flow**: Implemented and then refined the manual data capture flow for OCR failures, including frequent beneficiary selection and mandatory  capture.
+-   **P1 - Admin Validation Flow**: Implemented the admin validation interface for Ana to approve or reject manual entries.
+-   **P2 - Learning Collection**: Created and integrated the  collection for logging OCR failures and admin actions.
+-   **P3 - Initial Tests**: Created a passing test for the OCR failure mode.
+-   **Critical Bug Fix**: Fixed the issue where Ana was not notified at the end of the *manual* capture flow.
+-   **Data Integrity Fixes**: Repaired the  and  endpoints by fixing a Pydantic serialization issue and removing corrupted data from the database, making the frontend Clientes and Dashboard pages functional again.
+-   **UI/UX Fixes**: Corrected button contrast on the Alta Cliente form and added a Volver al menú button to the  command in the bot.
+-   **Frequent Beneficiary Bug Fix**: Ensured frequent beneficiaries can be saved even if the client lacks an , using  as a fallback.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Failing P4A automated tests**
+    -   **Debug checklist**: See Issues Detail section above.
+    -   **Why to solve this issue and what will be achieved with this?**: To create a stable test suite for the P4A email monitoring feature, preventing regressions.
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Is recurring issue?**: Y
+
+**Known issue recurrence from previous fork**
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Phased Development**: The agent worked through a strict, user-defined sequence of priorities (P0 -> P1 -> P2 -> P3 -> P4A -> OCR).
-- **Modular Services**: New functionality was encapsulated in dedicated services (, , ).
-- **Bank-Specific Parsing**: Implemented a factory pattern () to select the correct parsing logic based on heuristics from the PDF text.
-- **Stateful Bot Conversations**: The next step requires building a stateful conversation in the Telegram bot to handle the multi-step manual data capture process.
-- **Email Thread Replies**: The  was enhanced to support replying within an existing email thread using the .
+-   **Stateful Bot Conversations**: The core of the new features relies on complex, multi-step  flows in .
+-   **Data-Driven Bug Resolution**: The agent successfully debugged frontend failures by tracing them back to API 500 errors, then to Pydantic validation errors in the logs, and finally to specific corrupted documents in the MongoDB collection.
+-   **Separation of Concerns**: The strict OCR validation for the Telegram bot vs. the more lenient validation for the web UI was identified as an intentional design choice based on different user contexts (client vs. admin).
+-   **Fallback Keys**: Using  as a fallback when a client's  is not available to save a frequent beneficiary.
 
 **key DB schema**
--   ****: Heavily updated. New fields added:
-    -   : ocr_ok | manual_por_fallo_ocr
-    -   : robot | manual_cliente
-    -   : { , ,  }
-    -   : { , , ... } (from P4A)
-    -   : correo_enviado_a_proveedor (from P4A)
-    -   : / (from P4A)
-    -   , , ,  (from manual capture)
-    -   : /
--   ** (New Collection)**: To store OCR failure cases for future training.
-    -   Fields: , , , ,  (, ), , .
+-   ****:
+    -   :  added for manual flow.
+    -   : Added to store the beneficiary's IDMEX if captured manually.
+-   ** (New Collection)**:
+    -   uid=0(root) gid=0(root) groups=0(root), ,  (client's IDMEX), , , ,  (beneficiary's IDMEX), .
+-   ** (New Collection)**:
+    -   , , , , , , , , , .
 
 **changes in tech stack**
--   ****: Added to  to facilitate the creation of dummy PDFs for testing.
+-   None.
 
 **All files of reference**
 - **Created Files:**
+  - 
+  - 
+  - 
   - 
   - 
   - 
@@ -122,45 +470,64 @@ The agent was in the middle of implementing the comprehensive OCR improvement an
   - 
   - 
   - 
+  - 
+
+**Areas that need refactoring**:
+- The P4A test file () needs to be fixed to align with the current service implementation.
+
+**key api endpoints**
+-   : Repaired. Fetches all NetCash clients.
+-   : Repaired. Fetches all operations for the dashboard.
 
 **Critical Info for New Agent**
-- **Resume Here**: Your immediate task is to implement the user-facing part of the OCR fallback feature. Begin by modifying  to create the conversational flow for manual data capture.
-- **Use Provided Artifacts**: The user has uploaded real PDF examples for ALBO and ESPIRAL. Use these to test and refine the parsers in . The URLs are in the chat history.
-- **Follow the Plan**: The user has approved a clear, multi-part plan. After implementing the bot's manual capture flow, you must implement the admin's validation interface and then the logic to populate the  collection.
+-   **Your immediate task is to fix the critical bug where the admin (Ana) is NOT notified after a client completes a standard, successful OCR operation.** This is the highest priority.
+-   Do **NOT** relax the OCR validation rules in the Telegram bot. The user has confirmed that the strictness is intentional. The different behavior between the bot and the web UI is by design.
+-   After fixing the critical notification bug, the next priority is to fix the failing P4A automated tests in .
 
 **documents created in this job**
-- /app/FIX_P0_NAME_DB_IS_NOT_DEFINED.md
-- /app/FIX_P1_FLUJO_ASIGNAR_FOLIO_MBCO.md
-- /app/FIX_P2_CONTENIDO_CORREO_TESORERIA.md
-- /app/FIX_P3_NOTIFICACION_TELEGRAM_TESORERIA.md
-- /app/GUIA_VALIDACION_MANUAL_P4A.md
-- /app/RESUMEN_P4A_COMPLETO.md
+-   /app/P0_CAPTURA_MANUAL_OCR_IMPLEMENTADO.md
+-   /app/P0_TESTS_MANUAL_OCR.md
+-   /app/P1_VALIDACION_ANA_IMPLEMENTADO.md
+-   /app/P2_COLECCION_APRENDIZAJE_IMPLEMENTADO.md
+-   /app/P3_TESTS_AUTOMATIZADOS_ESTADO.md
+-   /app/RESUMEN_FINAL_P0_P1_P2_P3.md
+-   /app/AJUSTES_P0_BENEFICIARIOS_IDMEX.md
+-   /app/FIX_P0_BENEFICIARIOS_Y_NOTIFICACION_ANA.md
+-   /app/FIX_3_CORRECCIONES_UI_Y_API.md
+-   /app/FIX_DASHBOARD_Y_GITHUB_INFO.md
+-   /app/ANALISIS_OCR_TELEGRAM_VS_WEB.md
 
 **Last 10 User Messages and any pending user messages**
-The last several user messages focus exclusively on defining, refining, and approving the implementation plan for the OCR improvement and manual fallback feature. The user has provided detailed requirements, confirmed the agent's proposed architecture, supplied test artifacts (PDFs), and given a clear green light to proceed with the full implementation (bot flow, admin validation, and learning database). There are no pending questions for the user; the agent has a clear mandate to continue building the feature.
+1.  **User (Msg 390):** Asks why OCR fails in Telegram for files that work on the web.
+2.  **Agent (Msg 412):** Investigates and correctly identifies that the Telegram flow uses a much stricter validator () than the web flow, and proposes relaxing the Telegram validation.
+3.  **User (Msg 413):** **REJECTS** the proposal, stating the strict validation is intentional and correct.
+4.  **Agent (Msg 414):** Correctly understands and confirms the behavior is by design and will not be changed.
+5.  **User (Msg 415/418):** Reports the current critical bug: In the **normal flow** (successful OCR), after the client confirms the operation, Ana is not being notified by Telegram or email. **(PENDING)**
+6.  **Agent (Msg 419):** Acknowledges the new bug report and begins investigation. **(IN PROGRESS)**
+
+The last pending user message is the bug report about the missing notification to Ana in the standard workflow.
 
 **Project Health Check:**
-- **Broken**: Nothing is broken. The application is stable with the P0-P4A fixes.
-- **Mocked**: No mocked components in production code. Mocks will be needed for testing the P4A and OCR features.
+-   **Broken**: The primary happy path for Telegram operations is broken. Admin notifications are not being sent after a client completes a successful OCR operation, preventing any further processing.
+-   **Mocked**: No mocked components in production code.
 
-**3rd Party Integrations**:
-- **Google Gmail API**: Used for sending emails and monitoring for replies from Treasury.
+**3rd Party Integrations**
+-   **Google Gmail API**: Used for sending emails.
+-   **Telegram Bot API**: Used for all bot interactions.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. The agent used it successfully after struggling to write tests manually for P3.
-- **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**:
-  - 
-  - 
-  -  (scaffold only)
-- **Known regressions**: None in this session.
+-   **Testing agent used after significant changes**: YES. Used to test the initial P0 implementation.
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**:
+    -   
+-   **Known regressions**:
+    -   The automated tests in  are known to be failing.
 
 **Credentials to test flow:**
 -   **Admin User (Ana)**: Telegram ID 
 -   **Client User (DFGV)**: Telegram ID 
 -   **Treasury User (Toño)**: Telegram Chat ID 
 -   **Treasury Test Email**: 
--   **DNS Provider Test Email**: (Set via  in )
 
 **What agent forgot to execute**
-The agent is currently in the middle of a large, user-approved feature implementation. It has not forgotten anything but has paused at a logical point (after completing the backend service modifications) before starting the next part (the Telegram bot implementation). The user has explicitly approved this phased approach.</analysis>
+-   The agent identified that the P4A automated tests were failing but did not fix them, instead moving on to other tasks. This remains a pending issue.</analysis>
