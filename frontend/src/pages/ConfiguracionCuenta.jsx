@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, CreditCard, User, Plus, Check, History } from "lucide-react";
+import { ArrowLeft, Building2, CreditCard, User, Plus, Check, History, Home as HomeIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function ConfiguracionCuenta() {
