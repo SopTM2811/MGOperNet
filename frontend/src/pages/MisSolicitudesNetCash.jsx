@@ -76,29 +76,39 @@ const MisSolicitudesNetCash = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white py-8">
-      <div className="container mx-auto px-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-white py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header - Mismo diseño que Dashboard */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-12">
           <div>
             <h1 
-              className="text-4xl font-bold mb-2 tracking-tight"
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 tracking-tight"
               style={{ fontFamily: 'Space Grotesk, sans-serif' }}
             >
               Mis Solicitudes NetCash
             </h1>
-            <p className="text-slate-600 font-light">
-              Consulta el estado de tus operaciones NetCash
-            </p>
+            <p className="text-sm sm:text-base text-slate-600 font-light">Consulta el estado de tus operaciones</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/')}
-            className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
-          >
-            <HomeIcon className="h-4 w-4 mr-2" />
-            Inicio
-          </Button>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <HomeIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inicio</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="border-slate-300 text-sm"
+              size="sm"
+            >
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Dash</span>
+            </Button>
+          </div>
         </div>
 
         {/* Lista de Solicitudes */}
