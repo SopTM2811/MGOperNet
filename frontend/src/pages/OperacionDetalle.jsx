@@ -190,8 +190,8 @@ const OperacionDetalle = () => {
   const puedeConfirmar = !esSoloLectura && tieneCalculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8">
-      <div className="container mx-auto px-6 max-w-6xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-4 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-wrap gap-2 mb-4">
