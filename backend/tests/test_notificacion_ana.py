@@ -171,7 +171,7 @@ class TestNotificacionAna:
         logger.info("🔍 Test 3: Verificando manejo de errores...")
         
         # Test 3a: Usuario Ana no encontrado
-        with patch('netcash_service.usuarios_repo') as mock_usuarios_repo:
+        with patch('usuarios_repo.usuarios_repo') as mock_usuarios_repo:
             mock_usuarios_repo.obtener_usuario_por_rol = AsyncMock(return_value=None)
             
             # No debería lanzar excepción, solo loguear error
