@@ -32,25 +32,27 @@ class CalculosService:
             Diccionario con todos los cálculos
         """
         try:
-            # PASO 1: Calcular importe de comisión al cliente
-            # importe_comision_cliente = monto_total_comprobantes * porcentaje_comision_cliente / 100
-            importe_comision_cliente = monto_depositado_cliente * comision_cliente_porcentaje / 100
+            # PASO 1: Calcular comisión cobrada al cliente
+            comision_cliente_cobrada = monto_depositado_cliente * comision_cliente_porcentaje / 100
             
-            # PASO 2: Calcular importe de costo proveedor DNS
-            # importe_costo_proveedor_dns = monto_total_comprobantes * 0.375 / 100
-            importe_costo_proveedor_dns = monto_depositado_cliente * costo_proveedor_dns_porcentaje / 100
+            # PASO 2: Calcular comisión del proveedor
+            comision_proveedor = monto_depositado_cliente * costo_proveedor_dns_porcentaje / 100
             
-            # PASO 3: Calcular utilidad neta
-            # utilidad_neta = importe_comision_cliente - importe_costo_proveedor_dns
-            utilidad_neta = importe_comision_cliente - importe_costo_proveedor_dns
+            # PASO 3: Calcular capital NetCash (monto - comisión cliente)
+            capital_netcash = monto_depositado_cliente - comision_cliente_cobrada
             
+            # PASO 4: Calcular total egreso (capital + comisión proveedor)
+            total_egreso = capital_netcash + comision_proveedor
+            
+            # Resultado con nombres alineados al modelo CalculosNetCash de models.py
             resultado = {
-                "monto_total_comprobantes": round(monto_depositado_cliente, 2),
-                "porcentaje_comision_cliente": comision_cliente_porcentaje,
-                "importe_comision_cliente": round(importe_comision_cliente, 2),
-                "porcentaje_costo_proveedor_dns": costo_proveedor_dns_porcentaje,
-                "importe_costo_proveedor_dns": round(importe_costo_proveedor_dns, 2),
-                "utilidad_neta": round(utilidad_neta, 2)
+                "monto_depositado_cliente": round(monto_depositado_cliente, 2),
+                "comision_cliente_porcentaje": comision_cliente_porcentaje,
+                "comision_cliente_cobrada": round(comision_cliente_cobrada, 2),
+                "comision_proveedor_porcentaje": costo_proveedor_dns_porcentaje,
+                "comision_proveedor": round(comision_proveedor, 2),
+                "capital_netcash": round(capital_netcash, 2),
+                "total_egreso": round(total_egreso, 2)
             }
             
             logger.info(f"Cálculo completado: {resultado}")
