@@ -272,42 +272,42 @@ const Dashboard = () => {
                 {operacionesFiltradas.map((operacion) => (
                   <div
                     key={operacion.id}
-                    className="border rounded-lg p-4 hover:bg-slate-50 transition-colors"
+                    className="border rounded-lg p-3 sm:p-4 hover:bg-slate-50 transition-colors"
                     data-testid={`operation-card-${operacion.id}`}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                       <div 
                         className="flex-1 cursor-pointer"
                         onClick={() => handleOperacionClick(operacion)}
                       >
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
                           {/* Folio o ID */}
                           {operacion.folio_mbco ? (
                             <div className="flex items-center gap-2">
-                              <Badge className="bg-blue-600 text-white font-semibold text-base px-3 py-1">
+                              <Badge className="bg-blue-600 text-white font-semibold text-sm sm:text-base px-2 sm:px-3 py-1">
                                 {operacion.folio_mbco}
                               </Badge>
-                              <code className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500">
+                              <code className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500 hidden sm:inline">
                                 {operacion.id.substring(0, 12)}...
                               </code>
                             </div>
                           ) : (
-                            <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                              {operacion.id.substring(0, 15)}...
+                            <code className="text-xs sm:text-sm font-mono bg-slate-100 px-2 py-1 rounded">
+                              {operacion.id.substring(0, 12)}...
                             </code>
                           )}
                           
                           {/* Badge de estado */}
                           {getEstadoBadge(operacion.estado)}
                           
-                          {/* Badge de origen */}
+                          {/* Badge de origen - solo icono en móvil */}
                           {operacion.origen === 'telegram' ? (
-                            <Badge variant="outline" className="border-blue-400 text-blue-600">
-                              📱 Telegram
+                            <Badge variant="outline" className="border-blue-400 text-blue-600 text-xs">
+                              📱 <span className="hidden sm:inline">Telegram</span>
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="border-slate-400 text-slate-600">
-                              🖥️ Web
+                            <Badge variant="outline" className="border-slate-400 text-slate-600 text-xs">
+                              🖥️ <span className="hidden sm:inline">Web</span>
                             </Badge>
                           )}
                           
