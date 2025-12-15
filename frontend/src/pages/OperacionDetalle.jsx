@@ -148,9 +148,14 @@ const OperacionDetalle = () => {
   ];
   const esSoloLectura = esOrigenTelegram && estadosCerrados.includes(operacion.estado);
   
+  // Compatibilidad: soporte para nombres de campo antiguos y nuevos
+  const montoTotalComprobantes = operacion.monto_depositado_cliente || operacion.monto_total_comprobantes || 0;
+  const utilidadNeta = operacion.capital_netcash || operacion.utilidad_neta || 0;
+  const tieneCalculos = (montoTotalComprobantes > 0 && operacion.comision_cobrada);
+  
   const puedeAgregarTitular = !esSoloLectura && comprobantesValidos.length > 0 && !operacion.titular_nombre_completo;
-  const puedeCalcular = !esSoloLectura && operacion.titular_nombre_completo && !operacion.calculos;
-  const puedeConfirmar = !esSoloLectura && operacion.calculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
+  const puedeCalcular = !esSoloLectura && operacion.titular_nombre_completo && !tieneCalculos;
+  const puedeConfirmar = !esSoloLectura && tieneCalculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8">
