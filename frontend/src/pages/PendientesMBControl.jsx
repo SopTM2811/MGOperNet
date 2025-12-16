@@ -260,7 +260,7 @@ const PendientesMBControl = () => {
                           <Button
                             onClick={() => handleGuardarClave(operacion.id)}
                             disabled={guardando[operacion.id] || !clavesMBControl[operacion.id]?.trim()}
-                            className="w-full"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             {guardando[operacion.id] ? (
                               <>
