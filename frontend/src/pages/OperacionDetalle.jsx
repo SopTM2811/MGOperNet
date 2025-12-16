@@ -154,6 +154,43 @@ const OperacionDetalle = () => {
     }
   };
 
+  // Funciones para edición de datos manuales (Telegram)
+  const iniciarEdicionDatosManuales = () => {
+    if (operacion?.captura_manual) {
+      setDatosManualesForm({
+        monto_total: operacion.captura_manual.monto_total_declarado || operacion.monto_depositado_cliente || 0,
+        num_comprobantes: operacion.captura_manual.num_comprobantes_declarado || 0,
+        beneficiario: operacion.captura_manual.beneficiario_declarado || operacion.titular_nombre_completo || ''
+      });
+    }
+    setEditandoDatosManuales(true);
+  };
+
+  const cancelarEdicionDatosManuales = () => {
+    setEditandoDatosManuales(false);
+  };
+
+  const guardarDatosManuales = async () => {
+    try {
+      setGuardandoDatosManuales(true);
+      await axios.patch(`${API}/operaciones/${id}/datos-manuales`, null, {
+        params: {
+          monto_total: datosManualesForm.monto_total,
+          num_comprobantes: datosManualesForm.num_comprobantes,
+          beneficiario: datosManualesForm.beneficiario
+        }
+      });
+      toast.success('Datos actualizados correctamente');
+      setEditandoDatosManuales(false);
+      cargarOperacion();
+    } catch (error) {
+      console.error('Error actualizando datos manuales:', error);
+      toast.error('Error al actualizar los datos');
+    } finally {
+      setGuardandoDatosManuales(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center">
