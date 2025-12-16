@@ -49,7 +49,7 @@ Both critical fixes have been successfully verified:
 - Backend: FastAPI on port 8001
 - Frontend: React on port 3000  
 - MongoDB: Using MONGO_URL from env
-- Backend URL: https://smart-receipt-16.preview.emergentagent.com/api
+- Backend URL: https://netcash-hub.preview.emergentagent.com/api
 
 ## User Issues Resolved
 - ✅ "Error al cargar operaciones" on Dashboard NetCash - FIXED

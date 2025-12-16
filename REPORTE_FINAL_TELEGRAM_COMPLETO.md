@@ -482,7 +482,7 @@ ANA_TELEGRAM_CHAT_ID=<chat_id de Ana>
 
 **Puedes probar ahora mismo:**
 - Bot: @Netcash_bot
-- Dashboard: https://smart-receipt-16.preview.emergentagent.com
+- Dashboard: https://netcash-hub.preview.emergentagent.com
 
 ---
 
