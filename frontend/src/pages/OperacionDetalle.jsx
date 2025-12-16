@@ -364,7 +364,7 @@ const OperacionDetalle = () => {
                     <div>
                       <Label className="text-slate-600 text-sm">Fecha de creación</Label>
                       <p className="font-medium">
-                        {new Date(operacion.fecha_creacion).toLocaleString('es-MX')}
+                        {new Date(operacion.fecha_creacion).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}
                       </p>
                     </div>
                     <div>

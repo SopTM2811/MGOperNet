@@ -402,6 +402,15 @@ async def obtener_operacion(operacion_id: str):
         origen = "telegram"
         
         if operacion:
+            # Normalizar comprobantes: mapear monto_detectado a monto para compatibilidad con frontend
+            comprobantes_normalizados = []
+            for comp in operacion.get("comprobantes", []):
+                comp_normalizado = dict(comp)
+                # Mapear monto_detectado a monto para que el frontend lo encuentre
+                if "monto_detectado" in comp_normalizado and "monto" not in comp_normalizado:
+                    comp_normalizado["monto"] = comp_normalizado.get("monto_detectado", 0)
+                comprobantes_normalizados.append(comp_normalizado)
+            
             # Normalizar campos de Telegram a estructura web
             operacion = {
                 "id": operacion.get("id"),
@@ -411,7 +420,7 @@ async def obtener_operacion(operacion_id: str):
                 "titular_nombre_completo": operacion.get("beneficiario_reportado"),
                 "titular_idmex": operacion.get("idmex_reportado") or operacion.get("idmex_beneficiario_declarado"),
                 "numero_ligas": operacion.get("cantidad_ligas_reportada", 0),
-                "comprobantes": operacion.get("comprobantes", []),
+                "comprobantes": comprobantes_normalizados,
                 "estado": _mapear_estado_solicitud(operacion.get("estado", "borrador")),
                 "fecha_creacion": operacion.get("created_at"),
                 "monto_depositado_cliente": operacion.get("monto_depositado_cliente", 0),
@@ -429,10 +438,9 @@ async def obtener_operacion(operacion_id: str):
             
             # Calcular monto de comprobantes
             if not operacion["monto_depositado_cliente"]:
-                comprobantes = operacion.get("comprobantes", [])
                 monto_total = sum(
-                    c.get("monto_detectado", 0) or c.get("monto", 0)
-                    for c in comprobantes 
+                    c.get("monto", 0) or c.get("monto_detectado", 0)
+                    for c in comprobantes_normalizados 
                     if c.get("es_valido") and not c.get("es_duplicado")
                 )
                 operacion["monto_depositado_cliente"] = monto_total
