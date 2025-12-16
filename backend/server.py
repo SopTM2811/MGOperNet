@@ -451,6 +451,13 @@ async def obtener_operacion(operacion_id: str):
                 "modo_captura": operacion.get("modo_captura", "ocr_ok"),
                 "telegram_id": operacion.get("telegram_id"),
                 "idmex_beneficiario_declarado": operacion.get("idmex_beneficiario_declarado"),
+                # Datos de captura manual (cuando OCR falla)
+                "captura_manual": {
+                    "origen_montos": operacion.get("origen_montos"),
+                    "num_comprobantes_declarado": operacion.get("num_comprobantes_declarado"),
+                    "monto_total_declarado": operacion.get("monto_total_declarado"),
+                    "beneficiario_declarado": operacion.get("beneficiario_declarado"),
+                } if operacion.get("modo_captura") == "manual_por_fallo_ocr" else None,
                 # Calcular monto si no está definido
                 "calculos": None
             }
