@@ -822,6 +822,64 @@ async def eliminar_comprobante(operacion_id: str, comprobante_idx: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@api_router.patch("/operaciones/{operacion_id}/datos-manuales")
+async def actualizar_datos_manuales(
+    operacion_id: str,
+    monto_total: Optional[float] = None,
+    num_comprobantes: Optional[int] = None,
+    beneficiario: Optional[str] = None
+):
+    """
+    Actualiza los datos capturados manualmente de una operación de Telegram.
+    Solo aplica para operaciones con modo_captura = 'manual_por_fallo_ocr'
+    """
+    try:
+        # Solo buscar en solicitudes Telegram
+        operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+        
+        if not operacion:
+            raise HTTPException(status_code=404, detail="Operación no encontrada")
+        
+        if operacion.get("modo_captura") != "manual_por_fallo_ocr":
+            raise HTTPException(status_code=400, detail="Esta operación no tiene captura manual")
+        
+        # Construir update
+        update_data = {"updated_at": datetime.now(timezone.utc)}
+        
+        if monto_total is not None:
+            update_data["monto_total_declarado"] = monto_total
+            update_data["monto_depositado_cliente"] = monto_total
+        
+        if num_comprobantes is not None:
+            update_data["num_comprobantes_declarado"] = num_comprobantes
+        
+        if beneficiario is not None:
+            update_data["beneficiario_declarado"] = beneficiario
+            update_data["beneficiario_reportado"] = beneficiario
+        
+        # Actualizar
+        await db.solicitudes_netcash.update_one(
+            {"id": operacion_id},
+            {"$set": update_data}
+        )
+        
+        logger.info(f"Datos manuales actualizados para operación {operacion_id}")
+        
+        return {
+            "success": True,
+            "message": "Datos actualizados correctamente",
+            "campos_actualizados": list(update_data.keys())
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error actualizando datos manuales: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @api_router.post("/operaciones/{operacion_id}/calcular")
 async def calcular_operacion(
     operacion_id: str,
