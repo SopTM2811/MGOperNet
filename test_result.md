@@ -77,6 +77,45 @@ Both critical fixes have been successfully verified:
 - MongoDB: Using MONGO_URL from env
 - Backend URL: https://netcash-hub.preview.emergentagent.com/api
 
+## Latest Testing Results (December 16, 2025 - Testing Agent)
+
+### Test 3: Timezone Bug Fix Verification ✅ PASSED
+- **Operation Tested**: NC-000208 (ID: nc-1765835406493)
+- **Endpoint**: GET /api/operaciones/nc-1765835406493
+- **Expected**: fecha_creacion returned correctly for frontend timezone formatting
+- **Status**: ✅ VERIFIED
+- **Results**:
+  - HTTP Status: 200 OK
+  - fecha_creacion: "2025-12-15T21:50:06.494000" (UTC format)
+  - Frontend can now format this as "15/12/2025, 3:50 p.m." with Mexico timezone
+  - Operation found with correct folio: NC-000208
+  - Origin correctly identified as "telegram"
+
+### Test 4: Comprobantes Normalization Bug Fix ✅ PASSED
+- **Operation Tested**: NC-000208 (ID: nc-1765835406493)
+- **Issue**: Telegram comprobantes had monto_detectado but frontend expected monto
+- **Status**: ✅ VERIFIED
+- **Results**:
+  - ✅ Comprobante has both 'monto' and 'monto_detectado' fields
+  - ✅ monto: 223000.0 = monto_detectado: 223000.0 (correctly mapped)
+  - ✅ monto_depositado_cliente: 223000.0 (correctly calculated)
+  - ✅ Normalization works in both endpoints:
+    - GET /api/operaciones/{id} ✅
+    - GET /api/operaciones (dashboard listing) ✅
+
+### Test 5: Dashboard Integration ✅ PASSED
+- **Endpoint**: GET /api/operaciones
+- **Expected**: Operation NC-000208 appears in listing with normalized comprobantes
+- **Status**: ✅ VERIFIED
+- **Results**:
+  - HTTP Status: 200 OK
+  - Total operations: 83
+  - Operation NC-000208 found in dashboard listing
+  - Comprobantes properly normalized in listing view
+  - No errors in dashboard loading
+
 ## User Issues Resolved
 - ✅ "Error al cargar operaciones" on Dashboard NetCash - FIXED
 - ✅ Ana not receiving notifications after OCR success flow - FIXED
+- ✅ **Timezone Bug**: Operation NC-000208 showing wrong time - FIXED
+- ✅ **Comprobantes Bug**: Telegram operations showing $0.00 - FIXED
