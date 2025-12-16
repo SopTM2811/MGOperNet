@@ -225,12 +225,12 @@ const PendientesMBControl = () => {
                             </>
                           )}
                           <div className="flex justify-between">
-                            <span className="text-slate-600">Cantidad de ligas:</span>
-                            <span className="font-semibold">{operacion.cantidad_ligas || '-'}</span>
+                            <span className="text-slate-600">Titular:</span>
+                            <span className="font-semibold">{operacion.titular_nombre_completo || operacion.nombre_ligas || '-'}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-slate-600">Titular:</span>
-                            <span className="font-semibold">{operacion.nombre_ligas || '-'}</span>
+                            <span className="text-slate-600">Cantidad de ligas:</span>
+                            <span className="font-semibold">{operacion.numero_ligas || operacion.cantidad_ligas || '-'}</span>
                           </div>
                         </div>
                       </div>
