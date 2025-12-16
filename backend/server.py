@@ -1138,8 +1138,12 @@ async def registrar_clave_mbcontrol(
         if not operacion:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
         
+        # Obtener campos compatibles (Web vs Telegram)
+        cantidad_ligas = operacion.get("cantidad_ligas") or operacion.get("numero_ligas") or 1
+        nombre_titular = operacion.get("nombre_ligas") or operacion.get("titular_nombre_completo") or "TITULAR"
+        
         # Validar que la operación tenga datos completos
-        if not operacion.get("cantidad_ligas") or not operacion.get("nombre_ligas"):
+        if not nombre_titular or nombre_titular == "TITULAR":
             raise HTTPException(
                 status_code=400,
                 detail="La operación no tiene datos completos del titular"
@@ -1164,14 +1168,13 @@ async def registrar_clave_mbcontrol(
         # Preparar beneficiarios para el layout
         # SUPUESTO: Por ahora generamos una liga por el monto total
         # En una fase posterior, Ana podrá dividir en múltiples beneficiarios
-        cantidad_ligas = operacion.get("cantidad_ligas", 1)
         monto_por_liga = monto_total / cantidad_ligas if cantidad_ligas > 0 else monto_total
         
         beneficiarios = []
         for i in range(cantidad_ligas):
             beneficiarios.append({
                 "clabe": "646180139409481462",  # CLABE de MBco - debe venir de config
-                "titular": operacion.get("nombre_ligas", "TITULAR"),
+                "titular": nombre_titular,
                 "monto": monto_por_liga
             })
         
