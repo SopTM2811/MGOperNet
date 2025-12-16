@@ -1,6 +1,32 @@
 # Test Result Documentation
 
 ## Current Test Focus
+Testing two bug fixes reported by user:
+1. **Timezone Bug**: Operations from Telegram showing incorrect time (+6 hours offset)
+2. **Comprobantes Data Bug**: Telegram operations showing $0.00 in comprobantes and no financial calculations
+
+## Latest Bug Fixes (December 16, 2025)
+
+### Bug 1: Timezone Display - FIXED ✅
+- **Problem**: Operation NC-000208 was done at 3:50pm Mexico time but showed as 9:50pm
+- **Root Cause**: Frontend was not specifying timezone when formatting dates; UTC was interpreted as local time
+- **Fix Applied**:
+  - Added `timeZone: 'America/Mexico_City'` to `OperacionDetalle.jsx` line 370
+  - Added `timeZone: 'America/Mexico_City'` to `Dashboard.jsx` `formatFecha()` function
+- **Verification**: Screenshot confirmed "15/12/2025, 3:50:06 p.m." displays correctly
+
+### Bug 2: Comprobantes Monto = $0.00 - FIXED ✅
+- **Problem**: Comprobantes from Telegram operations showed $0.00 even though data existed
+- **Root Cause**: Telegram comprobantes use `monto_detectado` field, but frontend looks for `monto`
+- **Fix Applied**:
+  - Modified `server.py` endpoint `/api/operaciones/{id}` to normalize comprobantes
+  - Modified `server.py` endpoint `/api/operaciones` (list) to normalize comprobantes
+  - Added mapping: `comp["monto"] = comp.get("monto_detectado", 0)` during normalization
+- **Verification**: Screenshot confirmed "Monto: $223,000.00" displays correctly
+
+---
+
+## Previous Test Focus
 Testing two critical fixes:
 1. Dashboard NetCash loading error - FIXED (corrupted record removed)
 2. Admin notification (Ana) not working in standard OCR flow
