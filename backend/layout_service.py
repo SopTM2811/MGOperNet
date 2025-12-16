@@ -6,16 +6,14 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Importar gmail_service
-try:
-    from gmail_service import gmail_service
-except ImportError:
-    gmail_service = None
-    logger.warning("gmail_service no disponible para envío de layouts")
 
 
 class LayoutService:
@@ -25,10 +23,17 @@ class LayoutService:
         self.layouts_dir = Path("/tmp/netcash_layouts")
         self.layouts_dir.mkdir(exist_ok=True)
         
+        # Configuración SMTP con App Password
+        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_user = os.getenv("SMTP_USER", "")
+        self.smtp_pass = os.getenv("SMTP_PASSWORD", "")
+        
         # Email de Tesorería (Toño)
         self.tono_email = os.getenv("TONO_EMAIL_LAYOUT", "dfgalezzo@hotmail.com")
         
-        logger.info(f"LayoutService inicializado. Gmail API: {'Disponible' if gmail_service else 'No disponible'}")
+        smtp_status = "Configurado" if self.smtp_user and self.smtp_pass else "No configurado"
+        logger.info(f"LayoutService inicializado. SMTP: {smtp_status}")
     
     def generar_layout_spei(
         self,
