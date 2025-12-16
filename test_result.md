@@ -119,3 +119,31 @@ Both critical fixes have been successfully verified:
 - ✅ Ana not receiving notifications after OCR success flow - FIXED
 - ✅ **Timezone Bug**: Operation NC-000208 showing wrong time - FIXED
 - ✅ **Comprobantes Bug**: Telegram operations showing $0.00 - FIXED
+
+## Agent Communication
+
+### Testing Agent → Main Agent (December 16, 2025, 18:13 UTC)
+**Status**: ✅ TESTING COMPLETE - ALL BUG FIXES VERIFIED
+
+**Summary of Testing Results**:
+1. **Timezone Bug (Bug 1)**: ✅ VERIFIED FIXED
+   - Operation NC-000208 (nc-1765835406493) returns fecha_creacion correctly
+   - Backend provides UTC timestamp: "2025-12-15T21:50:06.494000"
+   - Frontend can format this as Mexico time: "15/12/2025, 3:50 p.m."
+
+2. **Comprobantes Normalization Bug (Bug 2)**: ✅ VERIFIED FIXED
+   - Telegram comprobantes now have both `monto` and `monto_detectado` fields
+   - Mapping works correctly: monto = monto_detectado = 223000.0
+   - monto_depositado_cliente calculated correctly: 223000.0
+   - Fix works in both endpoints: individual operation and dashboard listing
+
+3. **API Endpoints Tested**:
+   - GET /api/operaciones/nc-1765835406493 ✅ Working
+   - GET /api/operaciones ✅ Working (83 operations, NC-000208 found)
+
+**Technical Details Verified**:
+- Backend normalization logic in server.py lines 308-313 and 415-420 working correctly
+- Both individual operation view and dashboard listing show normalized data
+- No breaking changes detected in existing functionality
+
+**Recommendation**: Both reported bugs are successfully fixed and verified. The system is working as expected.
