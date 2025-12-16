@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, User, Calculator, Check, FileText, Clock, Mail, Phone, MessageCircle, Lock, Trash2, Home as HomeIcon } from 'lucide-react';
+import { ArrowLeft, User, Calculator, Check, FileText, Clock, Mail, Phone, MessageCircle, Lock, Trash2, Home as HomeIcon, Edit3, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,15 @@ const OperacionDetalle = () => {
   const [uploading, setUploading] = useState(false);
   const [showDeleteComprobante, setShowDeleteComprobante] = useState(false);
   const [comprobanteToDelete, setComprobanteToDelete] = useState(null);
+  
+  // Edición de datos manuales
+  const [editandoDatosManuales, setEditandoDatosManuales] = useState(false);
+  const [datosManualesForm, setDatosManualesForm] = useState({
+    monto_total: 0,
+    num_comprobantes: 0,
+    beneficiario: ''
+  });
+  const [guardandoDatosManuales, setGuardandoDatosManuales] = useState(false);
   
   // Formulario titular
   const [titular, setTitular] = useState({
