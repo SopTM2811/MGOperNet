@@ -197,8 +197,8 @@ const PendientesMBControl = () => {
                           Creada: {formatFecha(operacion.fecha_creacion)}
                         </CardDescription>
                       </div>
-                      <Badge variant="outline" className="text-amber-700 border-amber-300">
-                        {operacion.estado?.replace(/_/g, ' ')}
+                      <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+                        ✓ Datos Completos
                       </Badge>
                     </div>
                   </CardHeader>
