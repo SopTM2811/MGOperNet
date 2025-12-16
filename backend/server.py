@@ -959,14 +959,15 @@ async def calcular_operacion(
 @api_router.post("/operaciones/{operacion_id}/confirmar")
 async def confirmar_operacion(operacion_id: str):
     """
-    Confirma una operación y la pasa al siguiente estado.
+    Confirma una operación y la pasa al estado DATOS_COMPLETOS.
+    Después aparecerá en Pendientes MBControl para ingresar la clave.
     """
     try:
         result = await db.operaciones.update_one(
             {"id": operacion_id},
             {
                 "$set": {
-                    "estado": EstadoOperacion.ESPERANDO_CODIGO_SISTEMA,
+                    "estado": EstadoOperacion.DATOS_COMPLETOS,
                     "timestamp_confirmacion_cliente": datetime.now(timezone.utc).isoformat()
                 }
             }
@@ -975,12 +976,12 @@ async def confirmar_operacion(operacion_id: str):
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
         
-        logger.info(f"Operación {operacion_id} confirmada por cliente")
+        logger.info(f"Operación {operacion_id} confirmada - Estado: DATOS_COMPLETOS")
         
         return {
             "success": True,
             "operacion_id": operacion_id,
-            "mensaje": "Operación confirmada. Se enviará a Ana para generar código del sistema."
+            "mensaje": "Operación confirmada. Pasa a Pendientes MBControl para ingresar clave."
         }
         
     except HTTPException:
