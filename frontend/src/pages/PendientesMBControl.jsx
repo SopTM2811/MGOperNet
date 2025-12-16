@@ -28,8 +28,10 @@ const PendientesMBControl = () => {
       const response = await axios.get(`${API}/operaciones`);
       
       // Filtrar operaciones que tienen datos completos pero no tienen clave MBControl
+      // Incluye DATOS_COMPLETOS (nuevo) y ESPERANDO_CODIGO_SISTEMA (legacy)
+      const estadosValidos = ['DATOS_COMPLETOS', 'ESPERANDO_CODIGO_SISTEMA'];
       const pendientes = response.data.filter(op => 
-        op.estado === 'DATOS_COMPLETOS' && 
+        estadosValidos.includes(op.estado) && 
         !op.clave_operacion_mbcontrol
       );
       
