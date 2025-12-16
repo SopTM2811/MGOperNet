@@ -303,6 +303,15 @@ async def obtener_operaciones():
     solicitudes_telegram = await db.solicitudes_netcash.find({}, {"_id": 0}).to_list(1000)
     
     for sol in solicitudes_telegram:
+        # Normalizar comprobantes: mapear monto_detectado a monto para compatibilidad con frontend
+        comprobantes_normalizados = []
+        for comp in sol.get("comprobantes", []):
+            comp_normalizado = dict(comp)
+            # Mapear monto_detectado a monto para que el frontend lo encuentre
+            if "monto_detectado" in comp_normalizado and "monto" not in comp_normalizado:
+                comp_normalizado["monto"] = comp_normalizado.get("monto_detectado", 0)
+            comprobantes_normalizados.append(comp_normalizado)
+        
         # Mapear campos de solicitud a estructura de operación
         operacion_normalizada = {
             "id": sol.get("id"),
@@ -312,7 +321,7 @@ async def obtener_operaciones():
             "titular_nombre_completo": sol.get("beneficiario_reportado"),
             "titular_idmex": sol.get("idmex_reportado"),
             "numero_ligas": sol.get("cantidad_ligas_reportada", 0),
-            "comprobantes": sol.get("comprobantes", []),
+            "comprobantes": comprobantes_normalizados,
             "estado": _mapear_estado_solicitud(sol.get("estado", "borrador")),
             "fecha_creacion": sol.get("created_at"),
             "monto_depositado_cliente": sol.get("monto_depositado_cliente", 0),
@@ -328,10 +337,9 @@ async def obtener_operaciones():
         
         # Calcular monto si hay comprobantes válidos
         if not operacion_normalizada["monto_depositado_cliente"]:
-            comprobantes = sol.get("comprobantes", [])
             monto_total = sum(
-                c.get("monto_detectado", 0) or c.get("monto", 0)
-                for c in comprobantes 
+                c.get("monto", 0) or c.get("monto_detectado", 0)
+                for c in comprobantes_normalizados 
                 if c.get("es_valido") and not c.get("es_duplicado")
             )
             operacion_normalizada["monto_depositado_cliente"] = monto_total
