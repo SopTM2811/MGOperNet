@@ -106,15 +106,22 @@ const Dashboard = () => {
 
   const getEstadoBadge = (estado) => {
     const estadoMap = {
+      // Estados iniciales
       'ESPERANDO_COMPROBANTES': { variant: 'secondary', label: 'Esperando Comprobantes', icon: Clock },
       'VALIDANDO_COMPROBANTES': { variant: 'default', label: 'Validando', icon: Search },
       'ESPERANDO_DATOS_TITULAR': { variant: 'default', label: 'Esperando Datos', icon: AlertCircle },
       'ESPERANDO_CONFIRMACION_CLIENTE': { variant: 'warning', label: 'Por Confirmar', icon: AlertCircle },
+      // Datos completos - listo para MBControl
       'DATOS_COMPLETOS': { variant: 'default', label: 'Datos Completos', icon: CheckCircle },
       'ESPERANDO_CODIGO_SISTEMA': { variant: 'default', label: 'Datos Completos', icon: CheckCircle },
-      'PENDIENTE_PAGO_PROVEEDOR': { variant: 'default', label: 'Pago Pendiente', icon: Clock },
+      // Después de ingresar clave MBControl
+      'PENDIENTE_ENVIO_LAYOUT': { variant: 'default', label: 'Layout Pendiente', icon: Clock },
+      'LAYOUT_ENVIADO': { variant: 'default', label: 'Layout Enviado', icon: CheckCircle },
+      // Tesorería y proveedor
       'ESPERANDO_TESORERIA': { variant: 'default', label: 'En Tesorería', icon: Clock },
       'ESPERANDO_PROVEEDOR': { variant: 'default', label: 'Con Proveedor', icon: Clock },
+      'PENDIENTE_PAGO_PROVEEDOR': { variant: 'default', label: 'Pago Pendiente', icon: Clock },
+      // Finales
       'LISTO_PARA_ENTREGAR': { variant: 'success', label: 'Listo', icon: CheckCircle },
       'COMPLETADO': { variant: 'success', label: 'Completado', icon: CheckCircle }
     };
