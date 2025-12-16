@@ -458,7 +458,111 @@ const OperacionDetalle = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {esSoloLectura && (
+                {/* Sección de Datos Capturados Manualmente (solo para Telegram con OCR fallido) */}
+                {operacion.modo_captura === 'manual_por_fallo_ocr' && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">📝</span>
+                        <h3 className="font-semibold text-amber-900">Datos Capturados Manualmente</h3>
+                        <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">
+                          OCR no disponible
+                        </Badge>
+                      </div>
+                      {!editandoDatosManuales ? (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={iniciarEdicionDatosManuales}
+                          className="border-amber-400 text-amber-700 hover:bg-amber-100"
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={cancelarEdicionDatosManuales}
+                            disabled={guardandoDatosManuales}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={guardarDatosManuales}
+                            disabled={guardandoDatosManuales}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            {guardandoDatosManuales ? 'Guardando...' : 'Guardar'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-amber-700 mb-4">
+                      El sistema no pudo leer automáticamente los comprobantes. Los siguientes datos fueron declarados por el cliente:
+                    </p>
+                    
+                    {!editandoDatosManuales ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white rounded-lg p-3 border border-amber-200">
+                          <Label className="text-amber-700 text-xs">Monto Total Declarado</Label>
+                          <p className="text-xl font-bold text-amber-900">
+                            ${(operacion.captura_manual?.monto_total_declarado || operacion.monto_depositado_cliente || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-amber-200">
+                          <Label className="text-amber-700 text-xs">Comprobantes Declarados</Label>
+                          <p className="text-xl font-bold text-amber-900">
+                            {operacion.captura_manual?.num_comprobantes_declarado || operacion.comprobantes?.length || 0}
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-amber-200">
+                          <Label className="text-amber-700 text-xs">Beneficiario Declarado</Label>
+                          <p className="text-lg font-semibold text-amber-900 truncate">
+                            {operacion.captura_manual?.beneficiario_declarado || operacion.titular_nombre_completo || '-'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-amber-700 text-xs">Monto Total</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={datosManualesForm.monto_total}
+                            onChange={(e) => setDatosManualesForm({...datosManualesForm, monto_total: parseFloat(e.target.value) || 0})}
+                            className="border-amber-300 focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-amber-700 text-xs">Número de Comprobantes</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={datosManualesForm.num_comprobantes}
+                            onChange={(e) => setDatosManualesForm({...datosManualesForm, num_comprobantes: parseInt(e.target.value) || 0})}
+                            className="border-amber-300 focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-amber-700 text-xs">Beneficiario</Label>
+                          <Input
+                            type="text"
+                            value={datosManualesForm.beneficiario}
+                            onChange={(e) => setDatosManualesForm({...datosManualesForm, beneficiario: e.target.value.toUpperCase()})}
+                            className="border-amber-300 focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {esSoloLectura && operacion.modo_captura !== 'manual_por_fallo_ocr' && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                     <p className="text-sm text-amber-800">
                       ℹ️ Los comprobantes fueron subidos por el cliente en Telegram. No se permite agregar más desde el panel web.
