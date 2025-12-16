@@ -1748,14 +1748,16 @@ class TelegramNetCashHandlers:
                     benef_data = beneficiarios_lista[numero]
                     
                     # Guardar en contexto
+                    # NOTA: idmex_beneficiario es el IDMEX del beneficiario (persona física)
+                    # idmex es la llave del cliente (puede ser tg_XXXXX si no tiene IDMEX)
                     context.user_data['nc_manual_beneficiario'] = benef_data.get('nombre_beneficiario')
-                    context.user_data['nc_manual_idmex_beneficiario'] = benef_data.get('idmex')
+                    context.user_data['nc_manual_idmex_beneficiario'] = benef_data.get('idmex_beneficiario')  # CORREGIDO: usar idmex_beneficiario
                     context.user_data['nc_manual_id_beneficiario_frecuente'] = benef_data.get('id')
                     
                     # Actualizar última vez usado
                     await beneficiarios_frecuentes_service.actualizar_ultima_vez_usado(benef_data.get('id'))
                     
-                    logger.info(f"[NC Manual] Beneficiario frecuente #{numero} seleccionado: {benef_data.get('nombre_beneficiario')}")
+                    logger.info(f"[NC Manual] Beneficiario frecuente #{numero} seleccionado: {benef_data.get('nombre_beneficiario')} - IDMEX: {benef_data.get('idmex_beneficiario')}")
                     
                     # Siguiente paso: Número de ligas
                     await self._pedir_num_ligas_manual_directo(update, context)
