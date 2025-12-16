@@ -101,7 +101,7 @@ class LayoutService:
         destinatario: str = None
     ) -> bool:
         """
-        Envía el layout SPEI por correo electrónico a Tesorería.
+        Envía el layout SPEI por correo electrónico a Tesorería usando Gmail API.
         
         Args:
             layout_path: Ruta del archivo Excel a enviar
@@ -112,24 +112,20 @@ class LayoutService:
         Returns:
             bool: True si se envió correctamente
         """
-        # SUPUESTO: Si no hay credenciales SMTP configuradas, registrar y retornar
-        if not self.smtp_user or not self.smtp_pass:
-            logger.warning("Credenciales SMTP no configuradas. El layout fue generado pero no se pudo enviar.")
+        # Verificar que gmail_service esté disponible
+        if not gmail_service:
+            logger.warning("Gmail API no disponible. El layout fue generado pero no se pudo enviar.")
             logger.warning(f"Layout generado en: {layout_path}")
-            logger.warning("Configura SMTP_USER y SMTP_PASSWORD en .env para habilitar envío automático.")
             return False
         
         try:
-            destinatario = destinatario or self.tono_email
+            import asyncio
             
-            # Crear mensaje
-            msg = MIMEMultipart()
-            msg['From'] = self.smtp_from
-            msg['To'] = destinatario
-            msg['Subject'] = f"Layout SPEI NetCash - Folio {folio_mbco} - Clave {clave_mbcontrol}"
+            destinatario = destinatario or self.tono_email
+            asunto = f"Layout SPEI NetCash - Folio {folio_mbco} - Clave {clave_mbcontrol}"
             
             # Cuerpo del mensaje
-            body = f"""Hola Toño,
+            cuerpo = f"""Hola Toño,
 
 Te envío el layout SPEI para la operación NetCash:
 
@@ -142,28 +138,38 @@ Por favor procesa este layout a la brevedad.
 Saludos,
 Asistente NetCash MBco
 """
-            msg.attach(MIMEText(body, 'plain'))
             
-            # Adjuntar archivo Excel
-            with open(layout_path, 'rb') as attachment:
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment.read())
+            # Enviar usando Gmail API con adjunto
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Si ya hay un loop, crear una tarea
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    result = pool.submit(
+                        asyncio.run,
+                        gmail_service.enviar_correo_con_adjuntos(
+                            destinatario=destinatario,
+                            asunto=asunto,
+                            cuerpo=cuerpo,
+                            adjuntos=[layout_path]
+                        )
+                    ).result()
+            else:
+                result = asyncio.run(
+                    gmail_service.enviar_correo_con_adjuntos(
+                        destinatario=destinatario,
+                        asunto=asunto,
+                        cuerpo=cuerpo,
+                        adjuntos=[layout_path]
+                    )
+                )
             
-            encoders.encode_base64(part)
-            part.add_header(
-                'Content-Disposition',
-                f'attachment; filename= {Path(layout_path).name}'
-            )
-            msg.attach(part)
-            
-            # Enviar correo
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_pass)
-                server.send_message(msg)
-            
-            logger.info(f"Layout enviado a {destinatario}")
-            return True
+            if result:
+                logger.info(f"Layout enviado a {destinatario} via Gmail API")
+                return True
+            else:
+                logger.error("Gmail API retornó None al enviar el layout")
+                return False
             
         except Exception as e:
             logger.error(f"Error enviando layout por correo: {str(e)}")
