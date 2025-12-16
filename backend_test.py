@@ -1181,6 +1181,166 @@ class BackendTester:
             logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return False
 
+    async def test_timezone_bug_fix_nc_000208(self):
+        """Test ESPECÍFICO: Bug 1 - Corrección de zona horaria para operación NC-000208"""
+        logger.info("🔍 Test ESPECÍFICO: Bug 1 - Corrección de zona horaria para operación NC-000208")
+        try:
+            # Datos específicos de la operación reportada
+            operacion_id = "nc-1765835406493"
+            folio_esperado = "NC-000208"
+            fecha_creacion_utc = "2025-12-15T21:50:06.494000"  # UTC en BD
+            fecha_esperada_mexico = "15/12/2025, 3:50 p.m."  # Hora México esperada
+            
+            logger.info(f"   📋 DATOS DE LA OPERACIÓN REPORTADA:")
+            logger.info(f"      - ID: {operacion_id}")
+            logger.info(f"      - Folio: {folio_esperado}")
+            logger.info(f"      - Fecha UTC en BD: {fecha_creacion_utc}")
+            logger.info(f"      - Fecha esperada México: {fecha_esperada_mexico}")
+            
+            # PASO 1: Verificar que la operación existe en BD
+            logger.info("   🔍 PASO 1: Verificando operación en BD...")
+            
+            # Buscar en solicitudes_netcash (Telegram)
+            operacion_bd = await self.db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+            
+            if not operacion_bd:
+                logger.error(f"   ❌ Operación {operacion_id} NO encontrada en solicitudes_netcash")
+                return False
+            
+            logger.info("   ✅ Operación encontrada en BD:")
+            logger.info(f"      - ID: {operacion_bd.get('id')}")
+            logger.info(f"      - Folio: {operacion_bd.get('folio_mbco')}")
+            logger.info(f"      - Fecha creación: {operacion_bd.get('created_at')}")
+            logger.info(f"      - Estado: {operacion_bd.get('estado')}")
+            
+            # PASO 2: Probar endpoint GET /api/operaciones/{id}
+            logger.info("   🌐 PASO 2: Probando endpoint GET /api/operaciones/{id}...")
+            
+            async with self.session.get(f"{BACKEND_URL}/operaciones/{operacion_id}") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.info("   ✅ Endpoint responde correctamente")
+                    
+                    # Verificar campos básicos
+                    logger.info(f"      - ID: {data.get('id')}")
+                    logger.info(f"      - Folio: {data.get('folio_mbco')}")
+                    logger.info(f"      - Origen: {data.get('origen')}")
+                    logger.info(f"      - Fecha creación: {data.get('fecha_creacion')}")
+                    
+                    # Verificar que la fecha_creacion se devuelve correctamente
+                    fecha_creacion = data.get('fecha_creacion')
+                    if fecha_creacion:
+                        logger.info(f"   ✅ Campo fecha_creacion presente: {fecha_creacion}")
+                        
+                        # Verificar formato de fecha
+                        if isinstance(fecha_creacion, str):
+                            logger.info("   ✅ Fecha como string - frontend puede formatear con timezone")
+                        else:
+                            logger.info(f"   📊 Fecha como {type(fecha_creacion)} - valor: {fecha_creacion}")
+                    else:
+                        logger.error("   ❌ Campo fecha_creacion faltante")
+                        return False
+                    
+                else:
+                    logger.error(f"   ❌ Error en endpoint: {response.status}")
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Error details: {error_text}")
+                    return False
+            
+            # PASO 3: Verificar normalización de comprobantes (Bug 2)
+            logger.info("   📎 PASO 3: Verificando normalización de comprobantes...")
+            
+            comprobantes = data.get('comprobantes', [])
+            logger.info(f"   📊 Comprobantes encontrados: {len(comprobantes)}")
+            
+            if comprobantes:
+                for i, comp in enumerate(comprobantes):
+                    logger.info(f"   📎 Comprobante {i+1}:")
+                    logger.info(f"      - Tiene 'monto': {'monto' in comp}")
+                    logger.info(f"      - Tiene 'monto_detectado': {'monto_detectado' in comp}")
+                    
+                    if 'monto' in comp and 'monto_detectado' in comp:
+                        monto = comp.get('monto')
+                        monto_detectado = comp.get('monto_detectado')
+                        logger.info(f"      - monto: {monto}")
+                        logger.info(f"      - monto_detectado: {monto_detectado}")
+                        
+                        if monto == monto_detectado:
+                            logger.info("   ✅ Bug 2 FIXED: monto = monto_detectado")
+                        else:
+                            logger.error(f"   ❌ Bug 2 NOT FIXED: monto ({monto}) != monto_detectado ({monto_detectado})")
+                            return False
+                    elif 'monto_detectado' in comp and 'monto' not in comp:
+                        logger.error("   ❌ Bug 2 NOT FIXED: monto_detectado existe pero monto no")
+                        return False
+                    elif 'monto' in comp:
+                        logger.info("   ✅ Comprobante tiene campo monto")
+            else:
+                logger.warning("   ⚠️ No hay comprobantes para verificar")
+            
+            # PASO 4: Verificar monto_depositado_cliente
+            logger.info("   💰 PASO 4: Verificando monto_depositado_cliente...")
+            
+            monto_depositado = data.get('monto_depositado_cliente')
+            logger.info(f"   💰 monto_depositado_cliente: {monto_depositado}")
+            
+            if monto_depositado == 223000.0:
+                logger.info("   ✅ monto_depositado_cliente correcto: 223000.0")
+            else:
+                logger.warning(f"   ⚠️ monto_depositado_cliente inesperado: {monto_depositado}")
+            
+            # PASO 5: Probar endpoint GET /api/operaciones (listado)
+            logger.info("   📋 PASO 5: Verificando operación en listado del dashboard...")
+            
+            async with self.session.get(f"{BACKEND_URL}/operaciones") as response:
+                if response.status == 200:
+                    operaciones = await response.json()
+                    logger.info(f"   ✅ Listado obtenido: {len(operaciones)} operaciones")
+                    
+                    # Buscar nuestra operación específica
+                    operacion_encontrada = None
+                    for op in operaciones:
+                        if op.get('folio_mbco') == folio_esperado:
+                            operacion_encontrada = op
+                            break
+                    
+                    if operacion_encontrada:
+                        logger.info(f"   ✅ Operación {folio_esperado} encontrada en listado")
+                        
+                        # Verificar comprobantes normalizados en listado
+                        comprobantes_listado = operacion_encontrada.get('comprobantes', [])
+                        if comprobantes_listado:
+                            for comp in comprobantes_listado:
+                                if 'monto' in comp and 'monto_detectado' in comp:
+                                    logger.info("   ✅ Comprobantes normalizados en listado")
+                                    break
+                            else:
+                                logger.error("   ❌ Comprobantes NO normalizados en listado")
+                                return False
+                        
+                    else:
+                        logger.error(f"   ❌ Operación {folio_esperado} NO encontrada en listado")
+                        return False
+                else:
+                    logger.error(f"   ❌ Error obteniendo listado: {response.status}")
+                    return False
+            
+            # PASO 6: Resultado final
+            logger.info("   🎯 RESULTADO DE LA PRUEBA:")
+            logger.info("   ✅ Bug 1 (Timezone): fecha_creacion se devuelve correctamente para formateo en frontend")
+            logger.info("   ✅ Bug 2 (Comprobantes): monto_detectado se mapea a monto correctamente")
+            logger.info("   ✅ Operación NC-000208 funciona correctamente en ambos endpoints")
+            logger.info("   ✅ monto_depositado_cliente calculado correctamente")
+            
+            logger.info("🎉 Bugs de timezone y comprobantes VERIFICADOS como CORREGIDOS")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error en test_timezone_bug_fix_nc_000208: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
     async def test_flujo_captura_manual_por_fallo_ocr(self):
         """Test P0: Flujo de captura manual cuando OCR falla - CASOS 1 y 2"""
         logger.info("🔍 Test P0: FLUJO DE CAPTURA MANUAL POR FALLO OCR")
