@@ -419,12 +419,23 @@ async def obtener_operacion(operacion_id: str):
                     comp_normalizado["monto"] = comp_normalizado.get("monto_detectado", 0)
                 comprobantes_normalizados.append(comp_normalizado)
             
+            # Obtener datos completos del cliente desde el catálogo
+            cliente_id = operacion.get("cliente_id")
+            cliente_data = await db.clientes.find_one({"id": cliente_id}, {"_id": 0}) if cliente_id else None
+            
             # Normalizar campos de Telegram a estructura web
             operacion = {
                 "id": operacion.get("id"),
                 "folio_mbco": operacion.get("folio_mbco"),
                 "cliente_id": operacion.get("cliente_id"),
                 "cliente_nombre": operacion.get("cliente_nombre"),
+                # Datos del cliente desde catálogo
+                "propietario": cliente_data.get("propietario") if cliente_data else None,
+                "cliente_email": cliente_data.get("email") if cliente_data else None,
+                "cliente_telegram_id": cliente_data.get("telegram_id") if cliente_data else None,
+                "cliente_telefono_completo": cliente_data.get("telefono_completo") if cliente_data else None,
+                "porcentaje_comision_cliente": cliente_data.get("porcentaje_comision_cliente", 1.0) if cliente_data else 1.0,
+                # Datos del titular/beneficiario
                 "titular_nombre_completo": operacion.get("beneficiario_reportado"),
                 "titular_idmex": operacion.get("idmex_reportado") or operacion.get("idmex_beneficiario_declarado"),
                 "numero_ligas": operacion.get("cantidad_ligas_reportada", 0),
