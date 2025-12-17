@@ -1361,7 +1361,11 @@ async def registrar_clave_mbcontrol(
         
         # Obtener datos de comprobantes para calcular monto total
         comprobantes_validos = [c for c in operacion.get("comprobantes", []) if c.get("es_valido")]
-        monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+        monto_total = sum(c.get("monto") or c.get("monto_detectado") or 0 for c in comprobantes_validos)
+        
+        # Fallback para captura manual
+        if monto_total <= 0:
+            monto_total = operacion.get("monto_depositado_cliente") or operacion.get("monto_total_declarado") or 0
         
         # Preparar beneficiarios para el layout
         # SUPUESTO: Por ahora generamos una liga por el monto total
