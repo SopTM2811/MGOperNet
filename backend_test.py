@@ -2243,6 +2243,7 @@ class BackendTester:
         logger.info("=" * 60)
         
         tests = [
+            ("Beneficiarios CRUD API - Endpoints en Español", self.test_beneficiarios_crud_api),
             ("Bug Fix 1 & 2 - Timezone y Comprobantes NC-000208", self.test_timezone_bug_fix_nc_000208),
             ("P0 - Flujo de captura manual por fallo OCR", self.test_flujo_captura_manual_por_fallo_ocr),
             ("NetCash - Flujo completo end-to-end con usuario 19440987", self.test_netcash_flujo_completo_telegram)
