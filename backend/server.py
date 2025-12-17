@@ -387,6 +387,10 @@ def _mapear_estado_solicitud(estado_telegram: str) -> str:
         # Estados adicionales del bot de Telegram
         "esperando_validacion_ana": "VALIDANDO_COMPROBANTES",
         "ESPERANDO_VALIDACION_ANA": "VALIDANDO_COMPROBANTES",
+        "lista_para_confirmacion": "ESPERANDO_CONFIRMACION_CLIENTE",
+        "LISTA_PARA_CONFIRMACION": "ESPERANDO_CONFIRMACION_CLIENTE",
+        "lista_para_mbc": "DATOS_COMPLETOS",
+        "LISTA_PARA_MBC": "DATOS_COMPLETOS",
         "enviado_a_tesoreria": "ESPERANDO_TESORERIA",
         "ENVIADO_A_TESORERIA": "ESPERANDO_TESORERIA",
         "orden_interna_generada": "ESPERANDO_CODIGO_SISTEMA",
