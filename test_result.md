@@ -62,6 +62,53 @@
 - Don't touch Telegram bot processes (another instance is running) ✅
 - Folio base number is 215 ✅ (now at 218)
 
+## Frontend Testing Results - Beneficiarios Page UI
+
+### Test Date: 2025-12-17 21:15:00 UTC
+
+#### ✅ Beneficiarios Page UI Testing - COMPREHENSIVE PASS
+- **URL Tested**: https://telegrambot-repair.preview.emergentagent.com/beneficiarios
+- **Status**: ALL TEST CASES PASSED ✅
+
+#### Test Case Results:
+
+**1. Page Load ✅**
+- Page title "Beneficiarios" visible and correct
+- Stats cards displaying properly:
+  - "Beneficiarios totales": 6 
+  - "Clientes con beneficiarios": 3
+- "Nuevo Beneficiario" button visible and accessible
+
+**2. Expand Client to View Beneficiaries ✅**
+- "ricardo casas" client found and expandable
+- Beneficiary "RICARDO CASAS CASAS" displayed with IDMEX information
+- "Margarita Mtz" client found and expandable  
+- Margarita Mtz shows 4 beneficiaries (more than expected 3):
+  - RICARDO CASAS CASAS
+  - ALFREDO JIMÉNEZ TORRES
+  - MARIO ALFREDO RIOS
+  - SARA LEON RODRIGUEZ
+
+**3. Create New Beneficiario Modal ✅**
+- Modal opens correctly when clicking "Nuevo Beneficiario"
+- All required fields present:
+  - Cliente dropdown selector
+  - Nombre del Beneficiario input
+  - IDMEX input
+- Cancelar and Guardar buttons functional
+- Modal closes properly when clicking Cancelar
+
+**4. Navigation ✅**
+- "Inicio" button navigates correctly to home page
+- "Clientes" button navigates correctly to /clientes page
+- All navigation working as expected
+
+#### Integration Status:
+- Frontend-Backend API integration: ✅ WORKING
+- Data loading from `/api/beneficiarios-frecuentes`: ✅ WORKING
+- Data loading from `/api/clientes`: ✅ WORKING
+- UI responsiveness and interactions: ✅ WORKING
+
 ## Known Issues
 - Telegram bot has conflict error (don't modify - user has another instance)
 - Gmail OAuth token expired (only affects email reading, not sending)
