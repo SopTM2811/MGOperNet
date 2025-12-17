@@ -470,16 +470,49 @@ class TelegramNetCashHandlers:
                     nombre_archivo
                 )
             
-                # ⭐ NUEVO: Detectar si requiere captura manual por fallo OCR
-                if razon == "requiere_captura_manual":
-                    logger.warning(f"[NC Telegram] OCR NO confiable para solicitud {solicitud_id} - Iniciando captura manual")
-                    await self._iniciar_captura_manual(update, context, solicitud_id)
-                    return NC_MANUAL_NUM_COMPROBANTES
-            
                 # Obtener solicitud actualizada para contar comprobantes
                 solicitud = await netcash_service.obtener_solicitud(solicitud_id)
                 comprobantes = solicitud.get("comprobantes", [])
                 num_comprobantes = len(comprobantes)
+                
+                # ⭐ MEJORADO: Si OCR no es confiable, permitir edición manual del monto específico
+                # en lugar de interrumpir todo el flujo
+                if razon == "requiere_captura_manual":
+                    logger.warning(f"[NC Telegram] OCR NO confiable para comprobante {num_comprobantes - 1}")
+                    
+                    # Obtener el último comprobante (el que acaba de fallar OCR)
+                    ultimo_comp = comprobantes[-1] if comprobantes else None
+                    ocr_data = ultimo_comp.get("ocr_data", {}) if ultimo_comp else {}
+                    advertencias = ocr_data.get("advertencias", [])
+                    
+                    mensaje = "⚠️ **Comprobante recibido pero no se pudo leer completamente**\n\n"
+                    mensaje += f"📄 Archivo: {nombre_archivo}\n\n"
+                    
+                    if advertencias:
+                        mensaje += "**Problema detectado:**\n"
+                        for adv in advertencias[:2]:  # Mostrar máximo 2 advertencias
+                            mensaje += f"• {adv}\n"
+                        mensaje += "\n"
+                    
+                    mensaje += "**Opciones:**\n"
+                    mensaje += "• 📝 Ingresa el monto manualmente\n"
+                    mensaje += "• 📎 Sube otro comprobante diferente\n"
+                    mensaje += "• ➡️ Continúa si tienes otros comprobantes válidos\n\n"
+                    mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) en total.\n"
+                    
+                    # Guardar índice del comprobante que necesita edición
+                    context.user_data['nc_comp_editar_idx'] = num_comprobantes - 1
+                    
+                    # Botones con opción de editar monto
+                    keyboard = [
+                        [InlineKeyboardButton("📝 Ingresar monto manual", callback_data=f"nc_editar_monto_{solicitud_id}_{num_comprobantes - 1}")],
+                        [InlineKeyboardButton("➕ Subir otro comprobante", callback_data=f"nc_mas_comprobantes_{solicitud_id}")],
+                        [InlineKeyboardButton("➡️ Continuar sin este", callback_data=f"nc_continuar_paso1_{solicitud_id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+                    return NC_ESPERANDO_COMPROBANTE
             
             # UX MEJORADA: Eliminar botones del mensaje anterior (si existe)
             last_message_id = context.user_data.get('nc_last_comprobante_message_id')
@@ -513,7 +546,14 @@ class TelegramNetCashHandlers:
                 mensaje += "¿Quieres subir otro comprobante o continuar?"
             else:
                 # Comprobante único (válido o inválido)
-                mensaje = f"✅ Comprobante recibido.\n"
+                # Verificar si es válido para mostrar el monto detectado
+                ultimo_comp = comprobantes[-1] if comprobantes else None
+                monto_det = ultimo_comp.get("monto_detectado") if ultimo_comp else None
+                
+                mensaje = f"✅ Comprobante recibido"
+                if monto_det and monto_det > 0:
+                    mensaje += f" - Monto: **${monto_det:,.2f}**"
+                mensaje += f"\n"
                 mensaje += f"Llevamos **{num_comprobantes}** comprobante(s) adjunto(s) a esta operación.\n\n"
                 mensaje += "¿Quieres subir otro comprobante o continuar al siguiente paso?"
             
