@@ -265,6 +265,54 @@ class TelegramNetCashHandlers:
             )
             return ConversationHandler.END
     
+    async def cancelar_operacion_inicio(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Cancela la operación recién iniciada y regresa al menú principal.
+        Elimina el borrador si existe.
+        """
+        query = update.callback_query
+        await query.answer()
+        
+        # Obtener solicitud_id si existe
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        
+        try:
+            if solicitud_id:
+                # Eliminar el borrador de la BD
+                from motor.motor_asyncio import AsyncIOMotorClient
+                import os
+                mongo_url = os.getenv('MONGO_URL')
+                db_name = os.getenv('DB_NAME', 'netcash_mbco')
+                client = AsyncIOMotorClient(mongo_url)
+                db = client[db_name]
+                
+                result = await db.solicitudes_netcash.delete_one({"id": solicitud_id})
+                if result.deleted_count > 0:
+                    logger.info(f"[NC Telegram] Borrador {solicitud_id} eliminado por cancelación del usuario")
+            
+            # Limpiar datos del contexto
+            context.user_data.pop('nc_solicitud_id', None)
+            context.user_data.pop('nc_paso_actual', None)
+            
+            # Mostrar mensaje de cancelación y volver al menú
+            mensaje = "✅ **Operación cancelada**\n\n"
+            mensaje += "No se ha creado ninguna operación.\n"
+            mensaje += "Puedes iniciar una nueva cuando lo desees."
+            
+            keyboard = [
+                [InlineKeyboardButton("🏠 Volver al menú principal", callback_data="nc_menu_principal")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            
+            return ConversationHandler.END
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error cancelando operación: {str(e)}")
+            await query.edit_message_text("❌ Error al cancelar. Intenta de nuevo.")
+            return ConversationHandler.END
+    
     # ==================== PASO 1: RECIBIR COMPROBANTES ====================
     
     async def recibir_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
