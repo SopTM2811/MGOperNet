@@ -553,7 +553,13 @@ class NetCashService:
             logger.info(f"[NetCash] ✅ Comprobante agregado: válido={es_valido}, monto={monto_detectado}, ocr_confiable={es_confiable}")
             
             # Retornar información adicional para que el bot pueda actuar
-            return True, ("requiere_captura_manual" if not es_confiable and len(comprobantes_existentes) == 0 else None)
+            # CORREGIDO: Activar captura manual siempre que OCR no sea confiable (no solo en primer comprobante)
+            razon_retorno = None
+            if not es_confiable:
+                razon_retorno = "requiere_captura_manual"
+                logger.info(f"[NetCash] ⚠️ OCR no confiable - activando captura manual. Motivo: {motivo_fallo}")
+            
+            return True, razon_retorno
             
         except Exception as e:
             logger.error(f"[NetCash] Error agregando comprobante: {str(e)}")
