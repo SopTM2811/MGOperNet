@@ -13,12 +13,12 @@ db_name = os.getenv('DB_NAME', 'netcash_mbco')
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
-# Gmail service
+# SMTP service (reemplaza Gmail OAuth que expira)
 try:
-    from gmail_service import gmail_service
+    from smtp_service import smtp_service
 except:
-    gmail_service = None
-    logger.warning("[NotificacionCuenta] Gmail service no disponible")
+    smtp_service = None
+    logger.warning("[NotificacionCuenta] SMTP service no disponible")
 
 
 async def enviar_notificacion_cambio_cuenta(cuenta: Dict):
