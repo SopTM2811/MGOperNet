@@ -191,6 +191,54 @@ const OperacionDetalle = () => {
     }
   };
 
+  // Función para re-intentar OCR en un comprobante específico
+  const handleReintentarOCR = async (idx) => {
+    try {
+      toast.info('Re-procesando comprobante con OCR...');
+      const response = await axios.post(`${API}/operaciones/${id}/comprobantes/${idx}/reocr`);
+      if (response.data.success) {
+        toast.success('Comprobante re-procesado exitosamente');
+        cargarOperacion();
+      } else {
+        toast.warning(response.data.mensaje || 'OCR no pudo extraer datos del comprobante');
+      }
+    } catch (error) {
+      console.error('Error re-procesando OCR:', error);
+      toast.error(error.response?.data?.detail || 'Error al re-procesar el comprobante');
+    }
+  };
+
+  // Estado para edición de comprobante individual
+  const [editandoComprobante, setEditandoComprobante] = useState(null);
+  const [comprobanteEditForm, setComprobanteEditForm] = useState({
+    monto: 0,
+    banco_origen: '',
+    clave_rastreo: '',
+    cuenta_origen: ''
+  });
+
+  const iniciarEdicionComprobante = (idx, comp) => {
+    setComprobanteEditForm({
+      monto: comp.monto || 0,
+      banco_origen: comp.banco_origen || '',
+      clave_rastreo: comp.clave_rastreo || '',
+      cuenta_origen: comp.cuenta_origen || ''
+    });
+    setEditandoComprobante(idx);
+  };
+
+  const guardarEdicionComprobante = async (idx) => {
+    try {
+      await axios.patch(`${API}/operaciones/${id}/comprobantes/${idx}`, comprobanteEditForm);
+      toast.success('Comprobante actualizado correctamente');
+      setEditandoComprobante(null);
+      cargarOperacion();
+    } catch (error) {
+      console.error('Error actualizando comprobante:', error);
+      toast.error('Error al actualizar el comprobante');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center">
