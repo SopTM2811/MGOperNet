@@ -532,62 +532,153 @@ const OperacionDetalle = () => {
                     {operacion.comprobantes.map((comp, idx) => (
                       <div 
                         key={idx}
-                        className={`border rounded-lg p-4 ${comp.es_valido ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                        className={`border rounded-lg p-4 ${comp.es_valido ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}
                       >
                         <div className="flex justify-between items-start gap-4">
                           <div className="flex-1">
-                            <p className="font-medium mb-2">
-                              {comp.es_valido ? '✅' : '❌'} Comprobante {idx + 1}
-                              {comp.nombre_archivo && (
-                                <span className="text-xs text-slate-500 ml-2">({comp.nombre_archivo})</span>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span>{comp.es_valido ? '✅' : '⚠️'}</span>
+                              <p className="font-medium">
+                                Comprobante {idx + 1}
+                                {comp.nombre_archivo && (
+                                  <span className="text-xs text-slate-500 ml-2">({comp.nombre_archivo})</span>
+                                )}
+                              </p>
+                              {comp.editado_manualmente && (
+                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-600">Editado manual</Badge>
                               )}
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
-                              <div>
-                                <span className="font-medium">Monto:</span> ${comp.monto?.toLocaleString('es-MX', {minimumFractionDigits: 2}) || '0.00'}
+                            </div>
+                            
+                            {/* Modo edición */}
+                            {editandoComprobante === idx ? (
+                              <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <Label className="text-slate-600 text-sm">Monto</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={comprobanteEditForm.monto}
+                                      onChange={(e) => setComprobanteEditForm({...comprobanteEditForm, monto: parseFloat(e.target.value) || 0})}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-slate-600 text-sm">Banco Origen</Label>
+                                    <Input
+                                      type="text"
+                                      value={comprobanteEditForm.banco_origen}
+                                      onChange={(e) => setComprobanteEditForm({...comprobanteEditForm, banco_origen: e.target.value})}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-slate-600 text-sm">Clave Rastreo</Label>
+                                    <Input
+                                      type="text"
+                                      value={comprobanteEditForm.clave_rastreo}
+                                      onChange={(e) => setComprobanteEditForm({...comprobanteEditForm, clave_rastreo: e.target.value})}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-slate-600 text-sm">Cuenta Origen</Label>
+                                    <Input
+                                      type="text"
+                                      value={comprobanteEditForm.cuenta_origen}
+                                      onChange={(e) => setComprobanteEditForm({...comprobanteEditForm, cuenta_origen: e.target.value})}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 pt-2">
+                                  <Button size="sm" onClick={() => guardarEdicionComprobante(idx)} className="bg-green-600 hover:bg-green-700 text-white">
+                                    <Save className="h-4 w-4 mr-1" />
+                                    Guardar
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setEditandoComprobante(null)}>
+                                    Cancelar
+                                  </Button>
+                                </div>
                               </div>
-                              {comp.banco_origen && (
-                                <div>
-                                  <span className="font-medium">Banco del cliente:</span> {comp.banco_origen}
+                            ) : (
+                              <>
+                                {/* Datos del comprobante */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
+                                  <div>
+                                    <span className="font-medium">Monto:</span>{' '}
+                                    <span className={comp.monto > 0 ? 'text-green-700 font-semibold' : 'text-red-600'}>
+                                      ${comp.monto?.toLocaleString('es-MX', {minimumFractionDigits: 2}) || '0.00'}
+                                    </span>
+                                  </div>
+                                  {comp.banco_origen && (
+                                    <div>
+                                      <span className="font-medium">Banco:</span> {comp.banco_origen}
+                                    </div>
+                                  )}
+                                  {comp.clave_rastreo && (
+                                    <div>
+                                      <span className="font-medium">Clave rastreo:</span> {comp.clave_rastreo}
+                                    </div>
+                                  )}
+                                  {comp.cuenta_origen && (
+                                    <div>
+                                      <span className="font-medium">Cuenta origen:</span> {comp.cuenta_origen}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {comp.clave_rastreo && (
-                                <div>
-                                  <span className="font-medium">Clave rastreo:</span> {comp.clave_rastreo}
+                                
+                                {/* Botones de acción */}
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {(comp.file_url || comp.archivo) && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                      onClick={() => window.open(comp.file_url || comp.archivo, '_blank')}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      Ver
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Botón Re-OCR - solo si no es válido o tiene monto 0 */}
+                                  {(!comp.es_valido || !comp.monto) && (comp.file_url || comp.archivo) && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                                      onClick={() => handleReintentarOCR(idx)}
+                                    >
+                                      <RefreshCw className="h-4 w-4 mr-1" />
+                                      Re-OCR
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Botón Editar Manual */}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-slate-300 text-slate-600 hover:bg-slate-50"
+                                    onClick={() => iniciarEdicionComprobante(idx, comp)}
+                                  >
+                                    <Edit3 className="h-4 w-4 mr-1" />
+                                    Editar
+                                  </Button>
+                                  
+                                  {/* Botón Eliminar */}
+                                  {!esSoloLectura && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                      onClick={() => handleDeleteComprobanteClick(idx, comp)}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-1" />
+                                      Eliminar
+                                    </Button>
+                                  )}
                                 </div>
-                              )}
-                              {comp.cuenta_origen && (
-                                <div>
-                                  <span className="font-medium">Cuenta origen:</span> {comp.cuenta_origen}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-2 mt-3">
-                              {comp.file_url && (
-                                <Button
-                                  size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
-                                  onClick={() => window.open(comp.file_url, '_blank')}
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Ver comprobante
-                                </Button>
-                              )}
-                              {!esSoloLectura && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                                  onClick={() => handleDeleteComprobanteClick(idx, comp)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Eliminar
-                                </Button>
-                              )}
-                            </div>
+                              </>
+                            )}
                           </div>
-                          <Badge variant={comp.es_valido ? 'success' : 'destructive'}>
-                            {comp.es_valido ? 'Válido' : 'Inválido'}
+                          <Badge variant={comp.es_valido ? 'success' : 'secondary'} className={!comp.es_valido ? 'bg-amber-100 text-amber-700' : ''}>
+                            {comp.es_valido ? 'Válido' : 'Pendiente'}
                           </Badge>
                         </div>
                       </div>
