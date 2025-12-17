@@ -217,13 +217,13 @@ class BugFixesTester:
             # PASO 2: PATCH /api/operaciones/{id}/comprobantes/{idx} - Cambiar monto
             nuevo_monto = 75000.0  # Nuevo monto para el comprobante
             
-            patch_data = {
+            patch_params = {
                 'monto': nuevo_monto
             }
             
             patch_url = f"{BACKEND_URL}/operaciones/{operacion_id}/comprobantes/{comprobante_idx}"
             
-            async with self.session.patch(patch_url, json=patch_data) as response:
+            async with self.session.patch(patch_url, params=patch_params) as response:
                 if response.status == 200:
                     result = await response.json()
                     logger.info(f"   ✅ PATCH ejecutado exitosamente")
