@@ -396,6 +396,10 @@ class NetCashService:
             logger.info(f"[NetCash-OCR] Usando OCR unificado (Gemini Vision)...")
             datos_ocr = await ocr_service.leer_comprobante(archivo_url, mime_type)
             
+            # ⭐ DEBUG: Mostrar datos crudos del OCR
+            logger.info(f"[NetCash-OCR] 📊 Datos crudos OCR: monto={datos_ocr.get('monto')}, tipo_monto={type(datos_ocr.get('monto'))}")
+            logger.info(f"[NetCash-OCR] 📊 Banco={datos_ocr.get('banco_emisor')}, Cuenta={datos_ocr.get('cuenta_beneficiaria')}")
+            
             # Verificar si hubo error en OCR
             if datos_ocr.get("error"):
                 logger.warning(f"[NetCash-OCR] Error en OCR: {datos_ocr.get('error')}")
