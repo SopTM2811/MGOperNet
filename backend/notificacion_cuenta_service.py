@@ -105,7 +105,7 @@ Se han enviado notificaciones a {enviados} clientes activos.
 
 Sistema NetCash"""
                     
-                    gmail_service.send_reply(email_interno, asunto, cuerpo_interno, thread_id=None)
+                    smtp_service.enviar_correo(email_interno, asunto, cuerpo_interno)
                     logger.info(f"[NotificacionCuenta] Notificación interna enviada a {email_interno}")
                 except Exception as e:
                     logger.error(f"[NotificacionCuenta] Error enviando notificación interna: {str(e)}")
