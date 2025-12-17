@@ -291,3 +291,59 @@
 - `/app/backend/netcash_service.py` - Added `calculos_service` integration
 - `/app/backend/server.py` - Added calculation fields to operaciones list, fixed Re-OCR validation method
 - `/app/backend/telegram_bot.py` - Registered cancel operation handler
+
+## Backend Testing Results - Specific Issues Testing
+
+### Test Date: 2025-12-17 22:50:37 UTC
+
+#### ✅ Issue 1: OCR Data Concatenation Detection - VERIFIED
+- **Status**: WORKING ✅
+- **Test Results**:
+  - Multiple monto values (list): ✅ Correctly detected as `es_confiable=False`
+  - Concatenated monto string ("500,000.00,500,000.00"): ✅ Correctly detected as `es_confiable=False`
+  - Concatenated banco names ("banregiobanregio"): ✅ Correctly detected as `es_confiable=False`
+- **Implementation**: Lines 424-462 in `/app/backend/netcash_service.py`
+- **Verification**: Code-level verification confirms detection logic is working correctly
+
+#### ✅ Issue 2a: Re-OCR Auto-Regenerates Calculations - VERIFIED
+- **Test Operation**: nc-1766003737098 (NC-000217)
+- **Status**: WORKING ✅
+- **Response Fields Verified**:
+  - `success`: ✅ Present (True)
+  - `monto_detectado`: ✅ Present (1005000.0)
+  - `nuevo_monto_total`: ✅ Present (1005000.0)
+- **Auto-Regeneration Verified**:
+  - `calculos`: ✅ NOT None (auto-regenerated)
+  - `capital_netcash`: ✅ Present (994950.0)
+  - `costo_proveedor_monto`: ✅ Present (3768.75)
+
+#### ✅ Issue 2b: DELETE Comprobante Auto-Regenerates Calculations - VERIFIED
+- **Status**: WORKING ✅
+- **Test Results**:
+  - DELETE endpoint: ✅ Successfully removes comprobante
+  - Auto-regeneration: ✅ `calculos` updated based on remaining comprobantes
+  - Edge case: ✅ `calculos` set to None when no valid comprobantes remain
+- **Verification**: Calculations automatically recalculated after comprobante deletion
+
+#### ✅ Issue 2c: PATCH Comprobante Auto-Regenerates Calculations - VERIFIED
+- **Test Operation**: nc-1766003737098 (NC-000217)
+- **Status**: WORKING ✅
+- **Test Results**:
+  - PATCH endpoint: ✅ Successfully updates monto (1005000.0 → 1006000.0)
+  - Auto-regeneration verified:
+    - `calculos`: ✅ NOT None (auto-regenerated)
+    - `capital_netcash`: ✅ Updated (995940.0)
+    - `costo_proveedor_monto`: ✅ Updated (3772.5)
+- **Verification**: Calculations automatically recalculated after monto update
+
+### Summary of Fixes Tested:
+- **Issue 1**: ✅ OCR concatenation detection working correctly in netcash_service.py
+- **Issue 2**: ✅ Re-OCR, DELETE, and PATCH endpoints all auto-regenerate calculations
+- **All endpoints**: ✅ Responding correctly with proper calculation fields
+- **Database consistency**: ✅ Maintained across all operations
+
+### Test Coverage:
+- **7/7 Backend Tests**: ✅ ALL PASSED
+- **Code-level verification**: ✅ OCR concatenation detection logic confirmed
+- **API endpoint testing**: ✅ Re-OCR, DELETE, PATCH all working with auto-regeneration
+- **Database verification**: ✅ Calculations properly stored and updated
