@@ -716,9 +716,35 @@ class NetCashService:
             if result.modified_count > 0:
                 logger.info(f"[NetCash-Manual] ✅ Datos guardados correctamente")
                 
+                # ⭐ IMPORTANTE: Actualizar los comprobantes con el monto declarado
+                # Esto es necesario para que los cálculos funcionen
+                solicitud = await self.obtener_solicitud(solicitud_id)
+                if solicitud:
+                    comprobantes = solicitud.get("comprobantes", [])
+                    if comprobantes and num_comprobantes > 0:
+                        # Distribuir el monto total entre los comprobantes
+                        monto_por_comprobante = monto_total / len(comprobantes) if len(comprobantes) > 0 else monto_total
+                        
+                        for comp in comprobantes:
+                            # Si el comprobante no tiene monto detectado, asignarle uno
+                            if not comp.get("monto_detectado") and not comp.get("monto"):
+                                comp["monto"] = monto_por_comprobante
+                                comp["monto_detectado"] = monto_por_comprobante
+                                comp["es_valido"] = True
+                                comp["captura_manual"] = True
+                        
+                        # Guardar comprobantes actualizados
+                        await db[COLLECTION_NAME].update_one(
+                            {"id": solicitud_id},
+                            {"$set": {
+                                "comprobantes": comprobantes,
+                                "monto_depositado_cliente": monto_total
+                            }}
+                        )
+                        logger.info(f"[NetCash-Manual] Comprobantes actualizados con monto declarado: ${monto_por_comprobante:,.2f} c/u")
+                
                 # P2: Registrar en colección de aprendizaje
                 try:
-                    solicitud = await self.obtener_solicitud(solicitud_id)
                     if solicitud:
                         await netcash_pdf_learning_service.registrar_caso_aprendizaje(
                             solicitud=solicitud,
