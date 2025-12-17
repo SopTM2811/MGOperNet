@@ -946,9 +946,25 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
                 "es_valido": False
             }
         
-        # Obtener nuevo monto
-        nuevo_monto = resultado_ocr.get("monto", 0)
-        es_valido = nuevo_monto is not None and nuevo_monto > 0
+        # Obtener nuevo monto y validar que sea un valor numérico válido
+        nuevo_monto_raw = resultado_ocr.get("monto", 0)
+        
+        # Manejar caso donde OCR devuelve múltiples valores o formato inválido
+        if isinstance(nuevo_monto_raw, list):
+            # Si es una lista, tomar el primer valor numérico o marcar como inválido
+            nuevo_monto = nuevo_monto_raw[0] if nuevo_monto_raw and isinstance(nuevo_monto_raw[0], (int, float)) else 0
+            logger.warning(f"[Re-OCR] Monto detectado como lista, usando primer valor: {nuevo_monto}")
+        elif isinstance(nuevo_monto_raw, str):
+            # Intentar parsear string a número
+            try:
+                nuevo_monto = float(nuevo_monto_raw.replace(",", "").replace("$", "").strip())
+            except ValueError:
+                nuevo_monto = 0
+                logger.warning(f"[Re-OCR] No se pudo parsear monto string: {nuevo_monto_raw}")
+        else:
+            nuevo_monto = nuevo_monto_raw if isinstance(nuevo_monto_raw, (int, float)) else 0
+        
+        es_valido = nuevo_monto is not None and isinstance(nuevo_monto, (int, float)) and nuevo_monto > 0
         mensaje_validacion = ""
         
         # Validar contra cuenta bancaria autorizada (igual que en comprobante nuevo)
