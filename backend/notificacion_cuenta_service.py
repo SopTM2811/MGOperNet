@@ -29,8 +29,8 @@ async def enviar_notificacion_cambio_cuenta(cuenta: Dict):
     Args:
         cuenta: Dict con banco, clabe, beneficiario
     """
-    if not gmail_service:
-        logger.error("[NotificacionCuenta] Gmail service no disponible")
+    if not smtp_service or not smtp_service.configured:
+        logger.error("[NotificacionCuenta] SMTP service no disponible o no configurado")
         return
     
     try:
