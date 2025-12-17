@@ -846,14 +846,17 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
             raise HTTPException(status_code=404, detail="Comprobante no encontrado")
         
         comprobante = comprobantes[comprobante_idx]
-        file_url = comprobante.get("file_url") or comprobante.get("archivo")
+        file_url = comprobante.get("file_url") or comprobante.get("archivo_url") or comprobante.get("archivo")
         
         if not file_url:
             raise HTTPException(status_code=400, detail="El comprobante no tiene archivo asociado")
         
-        # Construir ruta del archivo
-        file_path = Path(f"/app/backend{file_url}")
-        if not file_path.exists():
+        # Construir ruta del archivo (puede ser ruta absoluta o relativa)
+        if file_url.startswith("/app/backend"):
+            file_path = Path(file_url)
+        elif file_url.startswith("/"):
+            file_path = Path(f"/app/backend{file_url}")
+        else:
             file_path = Path(f"/app/backend/uploads/{file_url}")
         
         if not file_path.exists():
