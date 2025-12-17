@@ -88,6 +88,17 @@ const Home = () => {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             
+            <Button
+              data-testid="beneficiarios-btn"
+              onClick={() => navigate('/beneficiarios')}
+              size="lg"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-10 py-6 text-base rounded-lg shadow-soft hover:shadow-medium transition-all font-medium"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Beneficiarios
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            
             {/* TODO: cuando tengamos usuario logueado, mostrar este botón solo si 
                 usuario.permisos.puede_ver_usuarios === true */}
             <Button
