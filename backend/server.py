@@ -329,13 +329,19 @@ async def obtener_operaciones():
             "fecha_creacion": sol.get("created_at"),
             "monto_depositado_cliente": sol.get("monto_depositado_cliente", 0),
             "monto_total_comprobantes": sol.get("monto_depositado_cliente", 0),
-            "comision_cobrada": sol.get("comision_cliente", 0),
-            "porcentaje_comision_usado": sol.get("comision_cliente_porcentaje", 1.0),
+            "comision_cobrada": sol.get("comision_cliente", 0) or sol.get("comision_cobrada", 0),
+            "porcentaje_comision_usado": sol.get("comision_cliente_porcentaje", 1.0) or sol.get("porcentaje_comision_usado", 1.0),
             "origen": "telegram",
             "modo_captura": sol.get("modo_captura", "ocr_ok"),
             # Campos adicionales de Telegram
             "telegram_id": sol.get("telegram_id"),
             "idmex_beneficiario_declarado": sol.get("idmex_beneficiario_declarado"),
+            # Campos de cálculos para compatibilidad con frontend
+            "capital_netcash": sol.get("capital_netcash"),
+            "costo_proveedor_monto": sol.get("costo_proveedor_monto"),
+            "costo_proveedor_pct": sol.get("costo_proveedor_pct"),
+            "total_egreso": sol.get("total_egreso"),
+            "calculos": sol.get("calculos"),
         }
         
         # Calcular monto si hay comprobantes válidos
