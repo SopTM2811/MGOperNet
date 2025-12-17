@@ -1242,7 +1242,11 @@ class TelegramBotNetCash:
                     MessageHandler(filters.Document.ALL, self.nc_handlers.recibir_comprobante),
                     MessageHandler(filters.PHOTO, self.nc_handlers.recibir_comprobante),
                     CallbackQueryHandler(self.nc_handlers.agregar_otro_comprobante, pattern="^nc_mas_comprobantes_"),
-                    CallbackQueryHandler(self.nc_handlers.continuar_desde_paso1, pattern="^nc_continuar_paso1_")
+                    CallbackQueryHandler(self.nc_handlers.continuar_desde_paso1, pattern="^nc_continuar_paso1_"),
+                    CallbackQueryHandler(self.nc_handlers.solicitar_monto_comprobante, pattern="^nc_editar_monto_")
+                ],
+                NC_ESPERANDO_MONTO_MANUAL: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_monto_comprobante_manual)
                 ],
                 NC_ESPERANDO_BENEFICIARIO: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, self.nc_handlers.recibir_beneficiario),
