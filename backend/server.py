@@ -862,9 +862,15 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
         if not file_path.exists():
             raise HTTPException(status_code=404, detail=f"Archivo no encontrado: {file_url}")
         
-        # Re-procesar con OCR
+        # Re-procesar con OCR (usando el servicio unificado)
         from ocr_service import ocr_service
-        resultado_ocr = await ocr_service.procesar_comprobante(str(file_path))
+        
+        # Determinar MIME type
+        mime_type = "application/pdf" if str(file_path).lower().endswith(".pdf") else "image/jpeg"
+        if str(file_path).lower().endswith(".png"):
+            mime_type = "image/png"
+        
+        resultado_ocr = await ocr_service.leer_comprobante(str(file_path), mime_type)
         
         # Actualizar comprobante con nuevos datos
         nuevo_monto = resultado_ocr.get("monto", 0)
