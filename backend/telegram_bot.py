@@ -1208,7 +1208,7 @@ class TelegramBotNetCash:
         self.app = Application.builder().token(self.token).build()
         
         # Importar handlers de NetCash V1
-        from telegram_netcash_handlers import TelegramNetCashHandlers
+        from telegram_netcash_handlers import TelegramNetCashHandlers, NC_ESPERANDO_MONTO_MANUAL
         self.nc_handlers = TelegramNetCashHandlers(self)
         
         # Importar handlers de Ana (admin MBco) y Tesorería
