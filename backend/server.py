@@ -946,10 +946,34 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
                 "es_valido": False
             }
         
-        # Actualizar comprobante con nuevos datos
+        # Obtener nuevo monto
         nuevo_monto = resultado_ocr.get("monto", 0)
         es_valido = nuevo_monto is not None and nuevo_monto > 0
+        mensaje_validacion = ""
         
+        # Validar contra cuenta bancaria autorizada (igual que en comprobante nuevo)
+        if es_valido:
+            cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
+            
+            if cuenta_activa:
+                from validador_comprobantes_service import validador_comprobantes
+                
+                resultado_validacion = await validador_comprobantes.validar_contra_cuenta(
+                    resultado_ocr, cuenta_activa
+                )
+                
+                es_valido = resultado_validacion["es_valido"]
+                mensaje_validacion = resultado_validacion.get("razon", "")
+                
+                if not es_valido:
+                    logger.warning(f"[Re-OCR] Comprobante inválido: {mensaje_validacion}")
+                else:
+                    mensaje_validacion = "Comprobante válido"
+                    logger.info(f"[Re-OCR] ✅ Comprobante válido")
+            else:
+                logger.warning("[Re-OCR] No hay cuenta activa configurada para validar")
+        
+        # Actualizar comprobante con nuevos datos
         comprobantes[comprobante_idx].update({
             "monto": nuevo_monto,
             "monto_detectado": nuevo_monto,
@@ -960,33 +984,51 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
             "fecha_operacion": resultado_ocr.get("fecha"),
             "referencia": resultado_ocr.get("referencia"),
             "es_valido": es_valido,
+            "mensaje_validacion": mensaje_validacion,
             "ocr_data": {
                 "datos_completos": resultado_ocr,
                 "es_confiable": es_valido,
-                "motivo_fallo": None if es_valido else "sin_monto"
+                "motivo_fallo": None if es_valido else (mensaje_validacion or "sin_monto")
             },
             "reprocessed_at": datetime.now(timezone.utc).isoformat()
         })
         
-        # Guardar en BD
-        if collection == "operaciones":
-            await db.operaciones.update_one(
-                {"id": operacion_id},
-                {"$set": {"comprobantes": comprobantes}}
-            )
-        else:
-            await db.solicitudes_netcash.update_one(
-                {"id": operacion_id},
-                {"$set": {"comprobantes": comprobantes}}
-            )
+        # Recalcular monto total de comprobantes válidos
+        nuevo_monto_total = sum(
+            c.get("monto", 0) or c.get("monto_detectado", 0)
+            for c in comprobantes
+            if c.get("es_valido") and not c.get("es_duplicado")
+        )
         
-        logger.info(f"Re-OCR completado para comprobante {comprobante_idx} de operación {operacion_id}")
+        # Preparar datos de actualización
+        update_data = {
+            "comprobantes": comprobantes,
+            "monto_depositado_cliente": nuevo_monto_total,
+            "monto_total_comprobantes": nuevo_monto_total,
+            "total_comprobantes_validos": nuevo_monto_total,
+            "num_comprobantes_validos": len([c for c in comprobantes if c.get("es_valido")]),
+            # Limpiar cálculos previos ya que el monto cambió
+            "calculos": None,
+            "capital_netcash": None,
+            "costo_proveedor_monto": None,
+            "total_egreso": None
+        }
+        
+        # Guardar en BD
+        db_collection = db.operaciones if collection == "operaciones" else db.solicitudes_netcash
+        await db_collection.update_one(
+            {"id": operacion_id},
+            {"$set": update_data}
+        )
+        
+        logger.info(f"Re-OCR completado para comprobante {comprobante_idx} de operación {operacion_id}. Monto total: {nuevo_monto_total}")
         
         return {
             "success": es_valido,
-            "mensaje": f"Monto detectado: ${nuevo_monto:,.2f}" if es_valido else "OCR no pudo extraer datos válidos",
+            "mensaje": f"Monto detectado: ${nuevo_monto:,.2f}" if es_valido else (mensaje_validacion or "OCR no pudo extraer datos válidos"),
             "monto_detectado": nuevo_monto,
-            "es_valido": es_valido
+            "es_valido": es_valido,
+            "nuevo_monto_total": nuevo_monto_total
         }
         
     except HTTPException:
