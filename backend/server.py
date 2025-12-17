@@ -1087,23 +1087,40 @@ async def actualizar_comprobante_manual(
         comprobantes[comprobante_idx]["editado_manualmente"] = True
         comprobantes[comprobante_idx]["editado_at"] = datetime.now(timezone.utc).isoformat()
         
-        # Guardar en BD
-        if collection == "operaciones":
-            await db.operaciones.update_one(
-                {"id": operacion_id},
-                {"$set": {"comprobantes": comprobantes}}
-            )
-        else:
-            await db.solicitudes_netcash.update_one(
-                {"id": operacion_id},
-                {"$set": {"comprobantes": comprobantes}}
-            )
+        # Recalcular monto total de comprobantes válidos
+        nuevo_monto_total = sum(
+            c.get("monto", 0) or c.get("monto_detectado", 0)
+            for c in comprobantes
+            if c.get("es_valido") and not c.get("es_duplicado")
+        )
         
-        logger.info(f"Comprobante {comprobante_idx} actualizado manualmente para operación {operacion_id}")
+        # Preparar datos de actualización
+        update_data = {
+            "comprobantes": comprobantes,
+            "monto_depositado_cliente": nuevo_monto_total,
+            "monto_total_comprobantes": nuevo_monto_total,
+            "total_comprobantes_validos": nuevo_monto_total,
+            "num_comprobantes_validos": len([c for c in comprobantes if c.get("es_valido")]),
+            # Limpiar cálculos previos ya que el monto cambió
+            "calculos": None,
+            "capital_netcash": None,
+            "costo_proveedor_monto": None,
+            "total_egreso": None
+        }
+        
+        # Guardar en BD
+        db_collection = db.operaciones if collection == "operaciones" else db.solicitudes_netcash
+        await db_collection.update_one(
+            {"id": operacion_id},
+            {"$set": update_data}
+        )
+        
+        logger.info(f"Comprobante {comprobante_idx} actualizado manualmente para operación {operacion_id}. Monto total: {nuevo_monto_total}")
         
         return {
             "success": True,
-            "message": "Comprobante actualizado correctamente"
+            "message": "Comprobante actualizado correctamente",
+            "nuevo_monto_total": nuevo_monto_total
         }
         
     except HTTPException:
