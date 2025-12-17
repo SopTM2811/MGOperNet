@@ -72,8 +72,8 @@ Cualquier duda, estamos a tus órdenes.
 
 Equipo NetCash"""
                 
-                # Enviar email (sin thread_id porque es nuevo email)
-                exito = gmail_service.send_reply(email, asunto, cuerpo, thread_id=None)
+                # Enviar email via SMTP
+                exito = smtp_service.enviar_correo(email, asunto, cuerpo)
                 
                 if exito:
                     enviados += 1
