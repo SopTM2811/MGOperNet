@@ -835,18 +835,39 @@ async def eliminar_comprobante(operacion_id: str, comprobante_idx: int):
         # Eliminar el comprobante del array
         comprobantes.pop(comprobante_idx)
         
-        # Actualizar en la base de datos
-        await collection.update_one(
-            {"id": operacion_id},
-            {"$set": {"comprobantes": comprobantes}}
+        # Recalcular monto total de comprobantes válidos
+        nuevo_monto_total = sum(
+            c.get("monto", 0) or c.get("monto_detectado", 0)
+            for c in comprobantes
+            if c.get("es_valido") and not c.get("es_duplicado")
         )
         
-        logger.info(f"Comprobante {comprobante_idx} eliminado de operación {operacion_id}")
+        # Actualizar en la base de datos con el nuevo monto
+        update_data = {
+            "comprobantes": comprobantes,
+            "monto_depositado_cliente": nuevo_monto_total,
+            "monto_total_comprobantes": nuevo_monto_total,
+            "total_comprobantes_validos": nuevo_monto_total,
+            "num_comprobantes_validos": len([c for c in comprobantes if c.get("es_valido")]),
+            # Limpiar cálculos previos ya que el monto cambió
+            "calculos": None,
+            "capital_netcash": None,
+            "costo_proveedor_monto": None,
+            "total_egreso": None
+        }
+        
+        await collection.update_one(
+            {"id": operacion_id},
+            {"$set": update_data}
+        )
+        
+        logger.info(f"Comprobante {comprobante_idx} eliminado de operación {operacion_id}. Nuevo monto total: {nuevo_monto_total}")
         
         return {
             "success": True,
             "message": "Comprobante eliminado correctamente",
-            "comprobantes_restantes": len(comprobantes)
+            "comprobantes_restantes": len(comprobantes),
+            "nuevo_monto_total": nuevo_monto_total
         }
         
     except HTTPException:
