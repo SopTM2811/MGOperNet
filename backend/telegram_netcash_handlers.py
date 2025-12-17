@@ -528,6 +528,62 @@ class TelegramNetCashHandlers:
             await update.message.reply_text("❌ Error al guardar. Por favor intenta de nuevo.")
             return NC_ESPERANDO_MONTO_MANUAL
     
+    async def descartar_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handler para descartar un comprobante que no se pudo procesar.
+        """
+        query = update.callback_query
+        await query.answer()
+        
+        try:
+            # Extraer solicitud_id e índice del callback_data: nc_descartar_comp_{solicitud_id}_{idx}
+            parts = query.data.replace("nc_descartar_comp_", "").rsplit("_", 1)
+            solicitud_id = parts[0]
+            comp_idx = int(parts[1])
+            
+            logger.info(f"[NC Telegram] Descartando comprobante {comp_idx} de solicitud {solicitud_id}")
+            
+            # Obtener solicitud y eliminar el comprobante
+            from motor.motor_asyncio import AsyncIOMotorClient
+            import os
+            client = AsyncIOMotorClient(os.environ.get('MONGO_URL'))
+            db = client[os.environ.get('DB_NAME', 'netcash_mbco')]
+            
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            comprobantes = solicitud.get("comprobantes", [])
+            
+            if comp_idx < len(comprobantes):
+                comprobante_eliminado = comprobantes.pop(comp_idx)
+                
+                await db.solicitudes_netcash.update_one(
+                    {"id": solicitud_id},
+                    {"$set": {"comprobantes": comprobantes}}
+                )
+                
+                logger.info(f"[NC Telegram] ✅ Comprobante {comp_idx} descartado")
+                
+                validos = [c for c in comprobantes if c.get("es_valido")]
+                
+                mensaje = "🗑️ **Comprobante descartado**\n\n"
+                mensaje += f"Quedan **{len(comprobantes)}** comprobante(s) ({len(validos)} válido(s)).\n\n"
+                mensaje += "¿Quieres subir otro comprobante o continuar?"
+            else:
+                mensaje = "⚠️ El comprobante ya fue eliminado.\n\n¿Quieres continuar?"
+            
+            keyboard = [
+                [InlineKeyboardButton("➕ Subir comprobante", callback_data=f"nc_mas_comprobantes_{solicitud_id}")],
+                [InlineKeyboardButton("➡️ Continuar", callback_data=f"nc_continuar_paso1_{solicitud_id}")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            return NC_ESPERANDO_COMPROBANTE
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error descartando comprobante: {str(e)}")
+            await query.edit_message_text("❌ Error al descartar. Por favor intenta de nuevo.")
+            return NC_ESPERANDO_COMPROBANTE
+    
     # ==================== PASO 1: RECIBIR COMPROBANTES ====================
     
     async def recibir_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
