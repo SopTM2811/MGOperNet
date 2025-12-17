@@ -318,6 +318,7 @@ class TelegramNetCashHandlers:
         """
         Handler para solicitar el monto manual de un comprobante específico.
         Se activa cuando el usuario presiona "Ingresar monto manual".
+        Primero pregunta cuántos montos hay, luego pide el total.
         """
         query = update.callback_query
         await query.answer()
@@ -334,15 +335,48 @@ class TelegramNetCashHandlers:
             
             logger.info(f"[NC Telegram] Solicitando monto manual para comprobante {comp_idx} de solicitud {solicitud_id}")
             
-            mensaje = "📝 **Ingresa el monto del comprobante**\n\n"
-            mensaje += "Escribe el monto total que aparece en el comprobante.\n\n"
-            mensaje += "**Ejemplos:**\n"
-            mensaje += "• 50000\n"
-            mensaje += "• 125000.50\n"
-            mensaje += "• 1000000\n\n"
-            mensaje += "_Envía solo el número, sin símbolos ni comas._"
+            # Obtener info del comprobante para mostrar contexto
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            comprobantes = solicitud.get("comprobantes", [])
+            
+            if comp_idx < len(comprobantes):
+                comp = comprobantes[comp_idx]
+                ocr_data = comp.get("ocr_data", {})
+                advertencias = ocr_data.get("advertencias", [])
+                cantidad_transacciones = ocr_data.get("cantidad_transacciones")
+                montos_individuales = ocr_data.get("montos_individuales")
+                
+                mensaje = "📝 **Captura manual del comprobante**\n\n"
+                
+                # Si OCR detectó múltiples transacciones, preguntar primero
+                if cantidad_transacciones and cantidad_transacciones > 1:
+                    mensaje += f"⚠️ Se detectaron **{cantidad_transacciones} depósitos** en este comprobante.\n"
+                    if montos_individuales:
+                        mensaje += f"Montos detectados: {montos_individuales}\n\n"
+                elif montos_individuales and len(montos_individuales) > 1:
+                    mensaje += f"⚠️ Se detectaron **{len(montos_individuales)} montos** en este comprobante.\n"
+                    mensaje += f"Montos: {montos_individuales}\n\n"
+                
+                if advertencias:
+                    for adv in advertencias[:1]:
+                        if "suma" in adv.lower():
+                            mensaje += f"💡 {adv}\n\n"
+                
+                mensaje += "**¿Cuántos depósitos contiene este comprobante?**\n\n"
+                mensaje += "Responde con el número de depósitos:\n"
+                mensaje += "• **1** = Un solo depósito\n"
+                mensaje += "• **2** = Dos depósitos\n"
+                mensaje += "• **3** = Tres depósitos\n"
+                mensaje += "• etc.\n\n"
+                mensaje += "_Después te pediré el monto total._"
+            else:
+                mensaje = "📝 **¿Cuántos depósitos contiene este comprobante?**\n\n"
+                mensaje += "Responde con el número (1, 2, 3, etc.)"
             
             await query.edit_message_text(mensaje, parse_mode="Markdown")
+            
+            # Guardar que estamos esperando la cantidad primero
+            context.user_data['nc_esperando_cantidad_montos'] = True
             
             # Cambiar al estado de esperar monto
             return NC_ESPERANDO_MONTO_MANUAL
