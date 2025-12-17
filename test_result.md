@@ -170,3 +170,34 @@
 ## Known Issues
 - Telegram bot has conflict error (don't modify - user has another instance)
 - Gmail OAuth token expired (only affects email reading, not sending)
+
+## Frontend Testing Results - Telegram Operations with Calculations
+
+### Test Date: 2025-12-17 20:43:00 UTC
+
+#### ✅ Operation Detail Page - Cálculos Tab VERIFIED
+- **Test Operation**: NC-000217 (Telegram origin)
+- **Status**: WORKING ✅
+
+#### Verified Calculations Display:
+- Monto total de comprobantes: $1,005,000.00 ✅
+- Comisión al cliente (1%): $10,050.00 ✅
+- Costo proveedor DNS (0.375%): $3,768.75 ✅
+- Resultado (Capital NetCash): Visible ✅
+
+#### Verified Tabs Working:
+- General tab: ✅ WORKING
+- Comprobantes tab: ✅ WORKING
+- Titular tab: ✅ WORKING
+- Cálculos tab: ✅ WORKING
+
+## Implementation Summary
+
+### Fixed Issues:
+1. **Telegram OCR Success Flow** - Calculations now properly populated
+2. **Cancel Button Handler** - Registered in conversation handler
+
+### Files Modified:
+- `/app/backend/netcash_service.py` - Added `calculos_service` integration
+- `/app/backend/server.py` - Added calculation fields to operaciones list
+- `/app/backend/telegram_bot.py` - Registered cancel operation handler
