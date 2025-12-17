@@ -36,6 +36,7 @@ NC_ESPERANDO_LIGAS = 23  # Paso 3: Ligas
 NC_ESPERANDO_CONFIRMACION = 24  # Paso 4: Confirmación
 
 # Estados para captura manual por fallo OCR
+NC_ESPERANDO_MONTO_MANUAL = 29  # Espera monto manual de un comprobante específico
 NC_MANUAL_NUM_COMPROBANTES = 30  # Captura manual: Número de comprobantes
 NC_MANUAL_MONTO_TOTAL = 31  # Captura manual: Monto total
 NC_MANUAL_ELEGIR_BENEFICIARIO = 32  # Captura manual: Elegir beneficiario (frecuente o nuevo)
