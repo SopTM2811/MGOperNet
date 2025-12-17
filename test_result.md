@@ -75,7 +75,7 @@ Both critical fixes have been successfully verified:
 - Backend: FastAPI on port 8001
 - Frontend: React on port 3000  
 - MongoDB: Using MONGO_URL from env
-- Backend URL: https://netcash-hub.preview.emergentagent.com/api
+- Backend URL: https://telegrambot-repair.preview.emergentagent.com/api
 
 ## Latest Testing Results (December 16, 2025 - Testing Agent)
 

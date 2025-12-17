@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # URL del backend
-BACKEND_URL = "https://netcash-hub.preview.emergentagent.com/api"
+BACKEND_URL = "https://telegrambot-repair.preview.emergentagent.com/api"
 
 async def test_specific_bugs():
     """Test específico para los bugs reportados"""

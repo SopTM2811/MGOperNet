@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # URLs
-BACKEND_URL = "https://netcash-hub.preview.emergentagent.com/api"
+BACKEND_URL = "https://telegrambot-repair.preview.emergentagent.com/api"
 
 async def test_dashboard_api_fix():
     """Test Fix 1: Dashboard API Endpoint"""

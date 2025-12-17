@@ -138,7 +138,7 @@ tail -f /var/log/supervisor/frontend.err.log
 
 Abre tu navegador y ve a:
 ```
-https://netcash-hub.preview.emergentagent.com
+https://telegrambot-repair.preview.emergentagent.com
 ```
 
 ---
