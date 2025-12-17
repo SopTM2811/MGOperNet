@@ -1149,13 +1149,15 @@ async def calcular_operacion(
             "calculos": calculos_dict
         }
         
-        # Guardar en la colección correcta
+        # Guardar en la colección correcta y actualizar estado
         if collection == "operaciones":
+            update_data["estado"] = "ESPERANDO_CONFIRMACION_CLIENTE"
             await db.operaciones.update_one({"id": operacion_id}, {"$set": update_data})
         else:
             # Para Telegram, también actualizar campos con nombres compatibles
             update_data["comision_cliente"] = calculos_dict["comision_cliente_cobrada"]
             update_data["comision_cliente_porcentaje"] = calculos_dict["comision_cliente_porcentaje"]
+            update_data["estado"] = "lista_para_confirmacion"  # Estado Telegram equivalente
             await db.solicitudes_netcash.update_one({"id": operacion_id}, {"$set": update_data})
         
         logger.info(f"Cálculos realizados para operación {operacion_id}")
