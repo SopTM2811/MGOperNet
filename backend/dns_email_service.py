@@ -73,25 +73,24 @@ class DNSEmailService:
                 numero_ligas=numero_ligas
             )
             
-            # Enviar correo con adjuntos
+            # Enviar correo con adjuntos usando SMTP
             logger.info(f"[DNSEmail-P4A] Enviando correo a {self.dns_email}")
             logger.info(f"[DNSEmail-P4A] Adjuntos: {len(comprobantes_paths)}")
             
-            email_info = await gmail_service.enviar_correo_con_adjuntos(
+            # Usar SMTP service (App Password, no expira)
+            enviado = smtp_service.enviar_correo(
                 destinatario=self.dns_email,
                 asunto=asunto,
                 cuerpo=cuerpo,
                 adjuntos=comprobantes_paths,
-                cc=[self.internal_email] if self.internal_email else None
+                html=True  # El cuerpo es HTML
             )
             
-            if email_info:
-                logger.info(f"[DNSEmail-P4A] ✅ Correo enviado exitosamente a DNS")
-                logger.info(f"[DNSEmail-P4A] Thread ID: {email_info.get('thread_id')}")
-                logger.info(f"[DNSEmail-P4A] Message ID: {email_info.get('message_id')}")
+            if enviado:
+                logger.info(f"[DNSEmail-P4A] ✅ Correo enviado exitosamente a DNS via SMTP")
                 return True
             else:
-                logger.error(f"[DNSEmail-P4A] ❌ No se obtuvo confirmación de envío")
+                logger.error(f"[DNSEmail-P4A] ❌ No se pudo enviar correo via SMTP")
                 return False
             
         except Exception as e:
