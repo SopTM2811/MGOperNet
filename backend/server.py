@@ -823,6 +823,167 @@ async def eliminar_comprobante(operacion_id: str, comprobante_idx: int):
 
 
 
+@api_router.post("/operaciones/{operacion_id}/comprobantes/{comprobante_idx}/reocr")
+async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
+    """
+    Re-intenta el procesamiento OCR de un comprobante específico.
+    """
+    try:
+        # Buscar en operaciones web
+        operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        collection = "operaciones"
+        
+        if not operacion:
+            # Buscar en solicitudes Telegram
+            operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+            collection = "solicitudes_netcash"
+        
+        if not operacion:
+            raise HTTPException(status_code=404, detail="Operación no encontrada")
+        
+        comprobantes = operacion.get("comprobantes", [])
+        if comprobante_idx < 0 or comprobante_idx >= len(comprobantes):
+            raise HTTPException(status_code=404, detail="Comprobante no encontrado")
+        
+        comprobante = comprobantes[comprobante_idx]
+        file_url = comprobante.get("file_url") or comprobante.get("archivo")
+        
+        if not file_url:
+            raise HTTPException(status_code=400, detail="El comprobante no tiene archivo asociado")
+        
+        # Construir ruta del archivo
+        file_path = Path(f"/app/backend{file_url}")
+        if not file_path.exists():
+            file_path = Path(f"/app/backend/uploads/{file_url}")
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"Archivo no encontrado: {file_url}")
+        
+        # Re-procesar con OCR
+        from ocr_service import ocr_service
+        resultado_ocr = await ocr_service.procesar_comprobante(str(file_path))
+        
+        # Actualizar comprobante con nuevos datos
+        nuevo_monto = resultado_ocr.get("monto", 0)
+        es_valido = resultado_ocr.get("es_valido", False) and nuevo_monto > 0
+        
+        comprobantes[comprobante_idx].update({
+            "monto": nuevo_monto,
+            "monto_detectado": nuevo_monto,
+            "banco_origen": resultado_ocr.get("banco_origen", ""),
+            "clave_rastreo": resultado_ocr.get("clave_rastreo", ""),
+            "cuenta_origen": resultado_ocr.get("cuenta_origen", ""),
+            "fecha_operacion": resultado_ocr.get("fecha_operacion"),
+            "es_valido": es_valido,
+            "ocr_data": resultado_ocr,
+            "reprocessed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        # Guardar en BD
+        if collection == "operaciones":
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {"$set": {"comprobantes": comprobantes}}
+            )
+        else:
+            await db.solicitudes_netcash.update_one(
+                {"id": operacion_id},
+                {"$set": {"comprobantes": comprobantes}}
+            )
+        
+        logger.info(f"Re-OCR completado para comprobante {comprobante_idx} de operación {operacion_id}")
+        
+        return {
+            "success": es_valido,
+            "mensaje": f"Monto detectado: ${nuevo_monto:,.2f}" if es_valido else "OCR no pudo extraer datos válidos",
+            "monto_detectado": nuevo_monto,
+            "es_valido": es_valido
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en re-OCR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.patch("/operaciones/{operacion_id}/comprobantes/{comprobante_idx}")
+async def actualizar_comprobante_manual(
+    operacion_id: str,
+    comprobante_idx: int,
+    monto: Optional[float] = None,
+    banco_origen: Optional[str] = None,
+    clave_rastreo: Optional[str] = None,
+    cuenta_origen: Optional[str] = None
+):
+    """
+    Actualiza manualmente los datos de un comprobante específico.
+    """
+    try:
+        # Buscar en operaciones web
+        operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        collection = "operaciones"
+        
+        if not operacion:
+            # Buscar en solicitudes Telegram
+            operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+            collection = "solicitudes_netcash"
+        
+        if not operacion:
+            raise HTTPException(status_code=404, detail="Operación no encontrada")
+        
+        comprobantes = operacion.get("comprobantes", [])
+        if comprobante_idx < 0 or comprobante_idx >= len(comprobantes):
+            raise HTTPException(status_code=404, detail="Comprobante no encontrado")
+        
+        # Actualizar campos proporcionados
+        update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+        
+        if monto is not None:
+            comprobantes[comprobante_idx]["monto"] = monto
+            comprobantes[comprobante_idx]["monto_detectado"] = monto
+            comprobantes[comprobante_idx]["es_valido"] = monto > 0
+        
+        if banco_origen is not None:
+            comprobantes[comprobante_idx]["banco_origen"] = banco_origen
+        
+        if clave_rastreo is not None:
+            comprobantes[comprobante_idx]["clave_rastreo"] = clave_rastreo
+        
+        if cuenta_origen is not None:
+            comprobantes[comprobante_idx]["cuenta_origen"] = cuenta_origen
+        
+        comprobantes[comprobante_idx]["editado_manualmente"] = True
+        comprobantes[comprobante_idx]["editado_at"] = datetime.now(timezone.utc).isoformat()
+        
+        # Guardar en BD
+        if collection == "operaciones":
+            await db.operaciones.update_one(
+                {"id": operacion_id},
+                {"$set": {"comprobantes": comprobantes}}
+            )
+        else:
+            await db.solicitudes_netcash.update_one(
+                {"id": operacion_id},
+                {"$set": {"comprobantes": comprobantes}}
+            )
+        
+        logger.info(f"Comprobante {comprobante_idx} actualizado manualmente para operación {operacion_id}")
+        
+        return {
+            "success": True,
+            "message": "Comprobante actualizado correctamente"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error actualizando comprobante: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 @api_router.patch("/operaciones/{operacion_id}/datos-manuales")
 async def actualizar_datos_manuales(
     operacion_id: str,
