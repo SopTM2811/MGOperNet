@@ -313,6 +313,128 @@ class TelegramNetCashHandlers:
             await query.edit_message_text("❌ Error al cancelar. Intenta de nuevo.")
             return ConversationHandler.END
     
+    async def solicitar_monto_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handler para solicitar el monto manual de un comprobante específico.
+        Se activa cuando el usuario presiona "Ingresar monto manual".
+        """
+        query = update.callback_query
+        await query.answer()
+        
+        # Extraer solicitud_id e índice del callback_data: nc_editar_monto_{solicitud_id}_{idx}
+        try:
+            parts = query.data.replace("nc_editar_monto_", "").rsplit("_", 1)
+            solicitud_id = parts[0]
+            comp_idx = int(parts[1])
+            
+            # Guardar en contexto para el siguiente paso
+            context.user_data['nc_solicitud_id'] = solicitud_id
+            context.user_data['nc_comp_editar_idx'] = comp_idx
+            
+            logger.info(f"[NC Telegram] Solicitando monto manual para comprobante {comp_idx} de solicitud {solicitud_id}")
+            
+            mensaje = "📝 **Ingresa el monto del comprobante**\n\n"
+            mensaje += "Escribe el monto total que aparece en el comprobante.\n\n"
+            mensaje += "**Ejemplos:**\n"
+            mensaje += "• 50000\n"
+            mensaje += "• 125000.50\n"
+            mensaje += "• 1000000\n\n"
+            mensaje += "_Envía solo el número, sin símbolos ni comas._"
+            
+            await query.edit_message_text(mensaje, parse_mode="Markdown")
+            
+            # Cambiar al estado de esperar monto
+            return NC_ESPERANDO_MONTO_MANUAL
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error solicitando monto manual: {str(e)}")
+            await query.edit_message_text("❌ Error. Por favor intenta de nuevo.")
+            return NC_ESPERANDO_COMPROBANTE
+    
+    async def recibir_monto_comprobante_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handler para recibir el monto manual de un comprobante específico.
+        """
+        solicitud_id = context.user_data.get('nc_solicitud_id')
+        comp_idx = context.user_data.get('nc_comp_editar_idx')
+        
+        if not solicitud_id or comp_idx is None:
+            await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
+            return ConversationHandler.END
+        
+        try:
+            # Validar que sea un número
+            monto_str = update.message.text.strip().replace(',', '').replace('$', '')
+            try:
+                monto = float(monto_str)
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Por favor envía solo el monto numérico.\n\n**Ejemplos:** 50000 o 125000.50",
+                    parse_mode="Markdown"
+                )
+                return NC_ESPERANDO_MONTO_MANUAL
+            
+            # Validar que sea mayor a 0
+            if monto <= 0:
+                await update.message.reply_text(
+                    "❌ El monto debe ser mayor a 0.\n\n**Ejemplo:** 50000",
+                    parse_mode="Markdown"
+                )
+                return NC_ESPERANDO_MONTO_MANUAL
+            
+            # Actualizar el comprobante con el monto manual
+            solicitud = await netcash_service.obtener_solicitud(solicitud_id)
+            comprobantes = solicitud.get("comprobantes", [])
+            
+            if comp_idx >= len(comprobantes):
+                await update.message.reply_text("❌ Error: Comprobante no encontrado.")
+                return NC_ESPERANDO_COMPROBANTE
+            
+            # Actualizar el comprobante
+            comprobantes[comp_idx]["monto"] = monto
+            comprobantes[comp_idx]["monto_detectado"] = monto
+            comprobantes[comp_idx]["es_valido"] = True  # Ahora es válido con monto manual
+            comprobantes[comp_idx]["editado_manualmente"] = True
+            comprobantes[comp_idx]["ocr_data"]["captura_manual_monto"] = True
+            
+            # Guardar en BD
+            from motor.motor_asyncio import AsyncIOMotorClient
+            import os
+            client = AsyncIOMotorClient(os.environ.get('MONGO_URL'))
+            db = client[os.environ.get('DB_NAME', 'netcash_mbco')]
+            
+            await db.solicitudes_netcash.update_one(
+                {"id": solicitud_id},
+                {"$set": {"comprobantes": comprobantes}}
+            )
+            
+            logger.info(f"[NC Telegram] ✅ Monto manual guardado: ${monto:,.2f} para comprobante {comp_idx}")
+            
+            # Contar comprobantes válidos
+            validos = [c for c in comprobantes if c.get("es_valido")]
+            
+            mensaje = f"✅ **Monto guardado: ${monto:,.2f}**\n\n"
+            mensaje += f"Llevamos **{len(comprobantes)}** comprobante(s) ({len(validos)} válido(s)).\n\n"
+            mensaje += "¿Quieres subir otro comprobante o continuar al siguiente paso?"
+            
+            keyboard = [
+                [InlineKeyboardButton("➕ Agregar otro comprobante", callback_data=f"nc_mas_comprobantes_{solicitud_id}")],
+                [InlineKeyboardButton("➡️ Continuar", callback_data=f"nc_continuar_paso1_{solicitud_id}")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+            
+            # Limpiar contexto de edición
+            context.user_data.pop('nc_comp_editar_idx', None)
+            
+            return NC_ESPERANDO_COMPROBANTE
+            
+        except Exception as e:
+            logger.error(f"[NC Telegram] Error guardando monto manual: {str(e)}")
+            await update.message.reply_text("❌ Error al guardar. Por favor intenta de nuevo.")
+            return NC_ESPERANDO_MONTO_MANUAL
+    
     # ==================== PASO 1: RECIBIR COMPROBANTES ====================
     
     async def recibir_comprobante(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
