@@ -431,9 +431,25 @@ class NetCashService:
                 elif isinstance(monto_detectado_raw, str):
                     # Intentar parsear - detectar si tiene múltiples valores concatenados
                     monto_str = str(monto_detectado_raw)
-                    # Detectar patrones de valores concatenados (ej: "500,000.00,500,000.00")
-                    if monto_str.count('.00') > 1 or monto_str.count(',') > 2:
-                        logger.warning(f"[NetCash-OCR] ⚠️ Monto parece tener valores concatenados: {monto_str}")
+                    
+                    # Detectar patrones de valores concatenados:
+                    # - Múltiples ".00" indica valores concatenados (ej: "500,000.00,500,000.00")
+                    # - Múltiples puntos decimales (ej: "500.00.500.00")
+                    es_concatenado = False
+                    
+                    if monto_str.count('.00') > 1:
+                        es_concatenado = True
+                        logger.warning(f"[NetCash-OCR] ⚠️ Monto tiene múltiples '.00': {monto_str}")
+                    elif monto_str.count('.') > 1:
+                        es_concatenado = True
+                        logger.warning(f"[NetCash-OCR] ⚠️ Monto tiene múltiples puntos decimales: {monto_str}")
+                    # Detectar patrón de valores repetidos (ej: "500000500000" o "500,000500,000")
+                    elif len(monto_str) > 15:
+                        # Posiblemente valores concatenados sin separador
+                        es_concatenado = True
+                        logger.warning(f"[NetCash-OCR] ⚠️ Monto demasiado largo, posible concatenación: {monto_str}")
+                    
+                    if es_concatenado:
                         es_confiable = False
                         motivo_fallo = "monto_concatenado"
                         advertencias.append(f"Formato de monto inválido: {monto_str}. Parece contener múltiples valores.")
