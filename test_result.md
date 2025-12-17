@@ -232,6 +232,8 @@
 - **File access working properly** ✅
 - **Bank rules validation implemented** ✅
 - **Monto updates and calculos clearing working** ✅
+- **PATCH endpoint uses query parameters (not JSON body)** ✅
+- **Re-OCR validation method fixed** ✅
 
 ## Implementation Summary
 
