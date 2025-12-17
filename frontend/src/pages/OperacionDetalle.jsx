@@ -637,8 +637,8 @@ const OperacionDetalle = () => {
                                     </Button>
                                   )}
                                   
-                                  {/* Botón Re-OCR - solo si no es válido o tiene monto 0 */}
-                                  {(!comp.es_valido || !comp.monto) && (comp.file_url || comp.archivo) && (
+                                  {/* Botón Re-OCR - siempre disponible si hay archivo */}
+                                  {(comp.file_url || comp.archivo || comp.archivo_url) && (
                                     <Button
                                       size="sm"
                                       variant="outline"
