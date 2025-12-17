@@ -872,19 +872,34 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
         
         resultado_ocr = await ocr_service.leer_comprobante(str(file_path), mime_type)
         
+        # Verificar si hubo error
+        if resultado_ocr.get("error"):
+            return {
+                "success": False,
+                "mensaje": f"Error en OCR: {resultado_ocr.get('error')}",
+                "monto_detectado": 0,
+                "es_valido": False
+            }
+        
         # Actualizar comprobante con nuevos datos
         nuevo_monto = resultado_ocr.get("monto", 0)
-        es_valido = resultado_ocr.get("es_valido", False) and nuevo_monto > 0
+        es_valido = nuevo_monto is not None and nuevo_monto > 0
         
         comprobantes[comprobante_idx].update({
             "monto": nuevo_monto,
             "monto_detectado": nuevo_monto,
-            "banco_origen": resultado_ocr.get("banco_origen", ""),
+            "banco_origen": resultado_ocr.get("banco_emisor", ""),
             "clave_rastreo": resultado_ocr.get("clave_rastreo", ""),
-            "cuenta_origen": resultado_ocr.get("cuenta_origen", ""),
-            "fecha_operacion": resultado_ocr.get("fecha_operacion"),
+            "cuenta_origen": resultado_ocr.get("cuenta_beneficiaria", ""),
+            "nombre_beneficiario": resultado_ocr.get("nombre_beneficiario", ""),
+            "fecha_operacion": resultado_ocr.get("fecha"),
+            "referencia": resultado_ocr.get("referencia"),
             "es_valido": es_valido,
-            "ocr_data": resultado_ocr,
+            "ocr_data": {
+                "datos_completos": resultado_ocr,
+                "es_confiable": es_valido,
+                "motivo_fallo": None if es_valido else "sin_monto"
+            },
             "reprocessed_at": datetime.now(timezone.utc).isoformat()
         })
         
