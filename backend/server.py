@@ -958,12 +958,9 @@ async def reintentar_ocr_comprobante(operacion_id: str, comprobante_idx: int):
             if cuenta_activa:
                 from validador_comprobantes_service import validador_comprobantes
                 
-                resultado_validacion = await validador_comprobantes.validar_contra_cuenta(
-                    resultado_ocr, cuenta_activa
+                es_valido, mensaje_validacion = validador_comprobantes.validar_comprobante(
+                    str(file_path), mime_type, cuenta_activa
                 )
-                
-                es_valido = resultado_validacion["es_valido"]
-                mensaje_validacion = resultado_validacion.get("razon", "")
                 
                 if not es_valido:
                     logger.warning(f"[Re-OCR] Comprobante inválido: {mensaje_validacion}")
