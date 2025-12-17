@@ -32,18 +32,30 @@ class OCRService:
             prompt = """Analiza este comprobante de depósito bancario y extrae la siguiente información en formato JSON:
 
 {
-  "monto": [monto numérico del depósito, ejemplo: 2000000.00],
+  "monto": [monto numérico del depósito como número, ejemplo: 500000.00],
   "fecha": [fecha del depósito en formato YYYY-MM-DD],
-  "banco_emisor": [nombre del banco que emite el comprobante],
-  "cuenta_beneficiaria": [CLABE o número de cuenta del beneficiario, puede estar parcialmente enmascarada con asteriscos],
+  "banco_emisor": [nombre del banco que emite el comprobante - solo UNO],
+  "cuenta_beneficiaria": [CLABE o número de cuenta del beneficiario - solo UNA cuenta, puede estar parcialmente enmascarada con asteriscos],
   "nombre_beneficiario": [nombre completo o razón social del beneficiario],
   "referencia": [número de referencia o folio del depósito],
-  "clave_rastreo": [clave de rastreo única de la transacción bancaria]
+  "clave_rastreo": [clave de rastreo única de la transacción bancaria],
+  "transacciones_multiples": [true si el documento contiene MÁS DE UNA transacción/depósito, false si es una sola],
+  "cantidad_transacciones": [número de transacciones detectadas en el documento, ejemplo: 1, 2, 3],
+  "montos_individuales": [si hay múltiples transacciones, lista de montos individuales, ejemplo: [500000.00, 500000.00, 500000.00]]
 }
 
-Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo no está visible, usa null.
+IMPORTANTE:
+- Si el documento contiene MÚLTIPLES transacciones o depósitos (por ejemplo, 3 depósitos de $500,000 cada uno), indica:
+  - transacciones_multiples: true
+  - cantidad_transacciones: 3
+  - monto: suma total (1500000.00)
+  - montos_individuales: [500000.00, 500000.00, 500000.00]
+- Si es UNA SOLA transacción:
+  - transacciones_multiples: false
+  - cantidad_transacciones: 1
+  - montos_individuales: null
 
-IMPORTANTE: La clave_rastreo y referencia son fundamentales para identificar únicamente cada transacción."""
+Responde ÚNICAMENTE con el JSON, sin explicaciones adicionales. Si algún campo no está visible, usa null."""
             
             # Crear chat con emergentintegrations usando Emergent LLM Key
             # IMPORTANTE: Para análisis de archivos/imágenes se debe usar Gemini
