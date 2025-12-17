@@ -10,7 +10,8 @@ import logging
 from typing import Dict, List
 from pathlib import Path
 
-from gmail_service import gmail_service
+# Usar SMTP en lugar de Gmail OAuth (no expira)
+from smtp_service import smtp_service
 
 logger = logging.getLogger(__name__)
 
