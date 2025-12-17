@@ -61,11 +61,34 @@ class NetCashService:
     async def _generar_folio_mbco(self) -> str:
         """
         Genera un folio secuencial para operaciones NetCash (ej: NC-000123).
-        Busca en AMBAS colecciones para mantener secuencia global.
+        Usa contador atómico en colección 'counters' para garantizar secuencia única.
+        No reutiliza números de operaciones eliminadas.
+        """
+        try:
+            # Usar find_one_and_update atómico para incrementar el contador
+            result = await db.counters.find_one_and_update(
+                {"_id": "folio_mbco"},
+                {"$inc": {"sequence_value": 1}},
+                upsert=True,
+                return_document=True  # Retorna el documento DESPUÉS del update
+            )
+            
+            nuevo_numero = result["sequence_value"]
+            logger.info(f"[NetCash] Folio generado atómicamente: NC-{nuevo_numero:06d}")
+            return f"NC-{nuevo_numero:06d}"
+            
+        except Exception as e:
+            logger.error(f"[NetCash] Error generando folio con contador: {str(e)}")
+            # Fallback al método anterior solo si falla el contador
+            return await self._generar_folio_mbco_legacy()
+    
+    async def _generar_folio_mbco_legacy(self) -> str:
+        """
+        Método legacy de generación de folio (solo como fallback).
+        DEPRECATED: No usar directamente, solo como fallback de emergencia.
         """
         ultimo_numero = 0
         
-        # Buscar el último folio en operaciones (web)
         ultima_web = await db.operaciones.find_one(
             {"folio_mbco": {"$exists": True, "$ne": None}},
             {"_id": 0, "folio_mbco": 1},
@@ -79,7 +102,6 @@ class NetCashService:
             except (IndexError, ValueError):
                 pass
         
-        # Buscar el último folio en solicitudes_netcash (Telegram)
         ultima_telegram = await db.solicitudes_netcash.find_one(
             {"folio_mbco": {"$exists": True, "$ne": None}},
             {"_id": 0, "folio_mbco": 1},
@@ -93,8 +115,8 @@ class NetCashService:
             except (IndexError, ValueError):
                 pass
         
-        # Generar nuevo folio
         nuevo_numero = ultimo_numero + 1
+        logger.warning(f"[NetCash] Usando método legacy para folio: NC-{nuevo_numero:06d}")
         return f"NC-{nuevo_numero:06d}"
     
     # ==================== CREACIÓN Y ACTUALIZACIÓN ====================
