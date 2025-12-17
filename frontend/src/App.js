@@ -5,6 +5,7 @@ import axios from "axios";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/Clientes";
+import Beneficiarios from "@/pages/Beneficiarios";
 import OperacionDetalle from "@/pages/OperacionDetalle";
 import PendientesMBControl from "@/pages/PendientesMBControl";
 import AltaClienteTelegram from "@/pages/AltaClienteTelegram";
@@ -25,6 +26,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clientes" element={<Clientes />} />
+          <Route path="/beneficiarios" element={<Beneficiarios />} />
           <Route path="/operacion/:id" element={<OperacionDetalle />} />
           <Route path="/solicitud-netcash/:id" element={<SolicitudNetCashDetalle />} />
           <Route path="/pendientes-mbcontrol" element={<PendientesMBControl />} />

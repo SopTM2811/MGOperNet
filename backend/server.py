@@ -1688,6 +1688,164 @@ async def actualizar_cuenta_deposito(
         logger.error(f"Error actualizando cuenta: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================
+# RUTAS DE BENEFICIARIOS FRECUENTES
+# ============================================
+
+@api_router.get("/beneficiarios-frecuentes")
+async def listar_beneficiarios_frecuentes(cliente_id: Optional[str] = None):
+    """
+    Lista todos los beneficiarios frecuentes.
+    Opcionalmente filtra por cliente_id.
+    """
+    try:
+        query = {"activo": True}
+        if cliente_id:
+            query["cliente_id"] = cliente_id
+        
+        beneficiarios = await db.netcash_beneficiarios_frecuentes.find(
+            query, {"_id": 0}
+        ).sort("nombre_beneficiario", 1).to_list(1000)
+        
+        return beneficiarios
+        
+    except Exception as e:
+        logger.error(f"Error listando beneficiarios: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/beneficiarios-frecuentes")
+async def crear_beneficiario_frecuente(
+    cliente_id: str = Form(...),
+    nombre_beneficiario: str = Form(...),
+    idmex_beneficiario: str = Form(...)
+):
+    """
+    Crea un nuevo beneficiario frecuente para un cliente.
+    """
+    try:
+        from uuid import uuid4
+        
+        # Validar que el cliente existe
+        cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
+        if not cliente:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        
+        # Validar IDMEX (10 dígitos)
+        if not idmex_beneficiario or len(idmex_beneficiario) != 10 or not idmex_beneficiario.isdigit():
+            raise HTTPException(status_code=400, detail="IDMEX debe tener exactamente 10 dígitos")
+        
+        # Verificar si ya existe
+        existing = await db.netcash_beneficiarios_frecuentes.find_one({
+            "cliente_id": cliente_id,
+            "nombre_beneficiario": nombre_beneficiario.upper(),
+            "activo": True
+        })
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Este beneficiario ya existe para el cliente")
+        
+        beneficiario_id = f"bf_{uuid4().hex[:8]}"
+        
+        beneficiario = {
+            "id": beneficiario_id,
+            "cliente_id": cliente_id,
+            "idmex": cliente.get("telegram_id", ""),  # IDMEX del cliente
+            "nombre_beneficiario": nombre_beneficiario.upper(),
+            "idmex_beneficiario": idmex_beneficiario,
+            "alias_mostrar": nombre_beneficiario.upper(),
+            "clabe": None,
+            "terminacion": None,
+            "banco": None,
+            "fecha_creacion": datetime.now(timezone.utc),
+            "ultima_vez_usado": datetime.now(timezone.utc),
+            "activo": True
+        }
+        
+        await db.netcash_beneficiarios_frecuentes.insert_one(beneficiario)
+        
+        logger.info(f"Beneficiario creado: {beneficiario_id} para cliente {cliente_id}")
+        
+        del beneficiario["_id"] if "_id" in beneficiario else None
+        return beneficiario
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creando beneficiario: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/beneficiarios-frecuentes/{beneficiario_id}")
+async def actualizar_beneficiario_frecuente(
+    beneficiario_id: str,
+    nombre_beneficiario: Optional[str] = Form(None),
+    idmex_beneficiario: Optional[str] = Form(None)
+):
+    """
+    Actualiza un beneficiario frecuente existente.
+    """
+    try:
+        # Verificar que existe
+        beneficiario = await db.netcash_beneficiarios_frecuentes.find_one(
+            {"id": beneficiario_id, "activo": True}
+        )
+        
+        if not beneficiario:
+            raise HTTPException(status_code=404, detail="Beneficiario no encontrado")
+        
+        update_data = {"ultima_vez_usado": datetime.now(timezone.utc)}
+        
+        if nombre_beneficiario:
+            update_data["nombre_beneficiario"] = nombre_beneficiario.upper()
+            update_data["alias_mostrar"] = nombre_beneficiario.upper()
+        
+        if idmex_beneficiario:
+            if len(idmex_beneficiario) != 10 or not idmex_beneficiario.isdigit():
+                raise HTTPException(status_code=400, detail="IDMEX debe tener exactamente 10 dígitos")
+            update_data["idmex_beneficiario"] = idmex_beneficiario
+        
+        await db.netcash_beneficiarios_frecuentes.update_one(
+            {"id": beneficiario_id},
+            {"$set": update_data}
+        )
+        
+        logger.info(f"Beneficiario actualizado: {beneficiario_id}")
+        
+        return {"success": True, "message": "Beneficiario actualizado"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error actualizando beneficiario: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/beneficiarios-frecuentes/{beneficiario_id}")
+async def eliminar_beneficiario_frecuente(beneficiario_id: str):
+    """
+    Elimina (desactiva) un beneficiario frecuente.
+    """
+    try:
+        result = await db.netcash_beneficiarios_frecuentes.update_one(
+            {"id": beneficiario_id},
+            {"$set": {"activo": False}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Beneficiario no encontrado")
+        
+        logger.info(f"Beneficiario eliminado: {beneficiario_id}")
+        
+        return {"success": True, "message": "Beneficiario eliminado"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error eliminando beneficiario: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Montar archivos estáticos para comprobantes
 uploads_dir = Path("/app/backend/uploads")
 uploads_dir.mkdir(parents=True, exist_ok=True)
