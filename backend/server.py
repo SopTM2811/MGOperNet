@@ -430,9 +430,16 @@ async def obtener_operacion(operacion_id: str):
                 # Mapear monto_detectado a monto para que el frontend lo encuentre
                 if "monto_detectado" in comp_normalizado and "monto" not in comp_normalizado:
                     comp_normalizado["monto"] = comp_normalizado.get("monto_detectado", 0)
-                # Mapear archivo_url a file_url para el botón "Ver"
-                if "archivo_url" in comp_normalizado and "file_url" not in comp_normalizado:
-                    comp_normalizado["file_url"] = comp_normalizado.get("archivo_url")
+                # Normalizar archivo_url/file_url para que sea accesible desde el frontend
+                archivo_path = comp_normalizado.get("archivo_url") or comp_normalizado.get("file_url")
+                if archivo_path:
+                    # Convertir ruta absoluta del servidor a URL relativa accesible
+                    if archivo_path.startswith("/app/backend/uploads/"):
+                        archivo_path = archivo_path.replace("/app/backend/uploads/", "/api/uploads/")
+                    elif archivo_path.startswith("/uploads/"):
+                        archivo_path = "/api" + archivo_path
+                    comp_normalizado["file_url"] = archivo_path
+                    comp_normalizado["archivo_url"] = archivo_path
                 comprobantes_normalizados.append(comp_normalizado)
             
             # Obtener datos completos del cliente desde el catálogo
