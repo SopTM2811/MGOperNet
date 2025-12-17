@@ -1766,7 +1766,8 @@ async def crear_beneficiario_frecuente(
         
         logger.info(f"Beneficiario creado: {beneficiario_id} para cliente {cliente_id}")
         
-        del beneficiario["_id"] if "_id" in beneficiario else None
+        if "_id" in beneficiario:
+            del beneficiario["_id"]
         return beneficiario
         
     except HTTPException:
