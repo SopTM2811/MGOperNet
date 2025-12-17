@@ -858,13 +858,31 @@ async def eliminar_comprobante(operacion_id: str, comprobante_idx: int):
             "monto_depositado_cliente": nuevo_monto_total,
             "monto_total_comprobantes": nuevo_monto_total,
             "total_comprobantes_validos": nuevo_monto_total,
-            "num_comprobantes_validos": len([c for c in comprobantes if c.get("es_valido")]),
-            # Limpiar cálculos previos ya que el monto cambió
-            "calculos": None,
-            "capital_netcash": None,
-            "costo_proveedor_monto": None,
-            "total_egreso": None
+            "num_comprobantes_validos": len([c for c in comprobantes if c.get("es_valido")])
         }
+        
+        # Regenerar cálculos automáticamente si hay monto válido
+        if nuevo_monto_total > 0:
+            porcentaje_comision = operacion.get("porcentaje_comision_cliente", 1.0)
+            calculos_dict = calculos_service.calcular_operacion(
+                monto_depositado_cliente=nuevo_monto_total,
+                comision_cliente_porcentaje=porcentaje_comision
+            )
+            update_data.update({
+                "calculos": calculos_dict,
+                "comision_cobrada": calculos_dict["comision_cliente_cobrada"],
+                "comision_cliente": calculos_dict["comision_cliente_cobrada"],
+                "costo_proveedor_monto": calculos_dict["comision_proveedor"],
+                "capital_netcash": calculos_dict["capital_netcash"],
+                "total_egreso": calculos_dict["total_egreso"]
+            })
+        else:
+            update_data.update({
+                "calculos": None,
+                "capital_netcash": None,
+                "costo_proveedor_monto": None,
+                "total_egreso": None
+            })
         
         await collection.update_one(
             {"id": operacion_id},
