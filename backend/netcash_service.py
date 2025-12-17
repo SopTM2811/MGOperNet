@@ -423,25 +423,36 @@ class NetCashService:
             } if cuenta_beneficiaria else None
             
             # Crear detalle del comprobante (con hash para detección de duplicados)
+            # ⭐ UNIFICADO: Misma estructura que comprobantes Web
             comprobante_detalle = {
                 "archivo_url": archivo_url,
+                "file_url": archivo_url,  # Alias para compatibilidad con frontend
                 "nombre_archivo": nombre_archivo,
                 "archivo_hash": file_hash,  # Hash SHA-256 para detección de duplicados
                 "es_valido": es_valido,
                 "es_duplicado": False,  # Este NO es duplicado
+                # Datos extraídos por OCR (igual que Web)
+                "monto": monto_detectado,
+                "monto_detectado": monto_detectado,  # Mantener por compatibilidad
+                "banco_origen": banco_detectado,
+                "clave_rastreo": clave_rastreo,
+                "cuenta_origen": cuenta_beneficiaria,
+                "nombre_beneficiario": nombre_beneficiario,
+                "fecha_operacion": fecha_operacion,
+                "referencia": referencia,
+                # Datos de validación
                 "validacion_detalle": {
                     "razon": razon,
-                    "cuenta_activa_esperada": cuenta_activa,
-                    "texto_extraido_chars": len(texto) if texto else 0
+                    "cuenta_activa_esperada": cuenta_activa.get('clabe'),
                 },
                 "cuenta_detectada": cuenta_detectada,
-                "monto_detectado": monto_detectado,
-                # ⭐ NUEVO: Datos de validación OCR
+                # Datos de validación OCR
                 "ocr_data": {
-                    "banco_detectado": datos_parseados.get('banco'),
+                    "banco_detectado": banco_detectado,
                     "es_confiable": es_confiable,
                     "motivo_fallo": motivo_fallo if not es_confiable else None,
-                    "advertencias": advertencias
+                    "advertencias": advertencias,
+                    "datos_completos": datos_ocr  # Guardar respuesta completa de OCR
                 }
             }
             
