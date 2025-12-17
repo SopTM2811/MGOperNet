@@ -410,13 +410,16 @@ async def obtener_operacion(operacion_id: str):
         origen = "telegram"
         
         if operacion:
-            # Normalizar comprobantes: mapear monto_detectado a monto para compatibilidad con frontend
+            # Normalizar comprobantes: mapear campos para compatibilidad con frontend
             comprobantes_normalizados = []
             for comp in operacion.get("comprobantes", []):
                 comp_normalizado = dict(comp)
                 # Mapear monto_detectado a monto para que el frontend lo encuentre
                 if "monto_detectado" in comp_normalizado and "monto" not in comp_normalizado:
                     comp_normalizado["monto"] = comp_normalizado.get("monto_detectado", 0)
+                # Mapear archivo_url a file_url para el botón "Ver"
+                if "archivo_url" in comp_normalizado and "file_url" not in comp_normalizado:
+                    comp_normalizado["file_url"] = comp_normalizado.get("archivo_url")
                 comprobantes_normalizados.append(comp_normalizado)
             
             # Obtener datos completos del cliente desde el catálogo
