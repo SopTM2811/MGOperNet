@@ -413,10 +413,6 @@ const OperacionDetalle = () => {
                         {new Date(operacion.fecha_creacion).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}
                       </p>
                     </div>
-                    <div>
-                      <Label className="text-slate-600 text-sm">Código del Sistema</Label>
-                      <p className="font-medium">{operacion.codigo_operacion_sistema || 'Pendiente'}</p>
-                    </div>
                     
                     {/* Clave MBco / MBControl */}
                     <div className="md:col-span-2">
