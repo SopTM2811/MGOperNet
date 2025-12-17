@@ -1093,11 +1093,18 @@ async def calcular_operacion(
         if not comprobantes_validos:
             raise HTTPException(status_code=400, detail="No hay comprobantes válidos")
         
-        # Sumar montos de comprobantes
-        monto_total = sum(c.get("monto", 0) for c in comprobantes_validos)
+        # Sumar montos de comprobantes (usar monto o monto_detectado)
+        monto_total = sum(
+            c.get("monto") or c.get("monto_detectado") or 0 
+            for c in comprobantes_validos
+        )
+        
+        # Si aún es 0, usar monto_depositado_cliente de la operación (captura manual)
+        if monto_total <= 0:
+            monto_total = operacion.get("monto_depositado_cliente") or operacion.get("monto_total_declarado") or 0
         
         if monto_total <= 0:
-            raise HTTPException(status_code=400, detail="El monto total debe ser mayor a 0")
+            raise HTTPException(status_code=400, detail="El monto total debe ser mayor a 0. Verifica que los comprobantes tengan monto asignado.")
         
         # Usar comisión proporcionada o la que está guardada en la operación
         if comision_cliente_porcentaje is None:
