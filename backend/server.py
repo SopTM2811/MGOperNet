@@ -704,6 +704,13 @@ async def procesar_comprobante(
         comprobantes = operacion.get("comprobantes", [])
         comprobantes.append(comprobante.model_dump())
         
+        # Recalcular monto total de comprobantes válidos
+        nuevo_monto_total = sum(
+            c.get("monto", 0) or c.get("monto_detectado", 0)
+            for c in comprobantes
+            if c.get("es_valido") and not c.get("es_duplicado")
+        )
+        
         nuevo_estado = EstadoOperacion.ESPERANDO_DATOS_TITULAR if es_valido else EstadoOperacion.ESPERANDO_COMPROBANTES
         
         await db.operaciones.update_one(
@@ -711,12 +718,15 @@ async def procesar_comprobante(
             {
                 "$set": {
                     "comprobantes": comprobantes,
-                    "estado": nuevo_estado
+                    "estado": nuevo_estado,
+                    "monto_depositado_cliente": nuevo_monto_total,
+                    "monto_total_comprobantes": nuevo_monto_total,
+                    "num_comprobantes_validos": len([c for c in comprobantes if c.get("es_valido")])
                 }
             }
         )
         
-        logger.info(f"Comprobante procesado para operación {operacion_id}: {mensaje_validacion}")
+        logger.info(f"Comprobante procesado para operación {operacion_id}: {mensaje_validacion}. Monto total: {nuevo_monto_total}")
         
         return {
             "success": True,
