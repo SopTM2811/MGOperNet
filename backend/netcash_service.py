@@ -420,7 +420,21 @@ class NetCashService:
             fecha_operacion = datos_ocr.get('fecha')
             referencia = datos_ocr.get('referencia')
             
-            # ⭐ NUEVO: Validar y normalizar monto - detectar valores concatenados/inválidos
+            # ⭐ NUEVO: Detectar si hay transacciones múltiples en el documento
+            tiene_multiples_transacciones = datos_ocr.get('transacciones_multiples', False)
+            cantidad_transacciones = datos_ocr.get('cantidad_transacciones', 1)
+            montos_individuales = datos_ocr.get('montos_individuales')
+            
+            if tiene_multiples_transacciones or cantidad_transacciones > 1:
+                logger.warning(f"[NetCash-OCR] ⚠️ DOCUMENTO CON MÚLTIPLES TRANSACCIONES: {cantidad_transacciones}")
+                logger.warning(f"[NetCash-OCR] ⚠️ Montos individuales: {montos_individuales}")
+                es_confiable = False
+                motivo_fallo = "transacciones_multiples"
+                advertencias.append(f"Este documento contiene {cantidad_transacciones} transacciones. Por favor indica el monto total que deseas registrar.")
+                if montos_individuales:
+                    advertencias.append(f"Montos detectados: {montos_individuales}")
+            
+            # Validar y normalizar monto - detectar valores concatenados/inválidos
             monto_detectado = None
             if monto_detectado_raw:
                 if isinstance(monto_detectado_raw, (int, float)):
@@ -431,7 +445,12 @@ class NetCashService:
                     es_confiable = False
                     motivo_fallo = "monto_multiple_valores"
                     advertencias.append(f"Se detectaron múltiples montos: {monto_detectado_raw}. Requiere revisión manual.")
-                    monto_detectado = monto_detectado_raw[0] if monto_detectado_raw else 0
+                    # Calcular suma si es posible
+                    try:
+                        monto_detectado = sum([float(m) for m in monto_detectado_raw if m])
+                        advertencias.append(f"Suma detectada: ${monto_detectado:,.2f}")
+                    except:
+                        monto_detectado = 0
                 elif isinstance(monto_detectado_raw, str):
                     # Intentar parsear - detectar si tiene múltiples valores concatenados
                     monto_str = str(monto_detectado_raw)
@@ -456,8 +475,28 @@ class NetCashService:
                     if es_concatenado:
                         es_confiable = False
                         motivo_fallo = "monto_concatenado"
-                        advertencias.append(f"Formato de monto inválido: {monto_str}. Parece contener múltiples valores.")
-                        monto_detectado = 0
+                        advertencias.append(f"Formato de monto detectado: {monto_str}. Parece contener múltiples valores.")
+                        # Intentar separar y sumar
+                        try:
+                            partes = monto_str.replace('$', '').split(',')
+                            # Filtrar y sumar valores que parecen montos
+                            montos_parseados = []
+                            for parte in partes:
+                                parte = parte.strip()
+                                if parte and '.' in parte:
+                                    try:
+                                        m = float(parte.replace(',', ''))
+                                        if m > 1000:  # Solo considerar montos razonables
+                                            montos_parseados.append(m)
+                                    except:
+                                        pass
+                            if montos_parseados:
+                                monto_detectado = sum(montos_parseados)
+                                advertencias.append(f"Suma sugerida: ${monto_detectado:,.2f} ({len(montos_parseados)} montos)")
+                            else:
+                                monto_detectado = 0
+                        except:
+                            monto_detectado = 0
                     else:
                         try:
                             monto_detectado = float(monto_str.replace(",", "").replace("$", "").strip())
