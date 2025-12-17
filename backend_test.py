@@ -2730,11 +2730,13 @@ class BackendTester:
         logger.info("=" * 60)
         
         tests = [
+            ("Issue 1: OCR Concatenation Detection", self.test_ocr_concatenation_detection),
+            ("Issue 2a: Re-OCR Auto-Regenerates Calculations", self.test_reocr_auto_regenerates_calculations),
+            ("Issue 2b: DELETE Comprobante Auto-Regenerates Calculations", self.test_delete_comprobante_auto_regenerates_calculations),
+            ("Issue 2c: PATCH Comprobante Auto-Regenerates Calculations", self.test_patch_comprobante_auto_regenerates_calculations),
+            ("Backend Health Check", self.test_backend_health),
             ("Telegram OCR Success Flow Fixes", self.test_telegram_ocr_success_flow),
-            ("Beneficiarios CRUD API - Endpoints en Español", self.test_beneficiarios_crud_api),
-            ("Bug Fix 1 & 2 - Timezone y Comprobantes NC-000208", self.test_timezone_bug_fix_nc_000208),
-            ("P0 - Flujo de captura manual por fallo OCR", self.test_flujo_captura_manual_por_fallo_ocr),
-            ("NetCash - Flujo completo end-to-end con usuario 19440987", self.test_netcash_flujo_completo_telegram)
+            ("Beneficiarios CRUD API - Endpoints en Español", self.test_beneficiarios_crud_api)
         ]
         
         results = []
