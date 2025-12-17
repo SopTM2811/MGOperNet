@@ -626,11 +626,18 @@ const OperacionDetalle = () => {
                                 
                                 {/* Botones de acción */}
                                 <div className="flex flex-wrap gap-2 mt-3">
-                                  {(comp.file_url || comp.archivo) && (
+                                  {(comp.file_url || comp.archivo || comp.archivo_url) && (
                                     <Button
                                       size="sm"
                                       className="bg-blue-600 hover:bg-blue-700 text-white"
-                                      onClick={() => window.open(comp.file_url || comp.archivo, '_blank')}
+                                      onClick={() => {
+                                        const fileUrl = comp.file_url || comp.archivo || comp.archivo_url;
+                                        // Si la URL es relativa (/api/...), construir URL completa con el backend
+                                        const fullUrl = fileUrl.startsWith('/api') 
+                                          ? `${process.env.REACT_APP_BACKEND_URL}${fileUrl}`
+                                          : fileUrl;
+                                        window.open(fullUrl, '_blank');
+                                      }}
                                     >
                                       <Eye className="h-4 w-4 mr-1" />
                                       Ver
