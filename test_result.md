@@ -191,13 +191,58 @@
 - Titular tab: ✅ WORKING
 - Cálculos tab: ✅ WORKING
 
+## Bug Fixes Testing Results - 3 Specific Fixes
+
+### Test Date: 2025-12-17 21:14:20 UTC
+
+#### ✅ Bug Fix 1: View Comprobante (File Access) - VERIFIED
+- **Test Operation**: nc-1765997234254 (NC-000213)
+- **Status**: WORKING ✅
+- **File URL Format**: `/api/uploads/comprobantes_telegram/nc-1765997234254_CASTEL 223,000 RECURSO PARA  CABO 11 DIC.pdf`
+- **File Access Test**: HTTP 200, Content-Type: application/pdf
+- **Verification**: ✅ File URLs start with `/api/uploads/` and files are directly accessible
+
+#### ✅ Bug Fix 2: Re-OCR validates against bank rules - VERIFIED
+- **Test Operation**: nc-1765997234254, comprobante index 0
+- **Status**: WORKING ✅
+- **Response Fields Verified**:
+  - `es_valido`: true ✅
+  - `nuevo_monto_total`: 223000.0 ✅
+  - `mensaje`: "Monto detectado: $223,000.00" ✅
+- **Bank Rules Validation**: ✅ Validates against cuenta activa (FONDEADORA - 699180600007037228)
+- **Fix Applied**: Corrected method call from `validar_contra_cuenta` to `validar_comprobante`
+
+#### ✅ Bug Fix 3: Monto total updates when comprobantes change - VERIFIED
+- **Test Operation**: nc-1765997234254, comprobante index 0
+- **Status**: WORKING ✅
+- **PATCH Endpoint**: `/api/operaciones/{id}/comprobantes/{idx}` ✅
+- **Response Verification**:
+  - `nuevo_monto_total`: Updated correctly ✅
+  - `calculos`: Cleared (set to null) after monto change ✅
+- **Database Update**: Monto changes reflected in operation ✅
+
+#### ✅ Additional Verification: Re-OCR Button Availability
+- **Status**: WORKING ✅
+- **Verification**: Re-OCR button available for ALL comprobantes with files (not just invalid ones)
+- **File URL Pattern**: All Telegram operations return file_url with `/api/uploads/` prefix ✅
+
+### Bug Fixes Summary:
+- **3/3 Bug Fixes VERIFIED** ✅
+- **All endpoints working correctly** ✅
+- **File access working properly** ✅
+- **Bank rules validation implemented** ✅
+- **Monto updates and calculos clearing working** ✅
+
 ## Implementation Summary
 
 ### Fixed Issues:
 1. **Telegram OCR Success Flow** - Calculations now properly populated
 2. **Cancel Button Handler** - Registered in conversation handler
+3. **View Comprobante File Access** - File URLs with /api/uploads/ prefix working
+4. **Re-OCR Bank Rules Validation** - Validates against cuenta activa correctly
+5. **Monto Total Updates** - PATCH endpoint updates monto and clears calculos
 
 ### Files Modified:
 - `/app/backend/netcash_service.py` - Added `calculos_service` integration
-- `/app/backend/server.py` - Added calculation fields to operaciones list
+- `/app/backend/server.py` - Added calculation fields to operaciones list, fixed Re-OCR validation method
 - `/app/backend/telegram_bot.py` - Registered cancel operation handler
