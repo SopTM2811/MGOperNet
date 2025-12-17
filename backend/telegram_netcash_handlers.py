@@ -245,7 +245,13 @@ class TelegramNetCashHandlers:
             mensaje += "⚠️ **Importante:** Los comprobantes deben corresponder a la cuenta NetCash autorizada mostrada arriba.\n\n"
             mensaje += "Cuando termines de subir todos tus comprobantes, pulsa **\"➡️ Continuar\"**."
             
-            await query.edit_message_text(mensaje, parse_mode="Markdown")
+            # Agregar botón de cancelar
+            keyboard = [
+                [InlineKeyboardButton("❌ Cancelar operación", callback_data="nc_cancelar_operacion_inicio")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
             
             return NC_ESPERANDO_COMPROBANTE
             
