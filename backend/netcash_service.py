@@ -360,58 +360,67 @@ class NetCashService:
                 return False, "sin_cuenta_activa"
             
             # Determinar MIME type
-            mime_type = "application/pdf" if archivo_url.endswith(".pdf") else "image/jpeg"
+            mime_type = "application/pdf" if archivo_url.lower().endswith(".pdf") else "image/jpeg"
+            if archivo_url.lower().endswith(".png"):
+                mime_type = "image/png"
             
             # LOG EXPLÍCITO - Para correlacionar con logs del validador
-            logger.info(f"[NC TELEGRAM] Llamando a validar_comprobante() para archivo={nombre_archivo}")
-            logger.info(f"[NC TELEGRAM] Cuenta activa: banco={cuenta_activa.get('banco')} clabe={cuenta_activa.get('clabe')} beneficiario={cuenta_activa.get('beneficiario')}")
+            logger.info(f"[NC TELEGRAM] Procesando comprobante: {nombre_archivo}")
+            logger.info(f"[NC TELEGRAM] Cuenta activa: banco={cuenta_activa.get('banco')} clabe={cuenta_activa.get('clabe')}")
             
-            # Validar comprobante
-            es_valido, razon = self.validador_comprobantes.validar_comprobante(
-                archivo_url, mime_type, cuenta_activa
-            )
+            # ⭐ UNIFICADO: Usar el mismo OCR de Web (Gemini Vision) para Telegram
+            from ocr_service import ocr_service
             
-            # Extraer texto para detectar datos
-            texto = self.validador_comprobantes.extraer_texto_comprobante(archivo_url, mime_type)
+            logger.info(f"[NetCash-OCR] Usando OCR unificado (Gemini Vision)...")
+            datos_ocr = await ocr_service.leer_comprobante(archivo_url, mime_type)
             
-            # ⭐ NUEVO: Usar parsers específicos por banco
-            logger.info(f"[NetCash-OCR] Usando parser específico por banco...")
-            datos_parseados = banco_parser_factory.parsear_comprobante(texto)
+            # Verificar si hubo error en OCR
+            if datos_ocr.get("error"):
+                logger.warning(f"[NetCash-OCR] Error en OCR: {datos_ocr.get('error')}")
+                es_confiable = False
+                motivo_fallo = "error_ocr"
+                advertencias = [datos_ocr.get("error")]
+            else:
+                es_confiable = True
+                motivo_fallo = None
+                advertencias = []
             
-            # ⭐ NUEVO: Validar confianza del OCR
-            capital_esperado = solicitud.get('monto_ligas')  # Puede ser None si aún no se ha declarado
-            es_confiable, motivo_fallo, advertencias = ocr_confidence_validator.validar_confianza_ocr(
-                datos_ocr=datos_parseados,
-                capital_esperado=Decimal(str(capital_esperado)) if capital_esperado else None
-            )
+            # Extraer datos del OCR unificado
+            monto_detectado = datos_ocr.get('monto')
+            banco_detectado = datos_ocr.get('banco_emisor')
+            clave_rastreo = datos_ocr.get('clave_rastreo')
+            cuenta_beneficiaria = datos_ocr.get('cuenta_beneficiaria')
+            nombre_beneficiario = datos_ocr.get('nombre_beneficiario')
+            fecha_operacion = datos_ocr.get('fecha')
+            referencia = datos_ocr.get('referencia')
             
-            logger.info(f"[NetCash-OCR] Confianza OCR: {es_confiable}")
-            if not es_confiable:
-                logger.warning(f"[NetCash-OCR] ⚠️ OCR NO confiable - Motivo: {motivo_fallo}")
-                logger.warning(f"[NetCash-OCR] Advertencias: {advertencias}")
+            logger.info(f"[NetCash-OCR] Datos extraídos: monto={monto_detectado}, banco={banco_detectado}, clave={clave_rastreo}")
             
-            # Extraer datos del parseo
-            cuenta_detectada = None
-            monto_detectado = datos_parseados.get('monto_detectado')
+            # Validar si el comprobante es válido (CLABE coincide con cuenta activa)
+            clabe_activa = cuenta_activa.get('clabe', '')
+            es_valido = False
+            razon = "CLABE no coincide con cuenta activa"
             
-            if datos_parseados.get('clabe_ordenante'):
-                cuenta_detectada = {
-                    "clabe": datos_parseados.get('clabe_ordenante'),
-                    "beneficiario": datos_parseados.get('beneficiario_reportado')
-                }
+            if cuenta_beneficiaria:
+                # Limpiar y comparar CLABEs
+                cuenta_limpia = str(cuenta_beneficiaria).replace(" ", "").replace("-", "").replace("*", "")
+                if clabe_activa in cuenta_limpia or cuenta_limpia in clabe_activa:
+                    es_valido = True
+                    razon = "CLABE coincide con cuenta activa"
+                elif len(cuenta_limpia) >= 4 and clabe_activa[-4:] == cuenta_limpia[-4:]:
+                    es_valido = True
+                    razon = "Últimos 4 dígitos de CLABE coinciden"
             
-            # Fallback: si el parser específico no encontró datos, usar método anterior
-            if not monto_detectado:
-                logger.info(f"[NetCash-OCR] Parser no encontró monto, usando método fallback...")
-                monto_detectado = self._extraer_monto_del_texto(texto)
+            # Si no se detectó monto, marcar como no confiable
+            if not monto_detectado or monto_detectado == 0:
+                es_confiable = False
+                motivo_fallo = "sin_monto_detectado"
+                advertencias.append("No se pudo detectar el monto del comprobante")
             
-            if not cuenta_detectada or not cuenta_detectada.get('clabe'):
-                logger.info(f"[NetCash-OCR] Parser no encontró CLABE, usando método fallback...")
-                clabes_detectadas = self._extraer_clabes_del_texto(texto)
-                if clabes_detectadas:
-                    cuenta_detectada = {
-                        "clabe": clabes_detectadas[0] if clabes_detectadas else None
-                    }
+            cuenta_detectada = {
+                "clabe": cuenta_beneficiaria,
+                "beneficiario": nombre_beneficiario
+            } if cuenta_beneficiaria else None
             
             # Crear detalle del comprobante (con hash para detección de duplicados)
             comprobante_detalle = {
