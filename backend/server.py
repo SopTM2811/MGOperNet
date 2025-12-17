@@ -464,8 +464,12 @@ async def obtener_operacion(operacion_id: str):
                     "monto_total_declarado": operacion.get("monto_total_declarado"),
                     "beneficiario_declarado": operacion.get("beneficiario_declarado"),
                 } if operacion.get("modo_captura") == "manual_por_fallo_ocr" else None,
-                # Calcular monto si no está definido
-                "calculos": None
+                # Campos de cálculos (si ya se calcularon)
+                "capital_netcash": operacion.get("capital_netcash"),
+                "costo_proveedor_monto": operacion.get("costo_proveedor_monto"),
+                "costo_proveedor_pct": operacion.get("costo_proveedor_pct"),
+                "total_egreso": operacion.get("total_egreso"),
+                "calculos": operacion.get("calculos")
             }
             
             # Calcular monto de comprobantes
