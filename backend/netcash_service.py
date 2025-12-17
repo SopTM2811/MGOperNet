@@ -408,7 +408,7 @@ class NetCashService:
                 advertencias = []
             
             # Extraer datos del OCR unificado
-            monto_detectado = datos_ocr.get('monto')
+            monto_detectado_raw = datos_ocr.get('monto')
             banco_detectado = datos_ocr.get('banco_emisor')
             clave_rastreo = datos_ocr.get('clave_rastreo')
             cuenta_beneficiaria = datos_ocr.get('cuenta_beneficiaria')
@@ -416,7 +416,51 @@ class NetCashService:
             fecha_operacion = datos_ocr.get('fecha')
             referencia = datos_ocr.get('referencia')
             
-            logger.info(f"[NetCash-OCR] Datos extraídos: monto={monto_detectado}, banco={banco_detectado}, clave={clave_rastreo}")
+            # ⭐ NUEVO: Validar y normalizar monto - detectar valores concatenados/inválidos
+            monto_detectado = None
+            if monto_detectado_raw:
+                if isinstance(monto_detectado_raw, (int, float)):
+                    monto_detectado = monto_detectado_raw
+                elif isinstance(monto_detectado_raw, list):
+                    # OCR devolvió múltiples valores - marcar como no confiable
+                    logger.warning(f"[NetCash-OCR] ⚠️ Monto es lista (múltiples valores detectados): {monto_detectado_raw}")
+                    es_confiable = False
+                    motivo_fallo = "monto_multiple_valores"
+                    advertencias.append(f"Se detectaron múltiples montos: {monto_detectado_raw}. Requiere revisión manual.")
+                    monto_detectado = monto_detectado_raw[0] if monto_detectado_raw else 0
+                elif isinstance(monto_detectado_raw, str):
+                    # Intentar parsear - detectar si tiene múltiples valores concatenados
+                    monto_str = str(monto_detectado_raw)
+                    # Detectar patrones de valores concatenados (ej: "500,000.00,500,000.00")
+                    if monto_str.count('.00') > 1 or monto_str.count(',') > 2:
+                        logger.warning(f"[NetCash-OCR] ⚠️ Monto parece tener valores concatenados: {monto_str}")
+                        es_confiable = False
+                        motivo_fallo = "monto_concatenado"
+                        advertencias.append(f"Formato de monto inválido: {monto_str}. Parece contener múltiples valores.")
+                        monto_detectado = 0
+                    else:
+                        try:
+                            monto_detectado = float(monto_str.replace(",", "").replace("$", "").strip())
+                        except ValueError:
+                            logger.warning(f"[NetCash-OCR] ⚠️ No se pudo parsear monto: {monto_str}")
+                            es_confiable = False
+                            motivo_fallo = "monto_no_parseable"
+                            advertencias.append(f"No se pudo interpretar el monto: {monto_str}")
+                            monto_detectado = 0
+            
+            # Validar otros campos por valores concatenados
+            if banco_detectado and isinstance(banco_detectado, str):
+                # Detectar bancos concatenados (ej: "banregiobanregio")
+                bancos_conocidos = ["bbva", "banregio", "banamex", "santander", "hsbc", "scotiabank", "banorte"]
+                banco_lower = banco_detectado.lower()
+                matches = sum(1 for b in bancos_conocidos if b in banco_lower)
+                if matches > 1 or (len(banco_detectado) > 15 and any(b in banco_lower for b in bancos_conocidos)):
+                    logger.warning(f"[NetCash-OCR] ⚠️ Banco parece tener valores concatenados: {banco_detectado}")
+                    es_confiable = False
+                    motivo_fallo = "datos_concatenados"
+                    advertencias.append(f"Datos de banco parecen inválidos: {banco_detectado}")
+            
+            logger.info(f"[NetCash-OCR] Datos extraídos: monto={monto_detectado}, banco={banco_detectado}, clave={clave_rastreo}, es_confiable={es_confiable}")
             
             # Validar si el comprobante es válido (CLABE coincide con cuenta activa)
             clabe_activa = cuenta_activa.get('clabe', '')
