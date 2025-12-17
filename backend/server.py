@@ -1960,7 +1960,8 @@ async def eliminar_beneficiario_frecuente(beneficiario_id: str):
 # Montar archivos estáticos para comprobantes
 uploads_dir = Path("/app/backend/uploads")
 uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+# Montar archivos estáticos en /api/uploads para compatibilidad con ingress
+app.mount("/api/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # Include routers in the main app
 app.include_router(api_router)
