@@ -70,15 +70,54 @@ async def notificar_ana_telegram(operacion: Dict[str, Any]) -> bool:
 async def notificar_ana_email(operacion: Dict[str, Any], backend_url: str = "") -> bool:
     """
     Envía notificación a Ana por email cuando una operación necesita clave MBControl.
-    
-    NOTA: Requiere configuración SMTP en .env para funcionar.
+    Usa SMTP con App Password (no expira).
     """
-    # Por ahora solo logueamos, ya que requiere SMTP configurado
-    folio = operacion.get("folio_mbco", "N/A")
-    logger.info(f"[PENDIENTE SMTP] Notificación email a Ana para operación {folio}")
-    logger.info(f"Destinatario: {ANA_EMAIL}")
-    logger.info(f"Asunto: Nueva operación NetCash lista - {folio}")
-    
-    # TODO: Implementar envío real cuando SMTP esté configurado
-    # Por ahora retorna False indicando que no se envió
-    return False
+    try:
+        from smtp_service import smtp_service
+        
+        folio = operacion.get("folio_mbco", "N/A")
+        cliente = operacion.get("cliente_nombre", "N/A")
+        monto_total = operacion.get("monto_depositado_cliente", 0) or operacion.get("monto_total_comprobantes", 0)
+        fecha = operacion.get("fecha_creacion", "N/A")
+        comision = operacion.get("comision_cobrada", 0)
+        capital = operacion.get("capital_netcash", 0)
+        
+        asunto = f"🔔 Nueva operación NetCash lista - {folio}"
+        
+        cuerpo = f"""Hola Ana,
+
+Hay una nueva operación NetCash pendiente de asignar clave MBControl:
+
+📋 DETALLES DE LA OPERACIÓN
+═══════════════════════════════════════
+🔑 Folio NetCash: {folio}
+👤 Cliente: {cliente}
+💵 Total comprobantes: ${monto_total:,.2f}
+💸 Comisión: ${comision:,.2f}
+🏦 Capital NetCash: ${capital:,.2f}
+📅 Fecha: {fecha[:10] if len(str(fecha)) > 10 else fecha}
+
+Para asignar la clave MBControl, puedes:
+1. Usar el comando en Telegram: /mbco {folio} CLAVE_MBCO
+2. O ingresar desde el panel web en Pendientes MBControl
+
+Saludos,
+Sistema NetCash MBco
+"""
+        
+        enviado = smtp_service.enviar_correo(
+            destinatario=ANA_EMAIL,
+            asunto=asunto,
+            cuerpo=cuerpo
+        )
+        
+        if enviado:
+            logger.info(f"[Email] Notificación enviada a Ana ({ANA_EMAIL}) para operación {folio}")
+        else:
+            logger.warning(f"[Email] No se pudo enviar notificación a Ana para operación {folio}")
+        
+        return enviado
+        
+    except Exception as e:
+        logger.error(f"Error en notificar_ana_email: {str(e)}")
+        return False
