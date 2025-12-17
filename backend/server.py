@@ -1078,10 +1078,17 @@ async def calcular_operacion(
 ):
     """
     Calcula los montos de una operación NetCash.
+    Busca en operaciones web y solicitudes Telegram.
     """
     try:
-        # Obtener operación
+        # Obtener operación (buscar en ambas colecciones)
+        collection = "operaciones"
         operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        
+        if not operacion:
+            # Buscar en solicitudes Telegram
+            operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+            collection = "solicitudes_netcash"
         
         if not operacion:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
