@@ -1269,6 +1269,7 @@ class TelegramBotNetCash:
             },
             fallbacks=[
                 CallbackQueryHandler(self.nc_handlers.cancelar_operacion, pattern="^nc_cancelar$"),
+                CallbackQueryHandler(self.nc_handlers.cancelar_operacion_inicio, pattern="^nc_cancelar_operacion_inicio$"),
                 CommandHandler("start", self.start)
             ]
         )
