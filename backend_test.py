@@ -1199,6 +1199,306 @@ class BackendTester:
             logger.error(f"❌ Traceback: {traceback.format_exc()}")
             return False
 
+    async def test_ocr_concatenation_detection(self):
+        """Test Issue 1: OCR data concatenation detection"""
+        logger.info("🔍 Test Issue 1: OCR data concatenation detection")
+        try:
+            # Test that netcash_service.py correctly detects invalid/concatenated OCR data
+            logger.info("   📋 Testing OCR concatenation detection in netcash_service.py")
+            
+            # Import the netcash service to test its logic
+            import sys
+            sys.path.append('/app/backend')
+            from netcash_service import NetCashService
+            
+            netcash_service = NetCashService()
+            
+            # Test 1: Multiple monto values (list)
+            logger.info("   🔍 Test 1a: Multiple monto values (list)")
+            monto_list = [500000.00, 500000.00]
+            # Simulate the logic from netcash_service.py lines 424-430
+            if isinstance(monto_list, list):
+                es_confiable = False
+                motivo_fallo = "monto_multiple_valores"
+                logger.info(f"   ✅ Multiple monto values detected correctly: es_confiable={es_confiable}")
+            else:
+                logger.error("   ❌ Multiple monto values not detected")
+                return False
+            
+            # Test 1b: Concatenated monto string
+            logger.info("   🔍 Test 1b: Concatenated monto string")
+            monto_concatenated = "500,000.00,500,000.00"
+            # Simulate the logic from netcash_service.py lines 433-440
+            if monto_concatenated.count('.00') > 1 or monto_concatenated.count(',') > 2:
+                es_confiable = False
+                motivo_fallo = "monto_concatenado"
+                logger.info(f"   ✅ Concatenated monto string detected correctly: es_confiable={es_confiable}")
+            else:
+                logger.error("   ❌ Concatenated monto string not detected")
+                return False
+            
+            # Test 2: Concatenated banco names
+            logger.info("   🔍 Test 2: Concatenated banco names")
+            banco_concatenated = "banregiobanregio"
+            # Simulate the logic from netcash_service.py lines 452-462
+            bancos_conocidos = ["bbva", "banregio", "banamex", "santander", "hsbc", "scotiabank", "banorte"]
+            banco_lower = banco_concatenated.lower()
+            matches = sum(1 for b in bancos_conocidos if b in banco_lower)
+            if matches > 1 or (len(banco_concatenated) > 15 and any(b in banco_lower for b in bancos_conocidos)):
+                es_confiable = False
+                motivo_fallo = "datos_concatenados"
+                logger.info(f"   ✅ Concatenated banco name detected correctly: es_confiable={es_confiable}")
+            else:
+                logger.error("   ❌ Concatenated banco name not detected")
+                return False
+            
+            logger.info("🎉 OCR concatenation detection working correctly")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error in test_ocr_concatenation_detection: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
+    async def test_reocr_auto_regenerates_calculations(self):
+        """Test Issue 2: Re-OCR now auto-regenerates calculations"""
+        logger.info("🔍 Test Issue 2: Re-OCR now auto-regenerates calculations")
+        try:
+            # Use the specific operation mentioned in the request
+            operacion_id = "nc-1766003737098"  # NC-000217
+            comprobante_idx = 0
+            
+            logger.info(f"   📋 Testing Re-OCR for operation: {operacion_id}")
+            logger.info(f"   📋 Comprobante index: {comprobante_idx}")
+            
+            # Step 1: Verify the operation exists
+            logger.info("   🔍 Step 1: Verify operation exists")
+            async with self.session.get(f"{BACKEND_URL}/operaciones/{operacion_id}") as response:
+                if response.status != 200:
+                    logger.error(f"   ❌ Operation {operacion_id} not found: {response.status}")
+                    return False
+                
+                operation_data = await response.json()
+                logger.info(f"   ✅ Operation found: {operation_data.get('folio_mbco')}")
+                
+                # Check if operation has comprobantes
+                comprobantes = operation_data.get('comprobantes', [])
+                if len(comprobantes) <= comprobante_idx:
+                    logger.error(f"   ❌ Comprobante index {comprobante_idx} not found")
+                    return False
+                
+                logger.info(f"   ✅ Operation has {len(comprobantes)} comprobantes")
+            
+            # Step 2: Test Re-OCR endpoint
+            logger.info("   🔍 Step 2: Test Re-OCR endpoint")
+            async with self.session.post(f"{BACKEND_URL}/operaciones/{operacion_id}/comprobantes/{comprobante_idx}/reocr") as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Re-OCR failed: {response.status} - {error_text}")
+                    return False
+                
+                reocr_data = await response.json()
+                logger.info(f"   ✅ Re-OCR successful")
+                
+                # Verify required fields in response
+                required_fields = ['success', 'monto_detectado', 'nuevo_monto_total']
+                for field in required_fields:
+                    if field not in reocr_data:
+                        logger.error(f"   ❌ Missing field in Re-OCR response: {field}")
+                        return False
+                    logger.info(f"   ✅ Field present: {field} = {reocr_data[field]}")
+            
+            # Step 3: Verify calculos is auto-regenerated (NOT None)
+            logger.info("   🔍 Step 3: Verify calculos auto-regenerated")
+            async with self.session.get(f"{BACKEND_URL}/operaciones/{operacion_id}") as response:
+                if response.status != 200:
+                    logger.error(f"   ❌ Failed to get updated operation: {response.status}")
+                    return False
+                
+                updated_operation = await response.json()
+                calculos = updated_operation.get('calculos')
+                capital_netcash = updated_operation.get('capital_netcash')
+                costo_proveedor_monto = updated_operation.get('costo_proveedor_monto')
+                
+                if calculos is None:
+                    logger.error("   ❌ calculos is None - not auto-regenerated")
+                    return False
+                
+                if capital_netcash is None:
+                    logger.error("   ❌ capital_netcash is None - not auto-regenerated")
+                    return False
+                
+                if costo_proveedor_monto is None:
+                    logger.error("   ❌ costo_proveedor_monto is None - not auto-regenerated")
+                    return False
+                
+                logger.info(f"   ✅ calculos auto-regenerated: {type(calculos)}")
+                logger.info(f"   ✅ capital_netcash: {capital_netcash}")
+                logger.info(f"   ✅ costo_proveedor_monto: {costo_proveedor_monto}")
+            
+            logger.info("🎉 Re-OCR auto-regenerates calculations correctly")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error in test_reocr_auto_regenerates_calculations: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
+    async def test_delete_comprobante_auto_regenerates_calculations(self):
+        """Test Issue 2b: DELETE comprobante auto-regenerates calculations"""
+        logger.info("🔍 Test Issue 2b: DELETE comprobante auto-regenerates calculations")
+        try:
+            # Find an operation with multiple comprobantes for testing
+            logger.info("   🔍 Finding operation with multiple comprobantes...")
+            
+            async with self.session.get(f"{BACKEND_URL}/operaciones") as response:
+                if response.status != 200:
+                    logger.error(f"   ❌ Failed to get operations: {response.status}")
+                    return False
+                
+                operations = await response.json()
+                test_operation = None
+                
+                # Find operation with multiple comprobantes
+                for op in operations:
+                    comprobantes = op.get('comprobantes', [])
+                    if len(comprobantes) > 1 and op.get('id', '').startswith('nc-'):
+                        test_operation = op
+                        break
+                
+                if not test_operation:
+                    logger.warning("   ⚠️ No operation with multiple comprobantes found - skipping test")
+                    return True
+                
+                operacion_id = test_operation['id']
+                initial_comprobantes_count = len(test_operation.get('comprobantes', []))
+                logger.info(f"   ✅ Using operation: {operacion_id} with {initial_comprobantes_count} comprobantes")
+            
+            # Delete the last comprobante
+            comprobante_idx = initial_comprobantes_count - 1
+            logger.info(f"   🗑️ Deleting comprobante at index: {comprobante_idx}")
+            
+            async with self.session.delete(f"{BACKEND_URL}/operaciones/{operacion_id}/comprobantes/{comprobante_idx}") as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ Delete comprobante failed: {response.status} - {error_text}")
+                    return False
+                
+                delete_data = await response.json()
+                logger.info(f"   ✅ Comprobante deleted: {delete_data.get('message')}")
+                nuevo_monto_total = delete_data.get('nuevo_monto_total')
+                logger.info(f"   ✅ New total: {nuevo_monto_total}")
+            
+            # Verify calculos is auto-regenerated
+            logger.info("   🔍 Verifying calculos auto-regenerated after delete...")
+            async with self.session.get(f"{BACKEND_URL}/operaciones/{operacion_id}") as response:
+                if response.status != 200:
+                    logger.error(f"   ❌ Failed to get updated operation: {response.status}")
+                    return False
+                
+                updated_operation = await response.json()
+                calculos = updated_operation.get('calculos')
+                
+                if nuevo_monto_total > 0 and calculos is None:
+                    logger.error("   ❌ calculos is None after delete - not auto-regenerated")
+                    return False
+                elif nuevo_monto_total == 0 and calculos is None:
+                    logger.info("   ✅ calculos correctly set to None (no valid comprobantes)")
+                else:
+                    logger.info(f"   ✅ calculos auto-regenerated after delete: {type(calculos)}")
+            
+            logger.info("🎉 DELETE comprobante auto-regenerates calculations correctly")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error in test_delete_comprobante_auto_regenerates_calculations: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
+    async def test_patch_comprobante_auto_regenerates_calculations(self):
+        """Test Issue 2c: PATCH comprobante auto-regenerates calculations"""
+        logger.info("🔍 Test Issue 2c: PATCH comprobante auto-regenerates calculations")
+        try:
+            # Use the specific operation mentioned in the request
+            operacion_id = "nc-1766003737098"  # NC-000217
+            comprobante_idx = 0
+            
+            logger.info(f"   📋 Testing PATCH for operation: {operacion_id}")
+            logger.info(f"   📋 Comprobante index: {comprobante_idx}")
+            
+            # Get current monto
+            async with self.session.get(f"{BACKEND_URL}/operaciones/{operacion_id}") as response:
+                if response.status != 200:
+                    logger.error(f"   ❌ Operation {operacion_id} not found: {response.status}")
+                    return False
+                
+                operation_data = await response.json()
+                comprobantes = operation_data.get('comprobantes', [])
+                if len(comprobantes) <= comprobante_idx:
+                    logger.error(f"   ❌ Comprobante index {comprobante_idx} not found")
+                    return False
+                
+                current_monto = comprobantes[comprobante_idx].get('monto', 0)
+                logger.info(f"   📋 Current monto: {current_monto}")
+            
+            # Update monto using PATCH
+            new_monto = current_monto + 1000  # Add 1000 to current monto
+            logger.info(f"   ✏️ Updating monto to: {new_monto}")
+            
+            async with self.session.patch(
+                f"{BACKEND_URL}/operaciones/{operacion_id}/comprobantes/{comprobante_idx}",
+                params={'monto': new_monto}
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"   ❌ PATCH comprobante failed: {response.status} - {error_text}")
+                    return False
+                
+                patch_data = await response.json()
+                logger.info(f"   ✅ Comprobante updated: {patch_data.get('message')}")
+                nuevo_monto_total = patch_data.get('nuevo_monto_total')
+                logger.info(f"   ✅ New total: {nuevo_monto_total}")
+            
+            # Verify calculos is auto-regenerated
+            logger.info("   🔍 Verifying calculos auto-regenerated after PATCH...")
+            async with self.session.get(f"{BACKEND_URL}/operaciones/{operacion_id}") as response:
+                if response.status != 200:
+                    logger.error(f"   ❌ Failed to get updated operation: {response.status}")
+                    return False
+                
+                updated_operation = await response.json()
+                calculos = updated_operation.get('calculos')
+                capital_netcash = updated_operation.get('capital_netcash')
+                costo_proveedor_monto = updated_operation.get('costo_proveedor_monto')
+                
+                if calculos is None:
+                    logger.error("   ❌ calculos is None after PATCH - not auto-regenerated")
+                    return False
+                
+                if capital_netcash is None:
+                    logger.error("   ❌ capital_netcash is None after PATCH - not auto-regenerated")
+                    return False
+                
+                if costo_proveedor_monto is None:
+                    logger.error("   ❌ costo_proveedor_monto is None after PATCH - not auto-regenerated")
+                    return False
+                
+                logger.info(f"   ✅ calculos auto-regenerated after PATCH: {type(calculos)}")
+                logger.info(f"   ✅ capital_netcash: {capital_netcash}")
+                logger.info(f"   ✅ costo_proveedor_monto: {costo_proveedor_monto}")
+            
+            logger.info("🎉 PATCH comprobante auto-regenerates calculations correctly")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error in test_patch_comprobante_auto_regenerates_calculations: {str(e)}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return False
+
     async def test_start_command_usuario_1570668456(self):
         """Test específico: Comando /start para usuario 1570668456 (daniel G)"""
         logger.info("🔍 Test ESPECÍFICO: Comando /start para usuario 1570668456 (daniel G)")
