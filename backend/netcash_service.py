@@ -1072,10 +1072,19 @@ class NetCashService:
                 if monto and monto > 0:
                     total_comprobantes_validos += monto
             
-            # Calcular comisiones
-            porcentaje_comision_cliente = 1.00  # 1.00%
-            comision_cliente = total_comprobantes_validos * (porcentaje_comision_cliente / 100)
-            monto_ligas = total_comprobantes_validos - comision_cliente
+            # Calcular comisiones usando el servicio de cálculos (igual que Web)
+            from calculos_service import calculos_service
+            
+            porcentaje_comision_cliente = 1.00  # 1.00% (se puede obtener del cliente si tiene uno personalizado)
+            
+            # Usar el servicio de cálculos para generar todos los campos
+            calculos_dict = calculos_service.calcular_operacion(
+                monto_depositado_cliente=total_comprobantes_validos,
+                comision_cliente_porcentaje=porcentaje_comision_cliente
+            )
+            
+            comision_cliente = calculos_dict["comision_cliente_cobrada"]
+            monto_ligas = calculos_dict["capital_netcash"]
             
             # Obtener cuenta NetCash utilizada
             cuenta_activa = await cuenta_deposito_service.obtener_cuenta_activa()
@@ -1087,7 +1096,7 @@ class NetCashService:
                     "beneficiario": cuenta_activa.get("beneficiario")
                 }
             
-            # Actualizar solicitud con todos los datos completos
+            # Actualizar solicitud con todos los datos completos (incluyendo calculos para frontend)
             update_data = {
                 "total_comprobantes_validos": total_comprobantes_validos,
                 "num_comprobantes_validos": len(comprobantes_validos),
@@ -1095,6 +1104,15 @@ class NetCashService:
                 "porcentaje_comision_cliente": porcentaje_comision_cliente,
                 "comision_cliente": comision_cliente,
                 "monto_ligas": monto_ligas,
+                # Campos adicionales para compatibilidad con frontend
+                "monto_depositado_cliente": calculos_dict["monto_depositado_cliente"],
+                "porcentaje_comision_usado": calculos_dict["comision_cliente_porcentaje"],
+                "comision_cobrada": calculos_dict["comision_cliente_cobrada"],
+                "costo_proveedor_pct": calculos_dict["comision_proveedor_porcentaje"] / 100,
+                "costo_proveedor_monto": calculos_dict["comision_proveedor"],
+                "capital_netcash": calculos_dict["capital_netcash"],
+                "total_egreso": calculos_dict["total_egreso"],
+                "calculos": calculos_dict,  # Guardar el objeto completo de cálculos
                 "cuenta_netcash_usada": cuenta_netcash_info,
                 "updated_at": datetime.now(timezone.utc)
             }
