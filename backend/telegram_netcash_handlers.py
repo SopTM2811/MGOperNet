@@ -388,23 +388,67 @@ class TelegramNetCashHandlers:
     
     async def recibir_monto_comprobante_manual(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
-        Handler para recibir el monto manual de un comprobante específico.
+        Handler para recibir datos manuales del comprobante.
+        Primero recibe la cantidad de depósitos, luego el monto total.
         """
         solicitud_id = context.user_data.get('nc_solicitud_id')
         comp_idx = context.user_data.get('nc_comp_editar_idx')
+        esperando_cantidad = context.user_data.get('nc_esperando_cantidad_montos', False)
         
         if not solicitud_id or comp_idx is None:
             await update.message.reply_text("❌ Sesión expirada. Inicia de nuevo con /start")
             return ConversationHandler.END
         
         try:
-            # Validar que sea un número
-            monto_str = update.message.text.strip().replace(',', '').replace('$', '')
+            texto = update.message.text.strip()
+            
+            # PASO 1: Recibir cantidad de depósitos
+            if esperando_cantidad:
+                try:
+                    cantidad = int(texto)
+                    if cantidad < 1 or cantidad > 20:
+                        await update.message.reply_text(
+                            "❌ Por favor ingresa un número válido entre 1 y 20.",
+                            parse_mode="Markdown"
+                        )
+                        return NC_ESPERANDO_MONTO_MANUAL
+                    
+                    # Guardar cantidad y pedir monto
+                    context.user_data['nc_cantidad_depositos'] = cantidad
+                    context.user_data['nc_esperando_cantidad_montos'] = False
+                    
+                    if cantidad == 1:
+                        mensaje = "📝 **Ahora ingresa el monto del depósito**\n\n"
+                        mensaje += "Escribe el monto total.\n\n"
+                    else:
+                        mensaje = f"📝 **Perfecto, son {cantidad} depósitos.**\n\n"
+                        mensaje += "Ahora ingresa el **monto TOTAL** sumando todos los depósitos.\n\n"
+                        mensaje += f"_Por ejemplo, si son {cantidad} depósitos de $500,000 cada uno, "
+                        mensaje += f"el total sería ${500000 * cantidad:,.2f}_\n\n"
+                    
+                    mensaje += "**Ejemplos:**\n"
+                    mensaje += "• 500000\n"
+                    mensaje += "• 1500000\n"
+                    mensaje += "• 2000000.50\n\n"
+                    mensaje += "_Envía solo el número, sin símbolos ni comas._"
+                    
+                    await update.message.reply_text(mensaje, parse_mode="Markdown")
+                    return NC_ESPERANDO_MONTO_MANUAL
+                    
+                except ValueError:
+                    await update.message.reply_text(
+                        "❌ Por favor ingresa solo el número de depósitos (1, 2, 3, etc.)",
+                        parse_mode="Markdown"
+                    )
+                    return NC_ESPERANDO_MONTO_MANUAL
+            
+            # PASO 2: Recibir monto total
+            monto_str = texto.replace(',', '').replace('$', '')
             try:
                 monto = float(monto_str)
             except ValueError:
                 await update.message.reply_text(
-                    "❌ Por favor envía solo el monto numérico.\n\n**Ejemplos:** 50000 o 125000.50",
+                    "❌ Por favor envía solo el monto numérico.\n\n**Ejemplos:** 500000 o 1500000",
                     parse_mode="Markdown"
                 )
                 return NC_ESPERANDO_MONTO_MANUAL
@@ -412,7 +456,7 @@ class TelegramNetCashHandlers:
             # Validar que sea mayor a 0
             if monto <= 0:
                 await update.message.reply_text(
-                    "❌ El monto debe ser mayor a 0.\n\n**Ejemplo:** 50000",
+                    "❌ El monto debe ser mayor a 0.\n\n**Ejemplo:** 500000",
                     parse_mode="Markdown"
                 )
                 return NC_ESPERANDO_MONTO_MANUAL
@@ -425,12 +469,19 @@ class TelegramNetCashHandlers:
                 await update.message.reply_text("❌ Error: Comprobante no encontrado.")
                 return NC_ESPERANDO_COMPROBANTE
             
+            # Obtener cantidad de depósitos registrados
+            cantidad_depositos = context.user_data.get('nc_cantidad_depositos', 1)
+            
             # Actualizar el comprobante
             comprobantes[comp_idx]["monto"] = monto
             comprobantes[comp_idx]["monto_detectado"] = monto
             comprobantes[comp_idx]["es_valido"] = True  # Ahora es válido con monto manual
             comprobantes[comp_idx]["editado_manualmente"] = True
+            comprobantes[comp_idx]["cantidad_depositos_manual"] = cantidad_depositos
+            if "ocr_data" not in comprobantes[comp_idx]:
+                comprobantes[comp_idx]["ocr_data"] = {}
             comprobantes[comp_idx]["ocr_data"]["captura_manual_monto"] = True
+            comprobantes[comp_idx]["ocr_data"]["cantidad_depositos_reportada"] = cantidad_depositos
             
             # Guardar en BD
             from motor.motor_asyncio import AsyncIOMotorClient
@@ -443,12 +494,17 @@ class TelegramNetCashHandlers:
                 {"$set": {"comprobantes": comprobantes}}
             )
             
-            logger.info(f"[NC Telegram] ✅ Monto manual guardado: ${monto:,.2f} para comprobante {comp_idx}")
+            logger.info(f"[NC Telegram] ✅ Monto manual guardado: ${monto:,.2f} ({cantidad_depositos} depósito(s)) para comprobante {comp_idx}")
             
             # Contar comprobantes válidos
             validos = [c for c in comprobantes if c.get("es_valido")]
             
-            mensaje = f"✅ **Monto guardado: ${monto:,.2f}**\n\n"
+            if cantidad_depositos > 1:
+                mensaje = f"✅ **Monto guardado: ${monto:,.2f}**\n"
+                mensaje += f"({cantidad_depositos} depósitos registrados)\n\n"
+            else:
+                mensaje = f"✅ **Monto guardado: ${monto:,.2f}**\n\n"
+            
             mensaje += f"Llevamos **{len(comprobantes)}** comprobante(s) ({len(validos)} válido(s)).\n\n"
             mensaje += "¿Quieres subir otro comprobante o continuar al siguiente paso?"
             
@@ -462,6 +518,8 @@ class TelegramNetCashHandlers:
             
             # Limpiar contexto de edición
             context.user_data.pop('nc_comp_editar_idx', None)
+            context.user_data.pop('nc_cantidad_depositos', None)
+            context.user_data.pop('nc_esperando_cantidad_montos', None)
             
             return NC_ESPERANDO_COMPROBANTE
             
