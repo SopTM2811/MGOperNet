@@ -746,61 +746,48 @@ class TelegramNetCashHandlers:
                 comprobantes = solicitud.get("comprobantes", [])
                 num_comprobantes = len(comprobantes)
                 
-                # ⭐ MEJORADO: Si OCR no es confiable, permitir edición manual del monto específico
-                # en lugar de interrumpir todo el flujo
+                # ⭐ MODIFICADO: Si OCR no es confiable por multi-montos, CONTINUAR el flujo normal
+                # y mostrar advertencia al final con el folio de operación
                 if razon == "requiere_captura_manual":
                     logger.warning(f"[NC Telegram] OCR NO confiable para comprobante {num_comprobantes - 1}")
                     
                     # Obtener el último comprobante (el que acaba de fallar OCR)
                     ultimo_comp = comprobantes[-1] if comprobantes else None
                     ocr_data = ultimo_comp.get("ocr_data", {}) if ultimo_comp else {}
-                    advertencias = ocr_data.get("advertencias", [])
                     motivo_fallo = ocr_data.get("motivo_fallo", "")
-                    cantidad_transacciones = ocr_data.get("datos_completos", {}).get("cantidad_transacciones")
-                    montos_individuales = ocr_data.get("datos_completos", {}).get("montos_individuales")
                     
-                    mensaje = "⚠️ **Comprobante recibido - Se requiere captura manual**\n\n"
-                    mensaje += f"📄 Archivo: _{nombre_archivo}_\n\n"
+                    # Guardar advertencia en context para mostrar al final
+                    if 'nc_advertencias_comprobantes' not in context.user_data:
+                        context.user_data['nc_advertencias_comprobantes'] = []
                     
-                    # Mensaje específico según el tipo de problema
-                    if motivo_fallo == "transacciones_multiples" or (cantidad_transacciones and cantidad_transacciones > 1):
-                        mensaje += f"🔢 **Se detectaron múltiples depósitos en este archivo.**\n"
-                        if cantidad_transacciones:
-                            mensaje += f"Cantidad detectada: **{cantidad_transacciones} depósitos**\n"
-                        if montos_individuales:
-                            mensaje += f"Montos: {montos_individuales}\n"
-                        mensaje += "\n"
-                    elif motivo_fallo in ["monto_multiple_valores", "monto_concatenado"]:
-                        mensaje += "🔢 **El sistema detectó múltiples montos en este comprobante.**\n\n"
-                    elif motivo_fallo == "datos_concatenados":
-                        mensaje += "📋 **Los datos del comprobante aparecen concatenados o repetidos.**\n\n"
-                    elif motivo_fallo == "monto_no_parseable":
-                        mensaje += "❓ **No se pudo interpretar el monto del comprobante.**\n\n"
-                    elif motivo_fallo == "error_ocr":
-                        mensaje += "🔍 **Hubo un error al procesar el comprobante.**\n\n"
-                    else:
-                        mensaje += "📋 **El OCR no pudo extraer los datos correctamente.**\n\n"
+                    context.user_data['nc_advertencias_comprobantes'].append({
+                        'comprobante_idx': num_comprobantes - 1,
+                        'nombre_archivo': nombre_archivo,
+                        'motivo': motivo_fallo
+                    })
                     
-                    if advertencias:
-                        for adv in advertencias[:3]:  # Mostrar máximo 3 advertencias
-                            mensaje += f"• {adv}\n"
-                        mensaje += "\n"
+                    # Marcar solicitud como requiere revisión manual
+                    await netcash_service.db[netcash_service.COLLECTION_NAME].update_one(
+                        {"id": solicitud_id},
+                        {"$set": {"requiere_revision_manual": True, "motivo_revision": motivo_fallo}}
+                    )
                     
-                    mensaje += "**Por favor ingresa los datos manualmente** para que podamos procesar este comprobante correctamente.\n\n"
-                    mensaje += f"📊 Llevamos **{num_comprobantes}** comprobante(s) en total.\n"
+                    # CONTINUAR con el flujo normal - mostrar mensaje de éxito pero con nota
+                    mensaje = f"✅ **Comprobante recibido** – _{nombre_archivo}_\n\n"
+                    mensaje += f"⚠️ **Nota:** El sistema detectó datos complejos en este comprobante. "
+                    mensaje += f"Se procesará y al final de la operación recibirás más información.\n\n"
+                    mensaje += f"📊 Llevamos **{num_comprobantes}** comprobante(s) en total.\n\n"
+                    mensaje += "¿Tienes otro comprobante o continuamos?"
                     
-                    # Guardar índice del comprobante que necesita edición
-                    context.user_data['nc_comp_editar_idx'] = num_comprobantes - 1
-                    
-                    # Botones con opción de editar monto (obligatorio para continuar correctamente)
                     keyboard = [
-                        [InlineKeyboardButton("📝 Ingresar datos manuales", callback_data=f"nc_editar_monto_{solicitud_id}_{num_comprobantes - 1}")],
-                        [InlineKeyboardButton("🗑️ Descartar este comprobante", callback_data=f"nc_descartar_comp_{solicitud_id}_{num_comprobantes - 1}")],
-                        [InlineKeyboardButton("➕ Subir otro diferente", callback_data=f"nc_mas_comprobantes_{solicitud_id}")]
+                        [InlineKeyboardButton("➕ Agregar otro comprobante", callback_data=f"nc_mas_comprobantes_{solicitud_id}")],
+                        [InlineKeyboardButton("✅ Continuar con estos", callback_data=f"nc_continuar_p1_{solicitud_id}")]
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     
-                    await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+                    sent_message = await update.message.reply_text(mensaje, parse_mode="Markdown", reply_markup=reply_markup)
+                    context.user_data['nc_last_comprobante_message_id'] = sent_message.message_id
+                    
                     return NC_ESPERANDO_COMPROBANTE
             
             # UX MEJORADA: Eliminar botones del mensaje anterior (si existe)
