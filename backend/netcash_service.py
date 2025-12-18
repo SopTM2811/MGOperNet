@@ -528,13 +528,54 @@ class NetCashService:
             
             if cuenta_beneficiaria:
                 # Limpiar y comparar CLABEs
-                cuenta_limpia = str(cuenta_beneficiaria).replace(" ", "").replace("-", "").replace("*", "")
+                cuenta_str = str(cuenta_beneficiaria).strip()
+                cuenta_limpia = cuenta_str.replace(" ", "").replace("-", "").replace("*", "")
+                
+                # Obtener últimos 4 dígitos de la CLABE activa
+                ultimos_4_clabe = clabe_activa[-4:] if len(clabe_activa) >= 4 else clabe_activa
+                
+                logger.info(f"[NetCash-OCR] Validando cuenta: '{cuenta_str}' vs CLABE activa terminación {ultimos_4_clabe}")
+                
+                # Caso 1: CLABE completa coincide
                 if clabe_activa in cuenta_limpia or cuenta_limpia in clabe_activa:
                     es_valido = True
-                    razon = "CLABE coincide con cuenta activa"
-                elif len(cuenta_limpia) >= 4 and clabe_activa[-4:] == cuenta_limpia[-4:]:
+                    razon = "CLABE completa coincide con cuenta activa"
+                    logger.info(f"[NetCash-OCR] ✅ CLABE completa coincide")
+                
+                # Caso 2: Últimos 4 dígitos de cuenta limpia coinciden
+                elif len(cuenta_limpia) >= 4 and cuenta_limpia[-4:] == ultimos_4_clabe:
                     es_valido = True
-                    razon = "Últimos 4 dígitos de CLABE coinciden"
+                    razon = f"Últimos 4 dígitos coinciden ({ultimos_4_clabe})"
+                    logger.info(f"[NetCash-OCR] ✅ Últimos 4 dígitos coinciden: {cuenta_limpia[-4:]}")
+                
+                # Caso 3: Formato enmascarado (ej: *7228, **7228, ***7228, ****7228)
+                # Extraer solo los dígitos del final
+                elif '*' in cuenta_str:
+                    # Extraer dígitos después de los asteriscos
+                    import re
+                    match = re.search(r'\*+(\d{3,4})$', cuenta_str)
+                    if match:
+                        digitos_encontrados = match.group(1)
+                        # Comparar con los últimos N dígitos de la CLABE
+                        if clabe_activa.endswith(digitos_encontrados):
+                            es_valido = True
+                            razon = f"Terminación enmascarada coincide (*{digitos_encontrados})"
+                            logger.info(f"[NetCash-OCR] ✅ Terminación enmascarada coincide: *{digitos_encontrados}")
+                        else:
+                            logger.warning(f"[NetCash-OCR] ❌ Terminación enmascarada NO coincide: *{digitos_encontrados} vs {ultimos_4_clabe}")
+                    else:
+                        logger.warning(f"[NetCash-OCR] ❌ No se pudo extraer dígitos de cuenta enmascarada: {cuenta_str}")
+                
+                # Caso 4: Verificar si los dígitos de la cuenta están contenidos en la CLABE
+                elif len(cuenta_limpia) >= 3:
+                    # Si la cuenta limpia es corta (3-6 dígitos), verificar si coincide con terminación
+                    if len(cuenta_limpia) <= 6 and clabe_activa.endswith(cuenta_limpia):
+                        es_valido = True
+                        razon = f"Terminación parcial coincide ({cuenta_limpia})"
+                        logger.info(f"[NetCash-OCR] ✅ Terminación parcial coincide: {cuenta_limpia}")
+                
+                if not es_valido:
+                    logger.warning(f"[NetCash-OCR] ❌ Cuenta '{cuenta_str}' NO coincide con CLABE activa (termina en {ultimos_4_clabe})")
             
             # Si no se detectó monto, marcar como no confiable
             if not monto_detectado or monto_detectado == 0:
