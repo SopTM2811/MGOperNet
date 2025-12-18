@@ -749,6 +749,7 @@ async def agregar_datos_titular(
 ):
     """
     Agrega datos del titular de las ligas.
+    Busca en ambas colecciones: operaciones (web) y solicitudes_netcash (Telegram).
     """
     try:
         # Validar que el nombre tenga al menos 3 palabras
@@ -759,23 +760,33 @@ async def agregar_datos_titular(
                 detail="El nombre debe incluir al menos nombre y dos apellidos (mínimo 3 palabras)"
             )
         
-        # Actualizar operación
+        update_data = {
+            "titular_nombre_completo": titular_nombre_completo.upper(),
+            "titular_idmex": titular_idmex,
+            "numero_ligas": numero_ligas,
+            "estado": EstadoOperacion.ESPERANDO_CONFIRMACION_CLIENTE
+        }
+        
+        # Primero intentar en colección de operaciones web
         result = await db.operaciones.update_one(
             {"id": operacion_id},
-            {
-                "$set": {
-                    "titular_nombre_completo": titular_nombre_completo.upper(),
-                    "titular_idmex": titular_idmex,
-                    "numero_ligas": numero_ligas,
-                    "estado": EstadoOperacion.ESPERANDO_CONFIRMACION_CLIENTE
-                }
-            }
+            {"$set": update_data}
         )
+        
+        collection_name = "operaciones"
+        
+        # Si no se encontró en operaciones, buscar en solicitudes_netcash (Telegram)
+        if result.matched_count == 0:
+            result = await db.solicitudes_netcash.update_one(
+                {"id": operacion_id},
+                {"$set": update_data}
+            )
+            collection_name = "solicitudes_netcash"
         
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
         
-        logger.info(f"Datos de titular agregados para operación {operacion_id}")
+        logger.info(f"Datos de titular agregados para operación {operacion_id} en {collection_name}")
         
         return {
             "success": True,
