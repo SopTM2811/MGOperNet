@@ -1637,9 +1637,9 @@ async def registrar_clave_mbcontrol(
             clave_mbcontrol=clave_mbcontrol
         )
         
-        # Actualizar estado según si se envió o no
+        # Actualizar estado según si se envió o no (en la colección correcta)
         nuevo_estado = "LAYOUT_ENVIADO" if enviado else "PENDIENTE_ENVIO_LAYOUT"
-        await db.operaciones.update_one(
+        await target_collection.update_one(
             {"id": operacion_id},
             {
                 "$set": {
@@ -1651,7 +1651,7 @@ async def registrar_clave_mbcontrol(
             }
         )
         
-        logger.info(f"Clave MBControl registrada para operación {operacion_id}. Layout generado: {layout_path}")
+        logger.info(f"Clave MBControl registrada para operación {operacion_id} en {collection_name}. Layout generado: {layout_path}")
         
         mensaje = "Layout SPEI generado correctamente."
         if enviado:
