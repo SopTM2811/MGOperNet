@@ -40,6 +40,19 @@ class CalculosService:
             - total_egreso
         """
         try:
+            # Validar parámetros - asegurar que no sean None
+            if monto_depositado_cliente is None:
+                monto_depositado_cliente = 0.0
+            if comision_cliente_porcentaje is None:
+                comision_cliente_porcentaje = 1.0  # Default 1%
+            if costo_proveedor_dns_porcentaje is None:
+                costo_proveedor_dns_porcentaje = 0.375  # Default 0.375%
+            
+            # Convertir a float por seguridad
+            monto_depositado_cliente = float(monto_depositado_cliente)
+            comision_cliente_porcentaje = float(comision_cliente_porcentaje)
+            costo_proveedor_dns_porcentaje = float(costo_proveedor_dns_porcentaje)
+            
             # PASO 1: Calcular comisión cobrada al cliente
             comision_cliente_cobrada = monto_depositado_cliente * comision_cliente_porcentaje / 100
             
