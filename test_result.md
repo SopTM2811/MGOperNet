@@ -516,3 +516,36 @@ if "*" in cuenta_leida:
 ### Final Masked Account Test Status:
 - **5/5 Validation Tests**: ✅ ALL PASSED
 - **Masked Account Logic**: ✅ FULLY IMPLEMENTED AND VERIFIED
+
+## Bug Fixes Session - 2025-12-18 18:05 UTC
+
+### ✅ Bug Fix 1: Botón "Confirmar Operación" Missing
+- **Problem**: Button wasn't showing for Telegram operations
+- **Root Cause**: `DATOS_COMPLETOS` was in `estadosCerrados` array, making `esSoloLectura = true`
+- **Fix Applied**: Removed `DATOS_COMPLETOS` from `estadosCerrados` in `OperacionDetalle.jsx`
+- **Also Fixed**: Backend endpoint now searches both `operaciones` AND `solicitudes_netcash` collections
+- **Status**: ✅ VERIFIED - Button visible and endpoint working
+
+### ✅ Bug Fix 2: Beneficiarios Not Saving
+- **Problem**: Frontend sent JSON but backend expected Form data
+- **Root Cause**: Backend endpoints used `Form(...)` parameters but frontend used `axios.post` with JSON
+- **Fix Applied**: 
+  - Created `BeneficiarioCreate` and `BeneficiarioUpdate` Pydantic models
+  - Changed POST and PUT endpoints to accept JSON body
+- **Status**: ✅ VERIFIED - Created test beneficiario successfully
+
+### ⚠️ Bug Fix 3: Telegram Multi-Amount OCR Flow
+- **Problem**: User reported generic error instead of manual entry flow
+- **Analysis**: Code already implements detection of multiple transactions
+- **Testing**: Cannot test directly due to telegram.error.Conflict
+- **Status**: REQUIRES USER TESTING
+
+### API Endpoints Tested:
+- POST `/api/operaciones/{id}/confirmar` - ✅ Works for Telegram ops (nc-1766079718379)
+- POST `/api/beneficiarios-frecuentes` - ✅ Works with JSON body
+- GET `/api/beneficiarios-frecuentes` - ✅ Returns created beneficiarios
+
+### Files Modified:
+- `/app/backend/server.py` - Fixed confirmar endpoint & beneficiarios endpoints
+- `/app/frontend/src/pages/OperacionDetalle.jsx` - Fixed estadosCerrados array
+
