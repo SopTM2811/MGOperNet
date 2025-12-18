@@ -1563,17 +1563,23 @@ async def registrar_clave_mbcontrol(
 ):
     """
     Registra la clave de MBControl para una operación y genera el layout SPEI.
+    Busca en ambas colecciones: operaciones (web) y solicitudes_netcash (Telegram).
     """
     try:
-        # Verificar que la operación exista
+        # Verificar que la operación exista - buscar en ambas colecciones
         operacion = await db.operaciones.find_one({"id": operacion_id}, {"_id": 0})
+        collection_name = "operaciones"
+        
+        if not operacion:
+            operacion = await db.solicitudes_netcash.find_one({"id": operacion_id}, {"_id": 0})
+            collection_name = "solicitudes_netcash"
         
         if not operacion:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
         
         # Obtener campos compatibles (Web vs Telegram)
-        cantidad_ligas = operacion.get("cantidad_ligas") or operacion.get("numero_ligas") or 1
-        nombre_titular = operacion.get("nombre_ligas") or operacion.get("titular_nombre_completo") or "TITULAR"
+        cantidad_ligas = operacion.get("cantidad_ligas") or operacion.get("numero_ligas") or operacion.get("cantidad_ligas_reportada") or 1
+        nombre_titular = operacion.get("nombre_ligas") or operacion.get("titular_nombre_completo") or operacion.get("beneficiario_reportado") or "TITULAR"
         
         # Validar que la operación tenga datos completos
         if not nombre_titular or nombre_titular == "TITULAR":
@@ -1582,8 +1588,9 @@ async def registrar_clave_mbcontrol(
                 detail="La operación no tiene datos completos del titular"
             )
         
-        # Actualizar clave MBControl
-        await db.operaciones.update_one(
+        # Actualizar clave MBControl en la colección correcta
+        target_collection = db.operaciones if collection_name == "operaciones" else db.solicitudes_netcash
+        await target_collection.update_one(
             {"id": operacion_id},
             {
                 "$set": {
