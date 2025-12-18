@@ -1987,14 +1987,19 @@ async def crear_beneficiario_frecuente(beneficiario_input: BeneficiarioCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class BeneficiarioUpdate(BaseModel):
+    nombre_beneficiario: Optional[str] = None
+    idmex_beneficiario: Optional[str] = None
+
+
 @api_router.put("/beneficiarios-frecuentes/{beneficiario_id}")
 async def actualizar_beneficiario_frecuente(
     beneficiario_id: str,
-    nombre_beneficiario: Optional[str] = Form(None),
-    idmex_beneficiario: Optional[str] = Form(None)
+    beneficiario_input: BeneficiarioUpdate
 ):
     """
     Actualiza un beneficiario frecuente existente.
+    Acepta JSON en el body con nombre_beneficiario y/o idmex_beneficiario.
     """
     try:
         # Verificar que existe
@@ -2005,16 +2010,16 @@ async def actualizar_beneficiario_frecuente(
         if not beneficiario:
             raise HTTPException(status_code=404, detail="Beneficiario no encontrado")
         
-        update_data = {"ultima_vez_usado": datetime.now(timezone.utc)}
+        update_data = {"ultima_vez_usado": datetime.now(timezone.utc).isoformat()}
         
-        if nombre_beneficiario:
-            update_data["nombre_beneficiario"] = nombre_beneficiario.upper()
-            update_data["alias_mostrar"] = nombre_beneficiario.upper()
+        if beneficiario_input.nombre_beneficiario:
+            update_data["nombre_beneficiario"] = beneficiario_input.nombre_beneficiario.upper()
+            update_data["alias_mostrar"] = beneficiario_input.nombre_beneficiario.upper()
         
-        if idmex_beneficiario:
-            if len(idmex_beneficiario) != 10 or not idmex_beneficiario.isdigit():
+        if beneficiario_input.idmex_beneficiario:
+            if len(beneficiario_input.idmex_beneficiario) != 10 or not beneficiario_input.idmex_beneficiario.isdigit():
                 raise HTTPException(status_code=400, detail="IDMEX debe tener exactamente 10 dígitos")
-            update_data["idmex_beneficiario"] = idmex_beneficiario
+            update_data["idmex_beneficiario"] = beneficiario_input.idmex_beneficiario
         
         await db.netcash_beneficiarios_frecuentes.update_one(
             {"id": beneficiario_id},
