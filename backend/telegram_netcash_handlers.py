@@ -1742,21 +1742,7 @@ class TelegramNetCashHandlers:
                 mensaje += f"  • Monto a enviar en ligas: ${monto_ligas:,.2f}\n"
                 
                 mensaje += f"\n✅ **Estado:** Lista para proceso interno MBco\n\n"
-                
-                # ⚠️ NUEVO: Mostrar advertencia si hubo comprobantes con problemas de OCR
-                advertencias = context.user_data.get('nc_advertencias_comprobantes', [])
-                requiere_revision = solicitud.get('requiere_revision_manual', False)
-                
-                if advertencias or requiere_revision:
-                    mensaje += "⚠️ **Nota importante:**\n"
-                    mensaje += "Uno o más de tus comprobantes contiene datos complejos "
-                    mensaje += "(múltiples montos o información no legible).\n\n"
-                    mensaje += "✅ Tu archivo SÍ se recibió y está guardado de forma segura.\n"
-                    mensaje += "👤 Ana o un enlace de nuestro equipo revisará tu comprobante "
-                    mensaje += "manualmente y te contactará para ajustar los montos si es necesario.\n\n"
-                    mensaje += f"📋 **ID de seguimiento:** `{folio}`\n\n"
-                else:
-                    mensaje += "Te avisaremos cuando tus ligas NetCash estén listas. 🚀\n\n"
+                mensaje += "Te avisaremos cuando tus ligas NetCash estén listas. 🚀"
                 
                 # Limpiar contexto
                 context.user_data.clear()
