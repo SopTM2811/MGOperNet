@@ -261,10 +261,11 @@ const OperacionDetalle = () => {
   const comprobantesValidos = operacion.comprobantes.filter(c => c.es_valido);
   
   // MODO ESPEJO: Deshabilitar edición para operaciones de Telegram en estados cerrados
+  // NOTA: DATOS_COMPLETOS, lista_para_mbc y lista_para_confirmacion NO son cerrados 
+  // porque necesitan mostrar el botón de confirmar para avanzar a MBControl
   const esOrigenTelegram = operacion.origen_operacion === 'telegram';
   const estadosCerrados = [
     'COMPROBANTES_CERRADOS',
-    'DATOS_COMPLETOS',
     'ESPERANDO_CODIGO_SISTEMA',
     'PENDIENTE_ENVIO_LAYOUT',
     'LAYOUT_ENVIADO',
