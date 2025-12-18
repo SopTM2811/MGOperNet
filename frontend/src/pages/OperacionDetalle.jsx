@@ -640,10 +640,19 @@ const OperacionDetalle = () => {
                                       className="bg-blue-600 hover:bg-blue-700 text-white"
                                       onClick={() => {
                                         const fileUrl = comp.file_url || comp.archivo || comp.archivo_url;
-                                        // Si la URL es relativa (/api/...), construir URL completa con el backend
-                                        const fullUrl = fileUrl.startsWith('/api') 
-                                          ? `${process.env.REACT_APP_BACKEND_URL}${fileUrl}`
-                                          : fileUrl;
+                                        // Construir URL completa para cualquier ruta relativa
+                                        let fullUrl = fileUrl;
+                                        if (fileUrl.startsWith('/api')) {
+                                          // Ya tiene prefijo /api
+                                          fullUrl = `${process.env.REACT_APP_BACKEND_URL}${fileUrl}`;
+                                        } else if (fileUrl.startsWith('/uploads')) {
+                                          // Ruta de uploads sin prefijo /api - agregar prefijo
+                                          fullUrl = `${process.env.REACT_APP_BACKEND_URL}/api${fileUrl}`;
+                                        } else if (fileUrl.startsWith('/')) {
+                                          // Otra ruta relativa
+                                          fullUrl = `${process.env.REACT_APP_BACKEND_URL}${fileUrl}`;
+                                        }
+                                        // Si es URL absoluta, usarla directamente
                                         window.open(fullUrl, '_blank');
                                       }}
                                     >
