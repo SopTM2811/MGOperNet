@@ -1249,7 +1249,7 @@ class TelegramNetCashHandlers:
             solicitud = await netcash_service.obtener_solicitud(solicitud_id)
             cliente_id = solicitud.get("cliente_id")
             
-            # Consultar beneficiarios frecuentes (últimas 5 solicitudes exitosas)
+            # Consultar beneficiarios frecuentes
             from motor.motor_asyncio import AsyncIOMotorClient
             import os
             mongo_url = os.getenv('MONGO_URL')
@@ -1257,7 +1257,34 @@ class TelegramNetCashHandlers:
             client = AsyncIOMotorClient(mongo_url)
             db = client[db_name]
             
-            # Buscar beneficiarios en operaciones válidas (no rechazadas ni canceladas)
+            beneficiarios_frecuentes = {}
+            
+            # FUENTE 1: Buscar en colección netcash_beneficiarios_frecuentes
+            beneficiarios_registrados = await db.netcash_beneficiarios_frecuentes.find(
+                {
+                    "cliente_id": cliente_id,
+                    "activo": True
+                },
+                {"_id": 0}
+            ).sort("ultima_vez_usado", -1).limit(10).to_list(10)
+            
+            logger.info(f"[NC Telegram] Beneficiarios registrados para cliente {cliente_id}: {len(beneficiarios_registrados)}")
+            
+            for ben in beneficiarios_registrados:
+                nombre = ben.get("nombre_beneficiario")
+                idmex = ben.get("idmex_beneficiario")
+                
+                if nombre and idmex:
+                    key = f"{nombre}_{idmex}"
+                    if key not in beneficiarios_frecuentes:
+                        beneficiarios_frecuentes[key] = {
+                            "beneficiario": nombre,
+                            "idmex": idmex,
+                            "created_at": ben.get("ultima_vez_usado") or ben.get("fecha_creacion"),
+                            "fuente": "registrado"
+                        }
+            
+            # FUENTE 2: Buscar en solicitudes históricas exitosas
             estados_validos = ["lista_para_mbc", "en_proceso_mbc", "completada", "enviado_a_tesoreria", "orden_interna_generada"]
             
             solicitudes_historicas = await db.solicitudes_netcash.find(
@@ -1268,32 +1295,30 @@ class TelegramNetCashHandlers:
                     "idmex_reportado": {"$exists": True, "$ne": None, "$ne": ""}
                 },
                 {"_id": 0, "beneficiario_reportado": 1, "idmex_reportado": 1, "created_at": 1}
-            ).sort("created_at", -1).limit(20).to_list(20)  # Buscar más para asegurar variedad
+            ).sort("created_at", -1).limit(20).to_list(20)
             
-            # Deduplicar beneficiarios (mismo beneficiario + idmex) manteniendo orden cronológico
-            beneficiarios_frecuentes = {}
+            logger.info(f"[NC Telegram] Solicitudes históricas con beneficiarios: {len(solicitudes_historicas)}")
+            
             for sol in solicitudes_historicas:
                 benef = sol.get("beneficiario_reportado")
                 idmex = sol.get("idmex_reportado")
                 
-                # Validar que tenga valores válidos
-                if not benef or not idmex:
-                    continue
-                
-                key = f"{benef}_{idmex}"
-                if key not in beneficiarios_frecuentes:
-                    beneficiarios_frecuentes[key] = {
-                        "beneficiario": benef,
-                        "idmex": idmex,
-                        "created_at": sol.get("created_at")
-                    }
+                if benef and idmex:
+                    key = f"{benef}_{idmex}"
+                    if key not in beneficiarios_frecuentes:
+                        beneficiarios_frecuentes[key] = {
+                            "beneficiario": benef,
+                            "idmex": idmex,
+                            "created_at": sol.get("created_at"),
+                            "fuente": "historico"
+                        }
             
-            # Tomar los 3 más recientes únicos
+            # Tomar los 5 más recientes únicos
             frecuentes_list = list(beneficiarios_frecuentes.values())
-            # Ordenar por fecha más reciente
-            frecuentes_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-            # Tomar hasta 3
-            frecuentes = frecuentes_list[:3]
+            frecuentes_list.sort(key=lambda x: x.get("created_at", "") or "", reverse=True)
+            frecuentes = frecuentes_list[:5]
+            
+            logger.info(f"[NC Telegram] Total beneficiarios únicos encontrados: {len(frecuentes)}")
             
             logger.info(f"[NC Telegram] Beneficiarios frecuentes encontrados: {len(frecuentes)}")
             for idx, freq in enumerate(frecuentes, 1):
