@@ -281,7 +281,14 @@ const OperacionDetalle = () => {
   
   const puedeAgregarTitular = !esSoloLectura && comprobantesValidos.length > 0 && !operacion.titular_nombre_completo;
   const puedeCalcular = !esSoloLectura && operacion.titular_nombre_completo && !tieneCalculos;
-  const puedeConfirmar = !esSoloLectura && tieneCalculos && operacion.estado === 'ESPERANDO_CONFIRMACION_CLIENTE';
+  // Estados que permiten confirmar operación
+  const estadosPermiteConfirmar = [
+    'ESPERANDO_CONFIRMACION_CLIENTE', 
+    'DATOS_COMPLETOS',  // Estado normalizado de Telegram 
+    'lista_para_mbc',   // Estado original de Telegram
+    'lista_para_confirmacion'
+  ];
+  const puedeConfirmar = !esSoloLectura && tieneCalculos && estadosPermiteConfirmar.includes(operacion.estado);
 
   return (
     <div className="min-h-screen bg-white py-4 sm:py-8">
