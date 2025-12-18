@@ -767,10 +767,17 @@ class TelegramNetCashHandlers:
                     })
                     
                     # Marcar solicitud como requiere revisión manual
-                    await netcash_service.db[netcash_service.COLLECTION_NAME].update_one(
-                        {"id": solicitud_id},
-                        {"$set": {"requiere_revision_manual": True, "motivo_revision": motivo_fallo}}
-                    )
+                    try:
+                        from motor.motor_asyncio import AsyncIOMotorClient
+                        import os
+                        mongo_client = AsyncIOMotorClient(os.getenv('MONGO_URL'))
+                        temp_db = mongo_client[os.getenv('DB_NAME', 'netcash_mbco')]
+                        await temp_db.solicitudes_netcash.update_one(
+                            {"id": solicitud_id},
+                            {"$set": {"requiere_revision_manual": True, "motivo_revision": motivo_fallo}}
+                        )
+                    except Exception as db_err:
+                        logger.warning(f"[NC Telegram] No se pudo marcar revisión manual: {str(db_err)}")
                     
                     # CONTINUAR con el flujo normal - mostrar mensaje de éxito pero con nota
                     mensaje = f"✅ **Comprobante recibido** – _{nombre_archivo}_\n\n"
