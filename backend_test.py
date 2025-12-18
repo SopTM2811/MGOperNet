@@ -3050,11 +3050,16 @@ class BackendTester:
         logger.info("=" * 60)
         
         tests = [
+            ("Backend Health Check", self.test_backend_health),
+            # Priority Bug Fix Tests from Review Request
+            ("Bug Fix #2: Beneficiarios JSON API", self.test_bug_fix_beneficiarios_json_api),
+            ("Bug Fix #1: Confirmar Operación Telegram", self.test_bug_fix_confirmar_operacion_telegram),
+            ("Get Operation Details Telegram", self.test_get_operation_details_telegram),
+            # Previous Tests
             ("Issue 1: OCR Concatenation Detection", self.test_ocr_concatenation_detection),
             ("Issue 2a: Re-OCR Auto-Regenerates Calculations", self.test_reocr_auto_regenerates_calculations),
             ("Issue 2b: DELETE Comprobante Auto-Regenerates Calculations", self.test_delete_comprobante_auto_regenerates_calculations),
             ("Issue 2c: PATCH Comprobante Auto-Regenerates Calculations", self.test_patch_comprobante_auto_regenerates_calculations),
-            ("Backend Health Check", self.test_backend_health),
             ("Telegram OCR Success Flow Fixes", self.test_telegram_ocr_success_flow),
             ("Beneficiarios CRUD API - Endpoints en Español", self.test_beneficiarios_crud_api)
         ]
