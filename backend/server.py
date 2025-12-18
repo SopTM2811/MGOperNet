@@ -1365,8 +1365,10 @@ async def confirmar_operacion(operacion_id: str):
     """
     Confirma una operación y la pasa al estado DATOS_COMPLETOS.
     Después aparecerá en Pendientes MBControl para ingresar la clave.
+    Busca en ambas colecciones: operaciones (web) y solicitudes_netcash (Telegram).
     """
     try:
+        # Primero intentar en colección de operaciones web
         result = await db.operaciones.update_one(
             {"id": operacion_id},
             {
@@ -1377,10 +1379,25 @@ async def confirmar_operacion(operacion_id: str):
             }
         )
         
+        collection_name = "operaciones"
+        
+        # Si no se encontró en operaciones, buscar en solicitudes_netcash (Telegram)
+        if result.matched_count == 0:
+            result = await db.solicitudes_netcash.update_one(
+                {"id": operacion_id},
+                {
+                    "$set": {
+                        "estado": EstadoOperacion.DATOS_COMPLETOS,
+                        "timestamp_confirmacion_cliente": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            collection_name = "solicitudes_netcash"
+        
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Operación no encontrada")
         
-        logger.info(f"Operación {operacion_id} confirmada - Estado: DATOS_COMPLETOS")
+        logger.info(f"Operación {operacion_id} confirmada desde {collection_name} - Estado: DATOS_COMPLETOS")
         
         return {
             "success": True,
@@ -1899,12 +1916,14 @@ async def listar_beneficiarios_frecuentes(cliente_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class BeneficiarioCreate(BaseModel):
+    cliente_id: str
+    nombre_beneficiario: str
+    idmex_beneficiario: str
+
+
 @api_router.post("/beneficiarios-frecuentes")
-async def crear_beneficiario_frecuente(
-    cliente_id: str = Form(...),
-    nombre_beneficiario: str = Form(...),
-    idmex_beneficiario: str = Form(...)
-):
+async def crear_beneficiario_frecuente(beneficiario_input: BeneficiarioCreate):
     """
     Crea un nuevo beneficiario frecuente para un cliente.
     """
