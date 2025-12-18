@@ -549,3 +549,69 @@ if "*" in cuenta_leida:
 - `/app/backend/server.py` - Fixed confirmar endpoint & beneficiarios endpoints
 - `/app/frontend/src/pages/OperacionDetalle.jsx` - Fixed estadosCerrados array
 
+## Backend Testing Results - Bug Fixes Verification - 2025-12-18 18:08 UTC
+
+### ✅ Comprehensive Bug Fix Testing - ALL PRIORITY TESTS PASSED
+
+#### Test Results Summary:
+- **3/3 Priority Bug Fix Tests**: ✅ ALL PASSED
+- **Status**: WORKING ✅
+
+#### Test Case Results:
+
+**1. Bug Fix #2: Beneficiarios CRUD API - JSON Support ✅**
+- **Test Data Used**:
+  - cliente_id: "49ac3766-bc9b-4509-89c1-433cc12bbe97"
+  - nombre_beneficiario: "TESTING AGENT BENEFICIARIO"
+  - idmex_beneficiario: "9876543210"
+- **Test Results**:
+  - GET `/api/beneficiarios-frecuentes`: ✅ Returns array with expected fields
+  - POST `/api/beneficiarios-frecuentes` (JSON): ✅ Creates beneficiario successfully (ID: bf_e8aea28d)
+  - PUT `/api/beneficiarios-frecuentes/{id}` (JSON): ✅ Updates successfully
+  - DELETE `/api/beneficiarios-frecuentes/{id}`: ✅ Soft delete successful
+- **Verification**: ✅ All endpoints now accept JSON instead of Form data
+
+**2. Bug Fix #1: Confirmar Operación for Telegram Operations ✅**
+- **Test Operation**: nc-1766079718379 (Telegram operation)
+- **Test Results**:
+  - GET `/api/operaciones/{id}`: ✅ Operation found and verified as Telegram origin
+  - POST `/api/operaciones/{id}/confirmar`: ✅ Confirmation successful
+  - Estado updated to: DATOS_COMPLETOS ✅
+  - timestamp_confirmacion_cliente set correctly ✅
+- **Verification**: ✅ Endpoint now searches both `operaciones` AND `solicitudes_netcash` collections
+
+**3. Get Operation Details for Telegram Operations ✅**
+- **Test Operation**: nc-1766079718379
+- **Test Results**:
+  - Operation details retrieved successfully ✅
+  - Estado: DATOS_COMPLETOS ✅
+  - timestamp_confirmacion_cliente exists ✅
+  - Confirmed as Telegram operation ✅
+  - Calculation fields present (calculos, capital_netcash, costo_proveedor_monto) ✅
+
+#### Integration Status:
+- **Beneficiarios JSON API**: ✅ FULLY WORKING - Accepts JSON payloads
+- **Confirmar Operación Telegram**: ✅ FULLY WORKING - Searches both collections
+- **Operation Details Retrieval**: ✅ FULLY WORKING - Returns complete Telegram operation data
+- **Backend API Consistency**: ✅ All endpoints responding correctly
+
+#### Backend Logs Verification:
+```
+INFO: POST /api/beneficiarios-frecuentes HTTP/1.1" 200 OK
+INFO: PUT /api/beneficiarios-frecuentes/bf_e8aea28d HTTP/1.1" 200 OK  
+INFO: DELETE /api/beneficiarios-frecuentes/bf_e8aea28d HTTP/1.1" 200 OK
+INFO: POST /api/operaciones/nc-1766079718379/confirmar HTTP/1.1" 200 OK
+INFO: GET /api/operaciones/nc-1766079718379 HTTP/1.1" 200 OK
+```
+
+### Summary - Bug Fixes Verification:
+- **✅ Bug Fix #1**: Confirmar Operación now works for Telegram operations
+- **✅ Bug Fix #2**: Beneficiarios endpoints now accept JSON instead of Form data  
+- **✅ Operation Details**: Telegram operations return complete data with timestamps
+- **✅ All API endpoints**: Responding correctly with proper status codes
+- **✅ Database integration**: Operations found in both collections as expected
+
+### Final Bug Fix Test Status:
+- **3/3 Priority Tests**: ✅ ALL PASSED
+- **Bug Fixes**: ✅ FULLY IMPLEMENTED AND VERIFIED
+
