@@ -755,6 +755,10 @@ class TelegramNetCashHandlers:
                     ultimo_comp = comprobantes[-1] if comprobantes else None
                     ocr_data = ultimo_comp.get("ocr_data", {}) if ultimo_comp else {}
                     motivo_fallo = ocr_data.get("motivo_fallo", "")
+                    advertencias = ocr_data.get("advertencias", [])
+                    cantidad_transacciones = ocr_data.get("datos_completos", {}).get("cantidad_transacciones")
+                    montos_individuales = ocr_data.get("datos_completos", {}).get("montos_individuales")
+                    monto_detectado = ultimo_comp.get("monto", 0) or ultimo_comp.get("monto_detectado", 0) if ultimo_comp else 0
                     
                     # Guardar advertencia en context para mostrar al final
                     if 'nc_advertencias_comprobantes' not in context.user_data:
@@ -779,10 +783,29 @@ class TelegramNetCashHandlers:
                     except Exception as db_err:
                         logger.warning(f"[NC Telegram] No se pudo marcar revisión manual: {str(db_err)}")
                     
-                    # CONTINUAR con el flujo normal - mostrar mensaje de éxito pero con nota
+                    # CONTINUAR con el flujo normal - mostrar mensaje informativo con datos detectados
                     mensaje = f"✅ **Comprobante recibido** – _{nombre_archivo}_\n\n"
-                    mensaje += f"⚠️ **Nota:** El sistema detectó datos complejos en este comprobante. "
-                    mensaje += f"Se procesará y al final de la operación recibirás más información.\n\n"
+                    
+                    # Mostrar información detectada según el tipo de problema
+                    if motivo_fallo == "transacciones_multiples" or (cantidad_transacciones and cantidad_transacciones > 1):
+                        mensaje += f"🔢 **Detectamos múltiples depósitos en este archivo.**\n"
+                        if cantidad_transacciones:
+                            mensaje += f"Cantidad detectada: **{cantidad_transacciones} depósitos**\n"
+                        if montos_individuales:
+                            mensaje += f"Montos: {montos_individuales}\n"
+                        if monto_detectado > 0:
+                            mensaje += f"💰 Monto total registrado: **${monto_detectado:,.2f}**\n"
+                        mensaje += "\n"
+                    elif motivo_fallo in ["monto_multiple_valores", "monto_concatenado"]:
+                        mensaje += "🔢 **Se detectaron múltiples montos en este comprobante.**\n"
+                        if monto_detectado > 0:
+                            mensaje += f"💰 Monto total registrado: **${monto_detectado:,.2f}**\n"
+                        mensaje += "\n"
+                    else:
+                        if monto_detectado > 0:
+                            mensaje += f"💰 Monto detectado: **${monto_detectado:,.2f}**\n\n"
+                    
+                    mensaje += f"⚠️ **Nota:** Al finalizar la operación, Ana verificará los montos manualmente.\n\n"
                     mensaje += f"📊 Llevamos **{num_comprobantes}** comprobante(s) en total.\n\n"
                     mensaje += "¿Tienes otro comprobante o continuamos?"
                     
