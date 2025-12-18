@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 load_dotenv('/app/frontend/.env')
 
 # URLs y configuración
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://telegrambot-repair.preview.emergentagent.com') + '/api'
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://receipt-flow-3.preview.emergentagent.com') + '/api'
 
 class BugFixesTester:
     def __init__(self):

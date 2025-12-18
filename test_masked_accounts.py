@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # URLs y configuración
-BACKEND_URL = "https://telegrambot-repair.preview.emergentagent.com/api"
+BACKEND_URL = "https://receipt-flow-3.preview.emergentagent.com/api"
 
 class MaskedAccountTester:
     def __init__(self):

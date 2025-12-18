@@ -67,7 +67,7 @@
 ### Test Date: 2025-12-17 21:15:00 UTC
 
 #### ✅ Beneficiarios Page UI Testing - COMPREHENSIVE PASS
-- **URL Tested**: https://telegrambot-repair.preview.emergentagent.com/beneficiarios
+- **URL Tested**: https://receipt-flow-3.preview.emergentagent.com/beneficiarios
 - **Status**: ALL TEST CASES PASSED ✅
 
 #### Test Case Results:
@@ -240,7 +240,7 @@
 ### Test Date: 2025-12-17 21:19:34 UTC
 
 #### ✅ Comprehensive UI Testing - ALL BUG FIXES VERIFIED
-- **URL Tested**: https://telegrambot-repair.preview.emergentagent.com/operacion/nc-1765997234254
+- **URL Tested**: https://receipt-flow-3.preview.emergentagent.com/operacion/nc-1765997234254
 - **Status**: ALL 3 BUG FIXES WORKING ✅
 
 #### Test Case Results:
