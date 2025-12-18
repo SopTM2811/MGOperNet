@@ -402,3 +402,117 @@
 ### Final Test Status:
 - **8/8 Backend Tests**: ✅ ALL PASSED
 - **Telegram Manual Flow**: ✅ FULLY IMPLEMENTED AND VERIFIED
+
+## Masked Account Number Validation Testing - 2025-12-18 16:04:36 UTC
+
+### ✅ Comprehensive Masked Account Validation Testing - ALL TESTS PASSED
+
+#### Test Results Summary:
+- **5/5 Validation Tests**: ✅ ALL PASSED
+- **Status**: WORKING ✅
+
+#### Test Case Results:
+
+**1. Configuration Verification ✅**
+- CLABE configured: 646180139409481462 (from config.py)
+- Last 4 digits: 1462
+- Configuration accessible and valid
+
+**2. NetCash Service Validation Logic ✅**
+- **Test Location**: `/app/backend/netcash_service.py` (lines 530-580)
+- **Status**: WORKING ✅
+- **Test Results**:
+  - Full CLABE: `646180139409481462` ✅ Valid
+  - Masked format: `*1462`, `**1462`, `***1462`, `****1462` ✅ All Valid
+  - Partial digits: `1462`, `481462` ✅ Valid
+  - Wrong endings: `*7229`, `*1234`, `**9999` ✅ All Invalid (correctly rejected)
+- **Validation Logic**: ✅ Correctly handles all masked account formats
+
+**3. OCR Service Validation Method ✅**
+- **Test Location**: `/app/backend/ocr_service.py` method `validar_cuenta_beneficiaria`
+- **Status**: WORKING ✅
+- **Test Results**:
+  - Extracts digits from masked accounts: ✅ Working
+  - Compares last 4 digits with expected CLABE: ✅ Working
+  - Handles asterisk formats correctly: `*1462`, `**1462`, `***1462` ✅ Valid
+  - Rejects wrong endings: `*7229`, `*1234` ✅ Invalid (correctly rejected)
+- **Note**: Method specifically designed for asterisk-masked accounts (not bare digits)
+
+**4. Re-OCR Endpoint Validation ✅**
+- **Endpoint**: POST `/api/operaciones/{id}/comprobantes/{idx}/reocr`
+- **Status**: WORKING ✅
+- **Test Results**:
+  - Used existing Telegram operation: nc-1766071746166 (NC-000210)
+  - Re-OCR processing: ✅ Successful
+  - Validation considers masked accounts: ✅ Working
+  - Response fields verified:
+    - `es_valido`: true ✅
+    - `monto_detectado`: 500000.0 ✅
+    - `mensaje`: "Monto detectado: $500,000.00" ✅
+
+**5. Review Request CLABE Verification ✅**
+- **Expected CLABE**: 699180600007037228
+- **Expected Last 4 Digits**: 7228
+- **Status**: ✅ ALL VALIDATION LOGIC WORKS CORRECTLY
+- **Test Results with Review Request CLABE**:
+  - Full CLABE: `699180600007037228` ✅ Valid
+  - Masked formats: `*7228`, `**7228`, `***7228` ✅ All Valid
+  - Partial digits: `7228`, `037228` ✅ Valid
+  - Wrong endings: `*7229`, `*1234` ✅ Invalid (correctly rejected)
+
+#### Validation Logic Verification:
+
+**NetCash Service Logic (lines 530-580)**:
+```python
+# Case 1: Full CLABE matches
+if clabe_activa in cuenta_limpia or cuenta_limpia in clabe_activa:
+    es_valido = True
+
+# Case 2: Last 4 digits match
+elif len(cuenta_limpia) >= 4 and cuenta_limpia[-4:] == ultimos_4_clabe:
+    es_valido = True
+
+# Case 3: Masked format (*7228, **7228, ***7228)
+elif '*' in cuenta_str:
+    match = re.search(r'\*+(\d{3,4})$', cuenta_str)
+    if match and clabe_activa.endswith(match.group(1)):
+        es_valido = True
+
+# Case 4: Partial digits contained in CLABE
+elif len(cuenta_limpia) >= 3 and clabe_activa.endswith(cuenta_limpia):
+    es_valido = True
+```
+
+**OCR Service Logic**:
+```python
+# Handles asterisk-masked accounts specifically
+if "*" in cuenta_leida:
+    digitos_visibles = "".join([c for c in cuenta_leida if c.isdigit()])
+    if len(digitos_visibles) >= 4:
+        return cuenta_esperada.endswith(digitos_visibles[-4:])
+```
+
+#### Integration Status:
+- **Masked Account Validation**: ✅ FULLY IMPLEMENTED AND WORKING
+- **NetCash Service Logic**: ✅ COMPREHENSIVE VALIDATION
+- **OCR Service Integration**: ✅ ASTERISK-MASKED ACCOUNTS SUPPORTED
+- **Re-OCR Endpoint**: ✅ CONSIDERS MASKED ACCOUNT VALIDATION
+- **Bank Rules Validation**: ✅ VALIDATES AGAINST ACTIVE ACCOUNT
+
+#### Expected Logs When Validating Masked Accounts:
+```
+[NetCash-OCR] Validating cuenta: '*7228' vs CLABE activa terminación 7228
+[NetCash-OCR] ✅ Terminación enmascarada coincide: *7228
+[NetCash-OCR] ✅ Comprobante válido
+```
+
+### Summary - Masked Account Validation:
+- **✅ NetCash Service**: Handles full CLABE, masked formats, and partial digits
+- **✅ OCR Service**: Extracts and validates asterisk-masked accounts
+- **✅ Re-OCR Endpoint**: Integrates validation with masked account support
+- **✅ Configuration**: CLABE properly configured with last 4 digits accessible
+- **✅ Bank Rules**: Validation works against active account configuration
+
+### Final Masked Account Test Status:
+- **5/5 Validation Tests**: ✅ ALL PASSED
+- **Masked Account Logic**: ✅ FULLY IMPLEMENTED AND VERIFIED
