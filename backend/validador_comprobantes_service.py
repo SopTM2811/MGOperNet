@@ -351,8 +351,14 @@ class ValidadorComprobantes:
             f"CLABE-{sufijo_4}",
             f"CLABE {sufijo_3}",
             f"CLABE {sufijo_4}",
-            # Formato: "****2915", "****462", etc. 
+            # Formato con asteriscos: "*7228", "**7228", "***7228", "****7228"
+            f"*{sufijo_4}",
+            f"**{sufijo_4}",
+            f"***{sufijo_4}",
             f"****{sufijo_4}",
+            f"*{sufijo_3}",
+            f"**{sufijo_3}",
+            f"***{sufijo_3}",
             f"****{sufijo_3}",
             # Formato: "65**0938" (dígitos al inicio y al final)
             f"{clabe_objetivo[:2]}**{sufijo_4}",
