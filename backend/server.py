@@ -1926,9 +1926,15 @@ class BeneficiarioCreate(BaseModel):
 async def crear_beneficiario_frecuente(beneficiario_input: BeneficiarioCreate):
     """
     Crea un nuevo beneficiario frecuente para un cliente.
+    Acepta JSON en el body con cliente_id, nombre_beneficiario, idmex_beneficiario.
     """
     try:
         from uuid import uuid4
+        
+        # Extraer datos del modelo Pydantic
+        cliente_id = beneficiario_input.cliente_id
+        nombre_beneficiario = beneficiario_input.nombre_beneficiario
+        idmex_beneficiario = beneficiario_input.idmex_beneficiario
         
         # Validar que el cliente existe
         cliente = await db.clientes.find_one({"id": cliente_id}, {"_id": 0})
@@ -1961,8 +1967,8 @@ async def crear_beneficiario_frecuente(beneficiario_input: BeneficiarioCreate):
             "clabe": None,
             "terminacion": None,
             "banco": None,
-            "fecha_creacion": datetime.now(timezone.utc),
-            "ultima_vez_usado": datetime.now(timezone.utc),
+            "fecha_creacion": datetime.now(timezone.utc).isoformat(),
+            "ultima_vez_usado": datetime.now(timezone.utc).isoformat(),
             "activo": True
         }
         
