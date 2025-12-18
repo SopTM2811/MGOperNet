@@ -615,3 +615,25 @@ INFO: GET /api/operaciones/nc-1766079718379 HTTP/1.1" 200 OK
 - **3/3 Priority Tests**: ✅ ALL PASSED
 - **Bug Fixes**: ✅ FULLY IMPLEMENTED AND VERIFIED
 
+
+## Additional Bug Fixes - 2025-12-18 18:30 UTC
+
+### ✅ Bug Fix: Botón "Ver" faltante en operaciones WEB
+- **Problem**: El botón "Ver" no aparecía para comprobantes de operaciones creadas vía web
+- **Root Cause**: El frontend solo construía la URL completa si empezaba con `/api`, pero el backend guarda `/uploads/comprobantes/...`
+- **Fix Applied**: Actualizado `OperacionDetalle.jsx` para manejar URLs que empiecen con `/uploads` agregándoles el prefijo `/api`
+- **Status**: ✅ VERIFIED - Botón Ver visible para operación NC-000015 con 4+ comprobantes
+
+### ⚠️ Bug Fix: Telegram Multi-Amount OCR Flow
+- **Problem**: Cuando se detectan múltiples montos en un comprobante, el flujo se detenía y pedía captura manual
+- **User Request**: El flujo debe continuar normalmente y mostrar advertencia al final con el folio
+- **Fix Applied**: 
+  1. Modificado handler en `telegram_netcash_handlers.py` para que comprobantes con multi-montos continúen el flujo normal
+  2. Se guarda advertencia en context y se muestra al generar la operación
+  3. El "ID de seguimiento" ahora es el folio de la operación (ej: NC-000100)
+- **Status**: REQUIRES USER TESTING (Bot tiene conflicto de proceso)
+
+### Files Modified:
+- `/app/frontend/src/pages/OperacionDetalle.jsx` - Fixed URL construction for Ver button
+- `/app/backend/telegram_netcash_handlers.py` - Modified multi-amount flow to continue and show warning at end
+
